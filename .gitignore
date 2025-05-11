@@ -1,0 +1,64 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Environment variables
+.env
+.env.local
+.env.*
+
+# Playwright specific
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/screenshots/*
+!/screenshots/.gitkeep
+
+# Authentication state
+/auth/*
+!/auth/.gitkeep
+user.json
+*.auth.json
+storageState.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE specific
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+*.swo
+
+# Temporary files
+/temp/
+/tmp/
+.tmp/
+
+# Test artifacts
+*.trace.zip
+*.har
+*.png
+*.jpg
+*.jpeg
+!/e2e-tests/assets/**/*.png
+!/e2e-tests/assets/**/*.jpg
+
+# Local configuration
+config.local.js 

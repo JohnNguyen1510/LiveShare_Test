@@ -1,0 +1,21 @@
+{
+  "name": "liveshare-tests",
+  "version": "1.0.0",
+  "description": "End-to-end tests for LiveShare using Playwright",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report",
+    "install:browsers": "playwright install"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.42.1",
+    "dotenv": "^16.5.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
