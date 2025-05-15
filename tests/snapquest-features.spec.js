@@ -49,10 +49,10 @@ test.describe('SnapQuest Additional Feature Tests', () => {
   test('TC-APP-FSQ-006: Verify "Details" button functionality', async ({ page, context }) => {
     console.log('Starting test: TC-APP-FSQ-006');
     
-    // Navigate to app and login
+    // Navigate to app and login with retry mechanism
     console.log('Navigating to app and logging in...');
     await page.goto('https://app.livesharenow.com/');
-    const success = await loginPage.completeGoogleAuth(context);
+    const success = await loginPage.authenticateWithRetry(context);
     expect(success, 'Google authentication should be successful').toBeTruthy();
     
     // Navigate to joined event
@@ -140,10 +140,10 @@ test.describe('SnapQuest Additional Feature Tests', () => {
   test('TC-APP-FSQ-007: Verify "Airshow Home" Button Functionality', async ({ page, context }) => {
     console.log('Starting test: TC-APP-FSQ-007');
     
-    // Navigate to app and login
+    // Navigate to app and login with retry mechanism
     console.log('Navigating to app and logging in...');
     await page.goto('https://app.livesharenow.com/');
-    const success = await loginPage.completeGoogleAuth(context);
+    const success = await loginPage.authenticateWithRetry(context);
     expect(success, 'Google authentication should be successful').toBeTruthy();
     
     // Navigate to joined event
@@ -195,10 +195,10 @@ test.describe('SnapQuest Additional Feature Tests', () => {
   test('TC-APP-FSQ-008: Verify "Map" Button Functionality', async ({ page, context }) => {
     console.log('Starting test: TC-APP-FSQ-008');
     
-    // Navigate to app and login
+    // Navigate to app and login with retry mechanism
     console.log('Navigating to app and logging in...');
     await page.goto('https://app.livesharenow.com/');
-    const success = await loginPage.completeGoogleAuth(context);
+    const success = await loginPage.authenticateWithRetry(context);
     expect(success, 'Google authentication should be successful').toBeTruthy();
     
     // Navigate to joined event
@@ -250,10 +250,10 @@ test.describe('SnapQuest Additional Feature Tests', () => {
   test('TC-APP-FSQ-009: Verify "LiveView" Option in More Menu', async ({ page, context }) => {
     console.log('Starting test: TC-APP-FSQ-009');
     
-    // Navigate to app and login
+    // Navigate to app and login with retry mechanism
     console.log('Navigating to app and logging in...');
     await page.goto('https://app.livesharenow.com/');
-    const success = await loginPage.completeGoogleAuth(context);
+    const success = await loginPage.authenticateWithRetry(context);
     expect(success, 'Google authentication should be successful').toBeTruthy();
     
     // Navigate to joined event
@@ -413,10 +413,10 @@ test.describe('SnapQuest Additional Feature Tests', () => {
   test('TC-APP-FSQ-0010: Verify "Redeem Gift Code" Option in More Menu', async ({ page, context }) => {
     console.log('Starting test: TC-APP-FSQ-0010');
     
-    // Navigate to app and login
+    // Navigate to app and login with retry mechanism
     console.log('Navigating to app and logging in...');
     await page.goto('https://app.livesharenow.com/');
-    const success = await loginPage.completeGoogleAuth(context);
+    const success = await loginPage.authenticateWithRetry(context);
     expect(success, 'Google authentication should be successful').toBeTruthy();
     
     // Navigate to joined event
@@ -531,10 +531,10 @@ test.describe('SnapQuest Additional Feature Tests', () => {
   test('TC-APP-FSQ-0011: Verify Image Upload Functionality', async ({ page, context }) => {
     console.log('Starting test: TC-APP-FSQ-0011');
     
-    // Navigate to app and login
+    // Navigate to app and login with retry mechanism
     console.log('Navigating to app and logging in...');
     await page.goto('https://app.livesharenow.com/');
-    const success = await loginPage.completeGoogleAuth(context);
+    const success = await loginPage.authenticateWithRetry(context);
     expect(success, 'Google authentication should be successful').toBeTruthy();
     
     // Navigate to joined event

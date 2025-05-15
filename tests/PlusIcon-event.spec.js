@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { LoginPage } from '../page-objects/LoginPage.js';
 import { EventPage } from '../page-objects/EventPage.js';
+import { BasePage } from '../page-objects/BasePage.js';
 import path from 'path';
 import fs from 'fs';
 
@@ -15,19 +16,31 @@ test.describe('Event Settings & UI Verification Tests', () => {
     
     let loginPage;
     let eventPage;
+    let basePage;
 
     test.beforeEach(async ({ page }) => {
         // Initialize page objects
         loginPage = new LoginPage(page);
         eventPage = new EventPage(page);
+        basePage = new BasePage(page);
     });
     test('TC-APP-VIEW-001-008: Verify Plus Features in View Detail', async ({ page, context }) => {
+        // Đợi event settings hoàn thành trước khi thực hiện test này
+        console.log('🔍 Kiểm tra xem test cấu hình event settings đã hoàn thành chưa...');
+        const settingsCompleted = await basePage.waitForEventSettingsCompletion();
+        
+        if (!settingsCompleted) {
+            console.warn('⚠️ Test cấu hình event settings chưa hoàn thành, có thể ảnh hưởng đến kết quả test này');
+        } else {
+            console.log('✅ Test cấu hình event settings đã hoàn thành, tiếp tục test');
+        }
+        
         console.log('Starting test: TC-APP-VIEW-001-008');
         
-        // Navigate to app and login
+        // Navigate to app and login with retry mechanism
         console.log('Navigating to app and logging in...');
         await page.goto('https://app.livesharenow.com/');
-        const success = await loginPage.completeGoogleAuth(context);
+        const success = await loginPage.authenticateWithRetry(context);
         expect(success, 'Google authentication should be successful').toBeTruthy();
         
         // Navigate to events and select first event
