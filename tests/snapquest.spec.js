@@ -32,7 +32,7 @@ test.describe('SnapQuest Feature Tests', () => {
     // Navigate to app and login
     console.log('Navigating to app and logging in...');
     await page.goto('https://app.livesharenow.com/');
-    const success = await loginPage.completeGoogleAuth(context);
+    const success = await loginPage.authenticateWithRetry(context);
     expect(success, 'Google authentication should be successful').toBeTruthy();
     
     // Navigate to Joined Events tab
@@ -329,7 +329,7 @@ test.describe('SnapQuest Feature Tests', () => {
     await page.goto('https://app.livesharenow.com/');
     
     // Enhanced login handling with retries
-    let success = await loginPage.completeGoogleAuth(context);
+    let success = await loginPage.authenticateWithRetry(context);
     
     // If first attempt fails, retry once with a page reload
     if (!success) {
@@ -347,7 +347,7 @@ test.describe('SnapQuest Feature Tests', () => {
       } else {
         // Try login again
         console.log('Trying login again after reload');
-        success = await loginPage.completeGoogleAuth(context);
+        success = await loginPage.authenticateWithRetry(context);
       }
     }
     
@@ -459,7 +459,7 @@ test.describe('SnapQuest Feature Tests', () => {
     // Navigate to app and login
     console.log('Navigating to app and logging in...');
     await page.goto('https://app.livesharenow.com/');
-    const success = await loginPage.completeGoogleAuth(context);
+    const success = await loginPage.authenticateWithRetry(context);
     expect(success, 'Google authentication should be successful').toBeTruthy();
     
     // Navigate to Joined Events tab
@@ -564,7 +564,7 @@ test.describe('SnapQuest Feature Tests', () => {
     await page.goto('https://app.livesharenow.com/');
     
     // Enhanced login handling with retries
-    let success = await loginPage.completeGoogleAuth(context);
+    let success = await loginPage.authenticateWithRetry(context);
     
     // If first attempt fails, retry once with a page reload
     if (!success) {
@@ -582,7 +582,7 @@ test.describe('SnapQuest Feature Tests', () => {
       } else {
         // Try login again
         console.log('Trying login again after reload');
-        success = await loginPage.completeGoogleAuth(context);
+        success = await loginPage.authenticateWithRetry(context);
       }
     }
     
@@ -769,7 +769,7 @@ test.describe('SnapQuest Feature Tests', () => {
     // Navigate to app and login
     console.log('Navigating to app and logging in...');
     await page.goto('https://app.livesharenow.com/');
-    const success = await loginPage.completeGoogleAuth(context);
+    const success = await loginPage.authenticateWithRetry(context);
     expect(success, 'Google authentication should be successful').toBeTruthy();
     
     // Navigate to Joined Events tab

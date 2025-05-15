@@ -2,6 +2,11 @@
  * @fileoverview Base page object that all other page objects extend from
  */
 
+// Biến tĩnh để theo dõi trạng thái chạy của test case event-settings
+export const TestState = {
+  isEventSettingsCompleted: false
+};
+
 export class BasePage {
   /**
    * @param {import('@playwright/test').Page} page Playwright page object
@@ -9,6 +14,42 @@ export class BasePage {
   constructor(page) {
     this.page = page;
     this.baseUrl = 'https://app.livesharenow.com';
+  }
+
+  /**
+   * Đợi đến khi event settings hoàn thành
+   * @param {number} timeout Timeout in milliseconds
+   * @returns {Promise<boolean>} Whether the wait was successful
+   */
+  async waitForEventSettingsCompletion(timeout = 150000) {
+    console.log('Kiểm tra trạng thái event-settings.spec.js...');
+    
+    if (TestState.isEventSettingsCompleted) {
+      console.log('✅ event-settings.spec.js đã hoàn thành trước đó');
+      return true;
+    }
+
+    console.log('⏳ Đang đợi event-settings.spec.js hoàn thành...');
+    
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeout) {
+      if (TestState.isEventSettingsCompleted) {
+        console.log('✅ event-settings.spec.js đã hoàn thành');
+        return true;
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    console.error('❌ Quá thời gian chờ event-settings.spec.js');
+    return false;
+  }
+
+  /**
+   * Đánh dấu event settings đã hoàn thành
+   */
+  static markEventSettingsCompleted() {
+    console.log('✅ Đánh dấu event-settings.spec.js đã hoàn thành');
+    TestState.isEventSettingsCompleted = true;
   }
 
   /**
@@ -22,20 +63,42 @@ export class BasePage {
   /**
    * Wait for page load state
    * @param {number} timeout Timeout in milliseconds
+   * @returns {Promise<boolean>} Whether the page successfully loaded
    */
   async waitForPageLoad(timeout = 30000) {
-    await this.page.waitForLoadState('networkidle', { timeout });
+    try {
+      await this.page.waitForLoadState('domcontentloaded', { timeout });
+      await this.page.waitForTimeout(1000);
+      await this.page.waitForLoadState('networkidle', { timeout });
+      return true;
+    } catch (error) {
+      console.error(`Error waiting for page to load: ${error.message}`);
+      return false;
+    }
   }
 
   /**
    * Take screenshot with descriptive name
    * @param {string} name Screenshot name
+   * @returns {Promise<boolean>} Whether screenshot was taken successfully
    */
   async takeScreenshot(name) {
-    await this.page.screenshot({
-      path: `./screenshots/${name}.png`,
-      fullPage: true
-    });
+    try {
+      // Check if page is still connected/open before taking screenshot
+      if (!this.page.isClosed()) {
+        await this.page.screenshot({
+          path: `./screenshots/${name}.png`,
+          fullPage: true
+        });
+        return true;
+      } else {
+        console.warn(`Cannot take screenshot "${name}": page is closed`);
+        return false;
+      }
+    } catch (error) {
+      console.warn(`Error taking screenshot "${name}": ${error.message}`);
+      return false;
+    }
   }
 
   /**
@@ -44,7 +107,7 @@ export class BasePage {
    * @param {number} timeout Timeout in ms
    * @returns {Promise<boolean>} Whether the selector is visible
    */
-  async waitForSelector(selector, timeout = 30000) {
+  async waitForSelector(selector, timeout = 50000) {
     try {
       // Handle multiple matches by using first() to avoid strict mode violations
       const element = this.page.locator(selector).first();

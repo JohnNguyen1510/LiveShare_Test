@@ -22,9 +22,9 @@ async function globalSetup() {
     // Create login page instance
     const loginPage = new LoginPage(page);
 
-    // Navigate to app and complete auth
+    // Navigate to app and complete auth with retry mechanism
     await page.goto('https://app.livesharenow.com');
-    const success = await loginPage.completeGoogleAuth(context);
+    const success = await loginPage.authenticateWithRetry(context);
 
     if (!success) {
       throw new Error('Authentication failed during global setup');

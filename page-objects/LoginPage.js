@@ -32,8 +32,170 @@ export class LoginPage extends BasePage {
       accountSelectionHeader: 'h1:has-text("Chọn tài khoản"), h1:has-text("Choose an account")',
       accountItems: 'li[class*="aZvCDf"] div[role="link"]',
       accountEmail: 'div[class*="yAlK0b"]',
-      useAnotherAccount: 'div:has-text("Sử dụng một tài khoản khác"), div:has-text("Use another account")'
+      useAnotherAccount: 'div:has-text("Sử dụng một tài khoản khác"), div:has-text("Use another account")',
+      // Dashboard indicators
+      dashboardIndicators: '.flex.pt-8, div.event-card, div.mat-card, [data-testid="dashboard"], .event-card-event'
     };
+  }
+
+  /**
+   * Robust authentication with retries - use this method in test files instead of completeGoogleAuth
+   * @param {import('@playwright/test').BrowserContext} context Browser context
+   * @param {string} [targetEmail] Optional email to select from account list
+   * @param {number} [maxRetries=3] Maximum number of retry attempts
+   * @returns {Promise<boolean>} Success status
+   */
+  async authenticateWithRetry(context, targetEmail = '', maxRetries = 3) {
+    console.log(`🔐 Starting authentication with ${maxRetries} retry attempts`);
+    
+    // Check if already logged in before attempting login
+    const isAlreadyLoggedIn = await this.checkIfAlreadyLoggedIn();
+    if (isAlreadyLoggedIn) {
+      console.log('✅ Already logged in - authentication successful');
+      return true;
+    }
+    
+    let success = false;
+    let attempt = 0;
+    let lastError = null;
+    
+    while (attempt < maxRetries && !success) {
+      attempt++;
+      console.log(`🔄 Authentication attempt ${attempt}/${maxRetries}`);
+      
+      try {
+        // Try standard authentication
+        success = await this.completeGoogleAuth(context, targetEmail);
+        
+        if (success) {
+          console.log(`✅ Authentication successful on attempt ${attempt}`);
+          break;
+        } else {
+          console.log(`❌ Authentication failed on attempt ${attempt} without throwing an error`);
+          
+          // Check if we're already logged in despite the auth flow indicating failure
+          // This can happen if the auth popup closed unexpectedly but the user is logged in
+          success = await this.checkIfAlreadyLoggedIn();
+          if (success) {
+            console.log('✅ User appears to be logged in despite auth flow failure');
+            break;
+          }
+          
+          // Reset the page state on failure
+          await this.resetPageState();
+        }
+      } catch (error) {
+        lastError = error;
+        console.log(`❌ Authentication error on attempt ${attempt}: ${error.message}`);
+        await this.takeScreenshot(`auth-failure-attempt-${attempt}`);
+        
+        // Check if we're already logged in despite the error
+        success = await this.checkIfAlreadyLoggedIn();
+        if (success) {
+          console.log('✅ User appears to be logged in despite auth error');
+          break;
+        }
+        
+        // Reset the page state on error
+        await this.resetPageState();
+      }
+      
+      // Wait before retry
+      if (!success && attempt < maxRetries) {
+        const delayMs = 3000 * attempt; // Increasing backoff delay
+        console.log(`⏳ Waiting ${delayMs}ms before retry attempt ${attempt + 1}`);
+        await this.page.waitForTimeout(delayMs);
+      }
+    }
+    
+    if (!success && lastError) {
+      console.error(`❌ All ${maxRetries} authentication attempts failed. Last error: ${lastError.message}`);
+    } else if (!success) {
+      console.error(`❌ All ${maxRetries} authentication attempts failed without errors.`);
+    }
+    
+    return success;
+  }
+  
+  /**
+   * Check if already logged in by looking for dashboard content
+   * @returns {Promise<boolean>}
+   */
+  async checkIfAlreadyLoggedIn() {
+    console.log('🔍 Checking if already logged in...');
+    
+    try {
+      // Try multiple indicators of logged-in state
+      const dashboardElement = this.page.locator(this.selectors.dashboardIndicators).first();
+      const isDashboardVisible = await dashboardElement.isVisible({ timeout: 3000 }).catch(() => false);
+      
+      if (isDashboardVisible) {
+        console.log('✅ Dashboard content visible - user is logged in');
+        await this.takeScreenshot('already-logged-in');
+        return true;
+      }
+      
+      // Check for sign-in button absence as another indicator
+      const signInButton = this.page.locator(this.selectors.signInButton);
+      const isSignInButtonVisible = await signInButton.isVisible({ timeout: 1000 }).catch(() => false);
+      
+      if (!isSignInButtonVisible) {
+        // If sign-in button is not visible, check for other logged-in indicators
+        const profileIndicators = [
+          'div.mat-menu-trigger.avatar',
+          'div.profile-image',
+          'img.profile-image',
+          '.profile div.avatar',
+          'div.navbar-end .avatar'
+        ];
+        
+        for (const selector of profileIndicators) {
+          const isProfileVisible = await this.page.locator(selector).first().isVisible({ timeout: 1000 }).catch(() => false);
+          if (isProfileVisible) {
+            console.log(`✅ Profile indicator found (${selector}) - user is logged in`);
+            await this.takeScreenshot('profile-indicator-visible');
+            return true;
+          }
+        }
+      }
+      
+      console.log('❌ No logged-in indicators found');
+      return false;
+    } catch (error) {
+      console.log(`Error checking logged-in state: ${error.message}`);
+      return false;
+    }
+  }
+  
+  /**
+   * Reset page state for retry
+   * @returns {Promise<void>}
+   */
+  async resetPageState() {
+    try {
+      console.log('🔄 Resetting page state for retry...');
+      
+      // Try to navigate to the homepage to reset state
+      await this.page.goto('https://app.livesharenow.com/');
+      await this.page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+      await this.page.waitForTimeout(1000);
+      
+      // Clear cookies and local storage for fresh login
+      // Only clear cookies if we're going to retry login, otherwise it might log out a successful session
+      await this.page.evaluate(() => {
+        try {
+          localStorage.removeItem('hasCompletedTour');
+          localStorage.removeItem('hasSeenWelcome');
+          sessionStorage.clear();
+        } catch (e) {
+          // Ignore errors from localStorage access
+        }
+      }).catch(() => {});
+      
+      await this.takeScreenshot('page-state-reset');
+    } catch (error) {
+      console.log(`Error resetting page state: ${error.message}`);
+    }
   }
 
   /**
@@ -176,40 +338,47 @@ export class LoginPage extends BasePage {
         // Standard email/password flow if account selection not detected
         console.log('Standard login flow, looking for email input...');
 
-      // Wait for and fill email
-      await popup.waitForSelector(this.selectors.emailInput, { state: 'visible', timeout: 10000 });
-      await popup.fill(this.selectors.emailInput, process.env.GOOGLE_EMAIL || '');
-      await popup.screenshot({ path: './screenshots/email-filled.png' });
-      console.log('Email filled, clicking next...');
+        // Wait for and fill email
+        try {
+          await popup.waitForSelector(this.selectors.emailInput, { state: 'visible', timeout: 10000 });
+          await popup.fill(this.selectors.emailInput, process.env.GOOGLE_EMAIL || '');
+          await popup.screenshot({ path: './screenshots/email-filled.png' });
+          console.log('Email filled, clicking next...');
 
-      // Click next after email
-      const nextButton = popup.locator(this.selectors.nextButton).first();
-      await nextButton.waitFor({ state: 'visible' });
-      await nextButton.click();
-      await popup.waitForTimeout(2000);
+          // Click next after email
+          const nextButton = popup.locator(this.selectors.nextButton).first();
+          await nextButton.waitFor({ state: 'visible' });
+          await nextButton.click();
+          await popup.waitForTimeout(2000);
 
-      // Wait for and fill password
-      await popup.waitForSelector(this.selectors.passwordInput, { state: 'visible', timeout: 10000 });
-      await popup.fill(this.selectors.passwordInput, process.env.GOOGLE_PASSWORD || '');
-      await popup.screenshot({ path: './screenshots/password-filled.png' });
-      console.log('Password filled, clicking next...');
+          // Wait for and fill password
+          await popup.waitForSelector(this.selectors.passwordInput, { state: 'visible', timeout: 10000 });
+          await popup.fill(this.selectors.passwordInput, process.env.GOOGLE_PASSWORD || '');
+          await popup.screenshot({ path: './screenshots/password-filled.png' });
+          console.log('Password filled, clicking next...');
 
-      // Click next after password
-      const submitButton = popup.locator(this.selectors.nextButton).first();
-      await submitButton.waitFor({ state: 'visible' });
-      await submitButton.click();
+          // Click next after password
+          const submitButton = popup.locator(this.selectors.nextButton).first();
+          await submitButton.waitFor({ state: 'visible' });
+          await submitButton.click();
 
-      // Wait for popup to close or redirect
-      await popup.waitForEvent('close', { timeout: 30000 }).catch(() => {
-        console.log('Popup did not close as expected, continuing...');
-      });
+          // Wait for popup to close or redirect
+          await popup.waitForEvent('close', { timeout: 30000 }).catch(() => {
+            console.log('Popup did not close as expected, continuing...');
+          });
 
-      // Wait for main page to stabilize
-      await this.page.waitForLoadState('networkidle', { timeout: 30000 });
-      await this.takeScreenshot('after-google-auth');
-        console.log('Authentication completed via standard flow');
+          // Wait for main page to stabilize
+          await this.page.waitForLoadState('networkidle', { timeout: 30000 });
+          await this.takeScreenshot('after-google-auth');
+          console.log('Authentication completed via standard flow');
 
-      return true;
+          return true;
+        } catch (error) {
+          console.log(`Error in standard login flow: ${error.message}`);
+          // Try to close popup if it's still open
+          await popup.close().catch(() => {});
+          throw error;
+        }
       }
       
       return false;
@@ -223,12 +392,14 @@ export class LoginPage extends BasePage {
         const popup = pages[pages.length - 1];
         if (popup !== this.page) {
           await popup.screenshot({ path: './screenshots/popup-error-state.png' });
+          // Try to close popup if it's still open
+          await popup.close().catch(() => {});
         }
       } catch (e) {
         console.error('Could not capture popup state:', e);
       }
       
-      return false;
+      throw error; // Re-throw so the retry mechanism knows there was an error
     }
   }
-} 
+}

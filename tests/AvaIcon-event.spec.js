@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { LoginPage } from '../page-objects/LoginPage.js';
 import { EventPage } from '../page-objects/EventPage.js';
+import { BasePage } from '../page-objects/BasePage.js';
 import path from 'path';
 import fs from 'fs';
 
@@ -15,83 +16,32 @@ test.describe('Event Settings & UI Verification Tests', () => {
     
     let loginPage;
     let eventPage;
+    let basePage;
 
     test.beforeEach(async ({ page }) => {
         // Initialize page objects
         loginPage = new LoginPage(page);
         eventPage = new EventPage(page);
+        basePage = new BasePage(page);
     });
     test('TC-APP-AI-001-005: Verify Avatar Icon in Event Page', async ({ page, context }) => {
+        // Đợi event settings hoàn thành trước khi thực hiện test này
+        console.log('🔍 Kiểm tra xem test cấu hình event settings đã hoàn thành chưa...');
+        const settingsCompleted = await basePage.waitForEventSettingsCompletion();
+        
+        if (!settingsCompleted) {
+            console.warn('⚠️ Test cấu hình event settings chưa hoàn thành, có thể ảnh hưởng đến kết quả test này');
+        } else {
+            console.log('✅ Test cấu hình event settings đã hoàn thành, tiếp tục test');
+        }
+        
         console.log('Starting test: TC-APP-AI-001-005');
         
-        // Navigate to app and login
+        // Navigate to app and login with retry mechanism
         console.log('Navigating to app and logging in...');
         await page.goto('https://app.livesharenow.com/');
-        
-        // Enhanced login handling with retries
-        let success = await loginPage.completeGoogleAuth(context);
-        
-        // If first attempt fails, retry once with a page reload
-        if (!success) {
-          console.log('First login attempt failed, retrying...');
-          await page.reload();
-          await page.waitForLoadState('networkidle');
-          
-          // Check if already logged in after reload
-          const dashboardVisible = await page.locator('.flex.pt-8, div.event-card, div.mat-card, [data-testid="dashboard"]')
-            .first().isVisible().catch(() => false);
-          
-          if (dashboardVisible) {
-            console.log('Already logged in after page reload');
-            success = true;
-          } else {
-            // Try login again
-            console.log('Trying login again after reload');
-            success = await loginPage.completeGoogleAuth(context);
-          }
-        }
-        
-        // If login still fails, try a direct navigation approach
-        if (!success) {
-          console.log('Login still failing, trying direct navigation...');
-          await page.goto('https://app.livesharenow.com/dashboard');
-          await page.waitForTimeout(3000);
-          
-          const dashboardVisible = await page.locator('.flex.pt-8, div.event-card, div.mat-card, [data-testid="dashboard"]')
-            .first().isVisible().catch(() => false);
-          
-          if (dashboardVisible) {
-            console.log('Successfully accessed dashboard through direct navigation');
-            success = true;
-          }
-        }
-        
-        // Try accessing the avatar menu directly as another verification of login status
-        if (!success) {
-          console.log('Checking if avatar menu elements are available...');
-          
-          // Look for avatar indicators to confirm login
-          const avatarIndicators = [
-            'div.mat-menu-trigger.avatar',
-            'div.profile-image',
-            'img.profile-image',
-            '.profile div.avatar',
-            'div.navbar-end .avatar'
-          ];
-          
-          for (const selector of avatarIndicators) {
-            const isAvatarVisible = await page.locator(selector).first().isVisible().catch(() => false);
-            if (isAvatarVisible) {
-              console.log(`Found avatar element with selector: ${selector}`);
-              success = true;
-              break;
-            }
-          }
-        }
-        
-        // Take screenshot of current state for debugging
-        await page.screenshot({ path: path.join(screenshotsDir, 'login-result-avatar-test.png') });
-        expect(success, 'Authentication should be successful').toBeTruthy();
+        const success = await loginPage.authenticateWithRetry(context);
+        expect(success, 'Google authentication should be successful').toBeTruthy();
         
         // Wait for page to fully load with extra time
         await page.waitForTimeout(3000);
