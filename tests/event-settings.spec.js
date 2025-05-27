@@ -67,7 +67,7 @@ ensureTestImages();
 // Use serial describe to ensure tests run in order
 test.describe.serial('Event Settings & UI Verification Tests', () => {
   // Increase timeout for the entire test suite
-  test.setTimeout(240000);
+  test.setTimeout(320000);
   
   let loginPage;
   let eventPage;

@@ -2,7 +2,7 @@
 
 Automated end-to-end testing framework for LiveShare built with Playwright and Page Object Model.
 
-## 📋 Overview
+##  Overview
 
 - UI/UX testing for event creation and management
 - Authentication workflows and verification
@@ -10,7 +10,7 @@ Automated end-to-end testing framework for LiveShare built with Playwright and P
 - Cross-browser compatibility
 - Visual regression testing
 
-## 🔧 Setup
+##  Setup
 
 ```bash
 # Install dependencies
@@ -25,7 +25,7 @@ GOOGLE_PASSWORD=your-test-password
 BASE_URL=https://app.livesharenow.com
 ```
 
-## 🧪 Running Tests
+##  Running Tests
 
 ```bash
 # Run all tests (headless mode)
@@ -41,7 +41,7 @@ npm test -- tests/event-settings.spec.js
 npm test -- --project=chromium
 ```
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 liveshare/
@@ -52,7 +52,7 @@ liveshare/
 ├── playwright.config.js
 ```
 
-## 🔍 Debugging
+##  Debugging
 
 1. **UI Mode**: Interactive test debugger
    ```bash
@@ -68,7 +68,7 @@ liveshare/
 
 4. **HTML Reports**: Open `playwright-report/index.html`
 
-## 🚑 Troubleshooting
+##  Troubleshooting
 
 1. **Authentication Issues**
    - Check `.env` credentials
@@ -82,7 +82,7 @@ liveshare/
    - Add explicit waits for dynamic elements
    - Ensure test data prerequisites exist
 
-## 📝 Contribution Guidelines
+##  Contribution Guidelines
 
 1. Follow Page Object Model pattern
 2. Include appropriate error handling
