@@ -32,7 +32,7 @@ const testImageFiles = [
 /**
  * Check if all test images exist, if not create them
  */
-function ensureTestImages() {
+function ensureTestImages() { 
   const allImagesExist = testImageFiles.every(img => 
     fs.existsSync(path.join(uploadImagesDir, img.name))
   );
@@ -94,7 +94,7 @@ test.describe.serial('Event Settings & UI Verification Tests', () => {
     // Click the Create Event button
     console.log('Clicking Create Event button...');
     const createEventButton = page.locator('button.Create-Event, button.btn-circle:has(i.material-icons:text("add"))');
-    await createEventButton.waitFor({ state: 'visible', timeout: 10000 });
+    await createEventButton.waitFor({ state: 'visible', timeout: 2000 });
     await createEventButton.click();
     await page.waitForTimeout(2000);
     await page.screenshot({ path: path.join(screenshotsDir, 'create-event-clicked.png') });
@@ -441,408 +441,153 @@ test.describe.serial('Event Settings & UI Verification Tests', () => {
     const success = await loginPage.authenticateWithRetry(context, '', 3);
     expect(success, 'Authentication should be successful').toBeTruthy();
 
-    // Navigate to events and select first event
-    console.log('Navigating to events page...');
-    await eventPage.navigateToEvents();
-    await page.screenshot({ path: path.join(screenshotsDir, 'events-page.png') });
-    
     // TC-APP-EVENT-001: Verify event page loads correctly with key UI elements
     console.log('TC-APP-EVENT-001: Verifying event page loads correctly');
-    const eventCards = page.locator('.event-card-event, .flex.pt-8, div.event-card, div.mat-card');
+    
+    // Verify page title
+    const pageTitle = page.locator('.heading.font-bold');
+    await expect(pageTitle).toHaveText('EVENTS');
+    
+    // Verify event cards are present
+    const eventCards = page.locator('.event-card-event');
     const eventCount = await eventCards.count();
     expect(eventCount).toBeGreaterThan(0);
     console.log(`Found ${eventCount} event cards on page`);
     
-    console.log('Selecting first event...');
-    await eventPage.clickFirstEvent();
+    // Verify Create Event button
+    const createEventButton = page.locator('button.Create-Event');
+    await expect(createEventButton).toBeVisible();
     
-    // Wait for event details page to load
-    await page.waitForTimeout(3000);
-    await page.screenshot({ path: path.join(screenshotsDir, 'event-details-loaded.png') });
+    // Verify menu button
+    const menuButton = page.locator('div.mat-menu-trigger.btn.btn-circle.btn-ghost');
+    await expect(menuButton).toBeVisible();
     
-    // Improved selector approach for event name
-    const eventNameSelectors = [
-      '.event-name-event',
-      '.event-name',
-      'span.text-lg.leading-5',
-      'span.event-name-event',
-      'div.bottom-section-event span',
-      'span.text-lg'
-    ];
+    // TC-APP-EVENT-002: Verify Gift an Event functionality
+    console.log('TC-APP-EVENT-002: Verifying Gift an Event functionality');
+    // Click menu button
+    await menuButton.click();
+    await page.waitForTimeout(1000);
+
+    // Verify Gift an Event option
+    const giftEventOption = page.locator('button:has-text("Gift an Event")');
+    await expect(giftEventOption).toBeVisible();
+    await giftEventOption.hover(); // Hover to ensure submenu appears
+    await giftEventOption.click();
+    await page.waitForTimeout(500);
+
+    // Verify submenu buttons
+    const createGiftEventBtn = page.locator('button:has-text("Create Gift Event")');
+    const viewGiftEventsBtn = page.locator('button:has-text("View Gift Events")');
+    await expect(createGiftEventBtn).toBeVisible();
+    await expect(viewGiftEventsBtn).toBeVisible();
+    console.log('Gift an Event submenu is visible');
+
+    // Click Create Gift Event và đóng dialog
+    await createGiftEventBtn.click();
+    await page.waitForTimeout(1000);
+    // Tìm và click nút close trên dialog Gifting Options
+    const closeGiftPurchaseBtn = page.locator('app-gift-event-purchase .btn.btn-circle.btn-ghost mat-icon:has-text("close")');
+    await expect(closeGiftPurchaseBtn).toBeVisible();
+    await closeGiftPurchaseBtn.click();
+    console.log('Closed Gifting Options dialog');
+    await page.waitForTimeout(500);
+
+    // Mở lại menu và submenu để test View Gift Events
+    await menuButton.click();
+    await page.waitForTimeout(500);
+    await giftEventOption.hover();
+    await giftEventOption.click();
+    await page.waitForTimeout(500);
+
+    // Click View Gift Events và đóng dialog
+    await viewGiftEventsBtn.click();
+    await page.waitForTimeout(1000);
+    // Tìm và click nút close trên dialog Gift Events
+    const closeGiftListBtn = page.locator('app-gift-event-list mat-icon[mat-dialog-close][role="img"]:has-text("close")');
+    await expect(closeGiftListBtn).toBeVisible();
+    await closeGiftListBtn.click();
+    console.log('Closed Gift Events dialog');
+    await page.waitForTimeout(500);
     
-    let eventNameFound = false;
-    for (const selector of eventNameSelectors) {
-      const elements = await page.locator(selector).all();
-      if (elements.length > 0) {
-        console.log(`Found ${elements.length} elements with selector: ${selector}`);
-        eventNameFound = true;
-        break;
-      }
-    }
+    // TC-APP-EVENT-003: Verify Share Feedback functionality
+    console.log('TC-APP-EVENT-003: Verifying Share Feedback functionality');
+    // Click menu button lại nếu cần
+    await menuButton.click();
+    await page.waitForTimeout(500);
+    // Click Share Feedback
+    const shareFeedbackOption = page.locator('button:has-text("Share Feedback")');
+    await expect(shareFeedbackOption).toBeVisible();
+    await shareFeedbackOption.click();
+    await page.waitForTimeout(1000);
+    // Điền dữ liệu mẫu và submit
+    const feedbackTextarea = page.locator('app-feedback-dialog textarea[formcontrolname="comment"]');
+    await expect(feedbackTextarea).toBeVisible();
+    await feedbackTextarea.fill('This is a sample feedback for automation test.');
+    const submitFeedbackBtn = page.locator('app-feedback-dialog button:has-text("Submit")');
+    await expect(submitFeedbackBtn).toBeVisible();
+    await submitFeedbackBtn.click();
+    console.log('Submitted feedback successfully');
+    await page.waitForTimeout(1000);
+    // Kiểm tra dialog cảm ơn và click Back to event
+    const backToEventBtn = page.locator('app-feedback-complete-dialog button:has-text("Back to event")');
+    await expect(backToEventBtn).toBeVisible();
+    await backToEventBtn.click();
+    console.log('Clicked Back to event after feedback');
+    await page.waitForTimeout(500);
+
+    // TC-APP-EVENT-004: Verify Pair Device functionality
+    console.log('TC-APP-EVENT-004: Verifying Pair Device functionality');
+    // Click menu button lại nếu cần
+    await menuButton.click();
+    await page.waitForTimeout(500);
+    const pairDeviceOption = page.locator('button:has-text("Pair Device")');
+    await expect(pairDeviceOption).toBeVisible();
+    await pairDeviceOption.click();
+    await page.waitForTimeout(1000);
+    // Khi dialog hiện ra, click Cancel
+    const cancelPairBtn = page.locator('app-pair-device-dialog button:has-text("Cancel")');
+    await expect(cancelPairBtn).toBeVisible();
+    await cancelPairBtn.click();
+    console.log('Canceled Pair Device dialog');
+    await page.waitForTimeout(500);
+
+    // TC-APP-EVENT-005: Verify Manage Devices functionality
+    console.log('TC-APP-EVENT-005: Verifying Manage Devices functionality');
+    // Click menu button lại nếu cần
+    await menuButton.click();
+    await page.waitForTimeout(500);
+    const manageDevicesOption = page.locator('button:has-text("Manage Devices")');
+    await expect(manageDevicesOption).toBeVisible();
+    await manageDevicesOption.click();
+    await page.waitForTimeout(1000);
+    // Khi dialog hiện ra, click close
+    const closeManageDeviceBtn = page.locator('app-manage-device-dialog button[mat-dialog-close] mat-icon:has-text("close")');
+    await expect(closeManageDeviceBtn).toBeVisible();
+    await closeManageDeviceBtn.click();
+    console.log('Closed Manage Devices dialog');
+    await page.waitForTimeout(500);
+
+    // TC-APP-EVENT-006: Verify Help functionality
+    console.log('TC-APP-EVENT-006: Verifying Help functionality');
     
-    expect(eventNameFound, 'Event name should be visible').toBeTruthy();
-    
-    // Verify core elements are visible - use .first() to avoid strict mode violations
-    const photoGrid = await page.locator('.event-image, .gallery-grid').first().isVisible();
-    expect(photoGrid, 'Photo grid/timeline should be visible').toBeTruthy();
-    
-    // TC-APP-EVENT-002: Verify "Add Photo/Video" button exists
-    console.log('TC-APP-EVENT-002: Verifying Add Photo/Video button exists');
-    const addButton = page.locator('button.menu-button, button:has(mat-icon:text("add"))').first();
-    const addButtonVisible = await addButton.isVisible();
-    expect(addButtonVisible, 'Add content button should be present').toBeTruthy();
-    await page.screenshot({ path: path.join(screenshotsDir, 'add-button-exists.png') });
-    
-    // TC-APP-EVENT-003: Verify clicking Add button opens upload interface
-    console.log('TC-APP-EVENT-003: Verifying clicking Add button opens upload interface');
-    await addButton.click();
-    const uploadInterface = await page.locator('.footer-btn-group, button:has(mat-icon:text("insert_photo")), button:has(mat-icon:text("videocam"))').first().isVisible();
-    expect(uploadInterface, 'Upload interface should appear').toBeTruthy();
-    await page.screenshot({ path: path.join(screenshotsDir, 'upload-interface.png') });
-    
-    // Add test for image upload using prepared test images
-    console.log('Testing image upload functionality with prepared test images');
-    // Find and click the Photo upload button
-    const photoUploadButton = page.locator('button:has(mat-icon:text("insert_photo")), button:has-text("Photo"), button:has(span:text("Photo"))').first();
-    if (await photoUploadButton.isVisible()) {
-      await photoUploadButton.click();
-      await page.waitForTimeout(1000);
-      
-      // Set input file with prepared test image
-      const testImagePath = path.join(uploadImagesDir, testImageFiles[0].name);
-      
-      // Make sure we have a file to upload, if not use a fallback approach
-      if (fs.existsSync(testImagePath) && fs.statSync(testImagePath).size > 0) {
-        console.log(`Using test image for upload: ${testImagePath}`);
-        
-        // Find file input element (it might be hidden)
-        const fileInput = page.locator('input[type="file"]');
-        await fileInput.setInputFiles(testImagePath);
-      } else {
-        console.log('Test image not available or empty, using fallback approach');
-        // Fallback approach when prepared images are not available
-        await page.evaluate(() => {
-          // Create a mock file upload event
-          const mockEvent = new Event('change', { bubbles: true });
-          // Find the file input element
-          const fileInput = document.querySelector('input[type="file"]');
-          if (fileInput) {
-            fileInput.dispatchEvent(mockEvent);
-          }
-        });
-      }
-      
-      await page.waitForTimeout(2000);
-      await page.screenshot({ path: path.join(screenshotsDir, 'image-upload-attempt.png') });
-      
-      // Click upload button or continue button if visible
-      const uploadButton = page.locator('button:has-text("Upload"), button:has-text("Continue"), button.upload-btn').first();
-      if (await uploadButton.isVisible().catch(() => false)) {
-        await uploadButton.click();
-        await page.waitForTimeout(3000);
-        await page.screenshot({ path: path.join(screenshotsDir, 'after-image-upload.png') });
-      }
-    }
-    
-    // TC-APP-EVENT-004: Verify and click "Gift an Event" button/icon
-    console.log('TC-APP-EVENT-004: Verifying Gift an Event functionality');
-    // First go back to the main menu
-    await page.goto('https://app.livesharenow.com/');
-    
-    // Improved selectors based on the actual HTML structure
-    const menuButtonSelectors = [
-      'div.mat-menu-trigger mat-icon.Menu-icon',
-      'div[mat-button].mat-menu-trigger mat-icon',
-      '.dropmenu1 .mat-menu-trigger mat-icon',
-      'mat-icon:text("menu")',
-      '.navbar-start button mat-icon'
-    ];
-    
-    let menuButtonFound = false;
-    for (const selector of menuButtonSelectors) {
-      const menuButton = page.locator(selector).first();
-      const isVisible = await menuButton.isVisible().catch(() => false);
-      if (isVisible) {
-        console.log(`Found menu button with selector: ${selector}`);
-        // Take screenshot before clicking menu
-        await page.screenshot({ path: path.join(screenshotsDir, 'before-menu-click.png') });
-        
-        try {
-          // Try clicking the menu button
-          await menuButton.click();
-          menuButtonFound = true;
-        } catch (error) {
-          console.log(`Error clicking with selector ${selector}: ${error.message}`);
-          // Try clicking the parent element instead
-          try {
-            const parentButton = page.locator(`${selector}/..`).first();
-            await parentButton.click();
-            menuButtonFound = true;
-          } catch (parentError) {
-            console.log(`Error clicking parent: ${parentError.message}`);
-          }
-        }
-        
-        if (menuButtonFound) {
-          // Take screenshot after successful click
-          await page.waitForTimeout(1000);
-          await page.screenshot({ path: path.join(screenshotsDir, 'after-menu-click.png') });
-          break;
-        }
-      }
-    }
-    
-    // If still not found, try using JavaScript with more specific selectors
-    if (!menuButtonFound) {
-      console.log('Trying JavaScript approach to click menu button');
-      menuButtonFound = await page.evaluate(() => {
-        // Try multiple approaches
-        // 1. Try direct class-based selector
-        let menuTrigger = document.querySelector('div.mat-menu-trigger');
-        if (menuTrigger) {
-          // Use dispatchEvent instead of direct click
-          menuTrigger.dispatchEvent(new MouseEvent('click', {
-            bubbles: true,
-            cancelable: true,
-            view: window
-          }));
-          return true;
-        }
-        
-        // 2. Try finding by mat-icon content
-        const menuIcons = Array.from(document.querySelectorAll('mat-icon'));
-        for (const icon of menuIcons) {
-          if (icon.textContent.trim() === 'menu') {
-            // Click the icon or its parent if it's in a button
-            const button = icon.closest('div.mat-menu-trigger') || icon.closest('button') || icon;
-            // Use dispatchEvent instead of click for better compatibility
-            button.dispatchEvent(new MouseEvent('click', {
-              bubbles: true,
-              cancelable: true,
-              view: window
-            }));
-            return true;
-          }
-        }
-        
-        // 3. Try dropmenu1 class
-        const dropmenu = document.querySelector('.dropmenu1 div[aria-haspopup="menu"]');
-        if (dropmenu) {
-          // Use dispatchEvent instead of direct click
-          dropmenu.dispatchEvent(new MouseEvent('click', {
-            bubbles: true,
-            cancelable: true,
-            view: window
-          }));
-          return true;
-        }
-        
-        return false;
-      });
-      
-      console.log(`JavaScript click menu button result: ${menuButtonFound}`);
-      await page.waitForTimeout(1000);
-      await page.screenshot({ path: path.join(screenshotsDir, 'js-menu-click.png') });
-    }
-    
-    // Wait for menu to appear and verify it's visible
-    console.log('Waiting for menu to appear...');
-    const menuPanel = page.locator('.mat-menu-panel, .cdk-overlay-pane').first();
-    await menuPanel.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-    const isMenuVisible = await menuPanel.isVisible().catch(() => false);
-    
-    if (!isMenuVisible) {
-      console.log('Menu panel not visible, trying to click menu button again');
-      // Try one more direct approach
-      await page.locator('div.dropmenu1 div[aria-haspopup="menu"]').first().click({force: true}).catch(() => {});
-      await page.waitForTimeout(1000);
-    }
-    
-    await page.screenshot({ path: path.join(screenshotsDir, 'menu-panel.png') });
-    
-    // Try to find Gift an Event option with improved selector
-    console.log('Looking for Gift an Event option...');
-    const giftEventOption = page.locator('button:has-text("Gift an Event"), div:has-text("Gift an Event"):not(:has(button)), .mat-menu-content button:has(mat-icon:text("redeem"))').first();
-    await giftEventOption.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-    const giftEventVisible = await giftEventOption.isVisible().catch(() => false);
-    
-    expect(giftEventVisible, 'Gift an Event option should be visible').toBeTruthy();
-    
-    // Take screenshot before clicking Gift an Event
-    await page.screenshot({ path: path.join(screenshotsDir, 'gift-event-option.png') });
-    
-    // Click the Gift an Event option
-    await giftEventOption.click().catch(async (error) => {
-      console.log(`Error clicking Gift an Event: ${error.message}`);
-      // Try JavaScript click as fallback
-      await page.evaluate(() => {
-        const giftButton = Array.from(document.querySelectorAll('button, div[role="menuitem"]'))
-          .find(el => el.textContent.includes('Gift an Event'));
-        if (giftButton) {
-          // Use dispatchEvent instead of click
-          giftButton.dispatchEvent(new MouseEvent('click', {
-            bubbles: true,
-            cancelable: true,
-            view: window
-          }));
-        }
-      });
-    });
+    // Click menu button
+    await menuButton.click();
     await page.waitForTimeout(1000);
     
-    // Verify sub-menu appears
-    console.log('Verifying Gift Event submenu appears...');
-    const giftSubMenu = page.locator('button:has-text("Create Gift Event"), button:has-text("View Gift Events")').first();
-    await giftSubMenu.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-    const isSubMenuVisible = await giftSubMenu.isVisible().catch(() => false);
+    // Verify Help option
+    const helpOption = page.locator('button:has-text("Help")');
+    await expect(helpOption).toBeVisible();
     
-    expect(isSubMenuVisible, 'Gift Event submenu should appear').toBeTruthy();
-    await page.screenshot({ path: path.join(screenshotsDir, 'gift-event-submenu.png') });
-    
-    // TC-APP-EVENT-005: Verify and click "Share Feedback"
-    console.log('TC-APP-EVENT-005: Verifying Share Feedback functionality');
-    await page.goto('https://app.livesharenow.com/');
-    
-    // Click menu button more reliably
-    await page.locator('div.mat-menu-trigger, .dropmenu1 div[aria-haspopup="menu"], mat-icon:text("menu")').first().click({timeout: 5000}).catch(async () => {
-      // Fallback to JavaScript click
-      await page.evaluate(() => {
-        const menuButton = document.querySelector('div.mat-menu-trigger') || 
-                          document.querySelector('.dropmenu1 div[aria-haspopup="menu"]');
-        if (menuButton) {
-          // Use dispatchEvent instead of click
-          menuButton.dispatchEvent(new MouseEvent('click', {
-            bubbles: true,
-            cancelable: true,
-            view: window
-          }));
-        }
-      });
-    });
-    
+    // Click Help
+    await helpOption.click();
     await page.waitForTimeout(1000);
-    await page.screenshot({ path: path.join(screenshotsDir, 'menu-opened-feedback.png') });
     
-    const shareFeedbackOption = page.locator('button:has-text("Share Feedback"), button:has(mat-icon:text("rate_review"))').first();
-    await shareFeedbackOption.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-    const feedbackVisible = await shareFeedbackOption.isVisible().catch(() => false);
+   
     
-    expect(feedbackVisible, 'Share Feedback option should be visible').toBeTruthy();
-    await page.screenshot({ path: path.join(screenshotsDir, 'share-feedback-option.png') });
+    // Take screenshots for verification
+    await page.screenshot({ path: path.join(screenshotsDir, 'event-page-ui.png') });
     
-    // Click Share Feedback for more thorough testing
-    await shareFeedbackOption.click().catch(async (error) => {
-      console.log(`Error clicking Share Feedback: ${error.message}`);
-      // Try JavaScript click as fallback
-      await page.evaluate(() => {
-        const feedbackButton = Array.from(document.querySelectorAll('button'))
-          .find(el => el.textContent.includes('Share Feedback'));
-        if (feedbackButton) {
-          // Use dispatchEvent instead of click
-          feedbackButton.dispatchEvent(new MouseEvent('click', {
-            bubbles: true,
-            cancelable: true,
-            view: window
-          }));
-        }
-      });
-    });
-    
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: path.join(screenshotsDir, 'after-feedback-click.png') });
-    
-    // TC-APP-EVENT-006: Verify "Gift an Event" again (duplicate of TC-APP-EVENT-004, but keeping for completeness)
-    console.log('TC-APP-EVENT-006: Verifying Gift an Event again (duplicate test)');
-    // Already covered in TC-APP-EVENT-004
-    
-    // TC-APP-EVENT-007: Verify Share button
-    console.log('TC-APP-EVENT-007: Verifying Share button');
-    // Navigate back to event detail page
-    await eventPage.navigateToEvents();
-    await eventPage.clickFirstEvent();
-    await page.waitForTimeout(2000);
-    
-    const shareButton = page.locator('button:has(mat-icon:text("share")), button.btn-circle.btn-ghost:has(mat-icon:text("share"))').first();
-    const shareButtonVisible = await shareButton.isVisible().catch(() => false);
-    
-    expect(shareButtonVisible, 'Share button should be visible').toBeTruthy();
-    await page.screenshot({ path: path.join(screenshotsDir, 'share-button.png') });
-    
-    // Click Share button for more thorough testing
-    await shareButton.click().catch(async (error) => {
-      console.log(`Error clicking Share button: ${error.message}`);
-      // Try JavaScript click as fallback
-      await page.evaluate(() => {
-        const shareBtn = Array.from(document.querySelectorAll('button'))
-          .find(el => el.querySelector('mat-icon') && 
-                el.querySelector('mat-icon').textContent.includes('share'));
-        if (shareBtn) {
-          // Use dispatchEvent instead of click
-          shareBtn.dispatchEvent(new MouseEvent('click', {
-            bubbles: true,
-            cancelable: true,
-            view: window
-          }));
-        }
-      });
-    });
-    
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: path.join(screenshotsDir, 'after-share-click.png') });
-    
-    // TC-APP-EVENT-008: Verify Help button
-    console.log('TC-APP-EVENT-008: Verifying Help functionality');
-    await page.goto('https://app.livesharenow.com/');
-    
-    // Click menu button more reliably
-    await page.locator('div.mat-menu-trigger, .dropmenu1 div[aria-haspopup="menu"], mat-icon:text("menu")').first().click({timeout: 5000}).catch(async () => {
-      // Fallback to JavaScript click
-      await page.evaluate(() => {
-        const menuButton = document.querySelector('div.mat-menu-trigger') || 
-                          document.querySelector('.dropmenu1 div[aria-haspopup="menu"]');
-        if (menuButton) {
-          // Use dispatchEvent instead of click
-          menuButton.dispatchEvent(new MouseEvent('click', {
-            bubbles: true,
-            cancelable: true,
-            view: window
-          }));
-        }
-      });
-    });
-    
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: path.join(screenshotsDir, 'menu-opened-help.png') });
-    
-    const helpOption = page.locator('button:has-text("Help"), button:has(a:has-text("Help")), button:has(mat-icon:text("help_outline"))').first();
-    await helpOption.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-    const helpVisible = await helpOption.isVisible().catch(() => false);
-    
-    expect(helpVisible, 'Help option should be visible').toBeTruthy();
-    await page.screenshot({ path: path.join(screenshotsDir, 'help-option.png') });
-    
-    // Click Help for more thorough testing
-    await helpOption.click().catch(async (error) => {
-      console.log(`Error clicking Help: ${error.message}`);
-      // Try JavaScript click as fallback
-      await page.evaluate(() => {
-        // Look for the Help link or button
-        const helpBtn = Array.from(document.querySelectorAll('button, a'))
-          .find(el => el.textContent.includes('Help') || 
-                (el.querySelector('div') && el.querySelector('div').textContent.includes('Help')));
-        if (helpBtn) {
-          // Use dispatchEvent instead of click
-          helpBtn.dispatchEvent(new MouseEvent('click', {
-            bubbles: true,
-            cancelable: true,
-            view: window
-          }));
-        }
-      });
-    });
-    
-    await page.waitForTimeout(2000);
-    await page.screenshot({ path: path.join(screenshotsDir, 'after-help-click.png') });
+    console.log('TEST COMPLETED: Event Page UI Verification');
   });
 
   // Step 4: Avatar icon test runs last
