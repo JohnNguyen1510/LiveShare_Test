@@ -1,99 +1,138 @@
 // @ts-check
-import { defineConfig, devices } from '@playwright/test';
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
+const { defineConfig, devices } = require('@playwright/test');
+const path = require('path');
+const fs = require('fs');
+const config = require('./src/config/config-loader');
 
-// Read environment variables from .env file
-dotenv.config();
+// Path to the authentication state file
+const authFile = path.resolve(__dirname, 'src/auth/user-auth.json');
+console.log(`Auth file path: ${authFile}`);
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Determine if tests should run headless or with browser visible
+const headless = process.env.HEADLESS !== '0';
 
 /**
  * @see https://playwright.dev/docs/test-configuration
  */
-export default defineConfig({
-  testDir: './tests',
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 1,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: 'html',
-  
-  // Global timeout for each test
-  timeout: 60000,
-  
-  // Global test setup
-  globalSetup: './global-setup.js',
-  
-  use: {
-    // Base URL for navigation
-    baseURL: 'https://app.livesharenow.com',
-
-    // Browser configurations
-    headless: false,
-    viewport: { width: 1280, height: 720 },
-    ignoreHTTPSErrors: true,
-
-    // Artifacts
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
-    trace: 'retain-on-failure',
-
-    // Timeouts
-    navigationTimeout: 30000,
-    actionTimeout: 15000,
-    
-    // Retry options
-    retryOnNetworkError: true,
-    maxRetries: 3,
-    
-    // Test isolation
-    isolatePages: true,
-    
-    // Storage state for auth
-    storageState: 'auth/user-auth.json'
-  },
-
-  projects: [
-    {
-      name: 'chromium',
-      use: { 
-        ...devices['Desktop Chrome'],
-        launchOptions: {
-          args: [
-            '--disable-dev-shm-usage',
-            '--no-sandbox',
-            '--disable-setuid-sandbox'
-          ]
-        }
-      },
+module.exports = defineConfig({
+    testDir: './src/tests',
+    timeout: config.testConfig?.timeout || 60000,
+    expect: {
+        timeout: 10000
     },
-  
-  ],
+    
+    /* Run tests in files in parallel */
+    fullyParallel: false,
+    
+    /* Fail the build on CI if you accidentally left test.only in the source code. */
+    forbidOnly: !!process.env.CI,
+    
+    /* Retry on CI only */
+    retries: process.env.CI ? (config.testConfig?.retries || 2) : 1,
+    
+    /* Opt out of parallel tests to prevent auth/UI race conditions. */
+    workers: 1,
+    
+    /* Reporter to use. See https://playwright.dev/docs/test-reporters */
+    reporter: [
+        ['list'],
+        ['html', { 
+            open: process.env.CI ? 'never' : 'on-failure',
+            outputFolder: 'playwright-report'
+        }]
+    ],
+    
+    /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
+    use: {
+        // Base URL for navigation
+        baseURL: config.baseURL,
+        
+        // Browser configurations
+        headless: headless,
+        viewport: { width: 1280, height: 720 },
+        ignoreHTTPSErrors: true,
+        
+        // Artifacts
+        screenshot: config.testConfig?.screenshotOnFailure ? 'only-on-failure' : 'off',
+        video: config.testConfig?.videoOnFailure ? 'retain-on-failure' : 'off',
+        trace: 'retain-on-failure',
+        
+        // Timeouts
+        navigationTimeout: 30000,
+        actionTimeout: 15000,
+        
+        // Retry options
+        retryOnNetworkError: true,
+        maxRetries: 3,
+        
+        // Test isolation
+        isolatePages: true,
+        
+        // Storage state for auth
+        storageState: fs.existsSync(authFile) ? authFile : undefined,
+        
+        // Launch options
+        launchOptions: {
+            slowMo: 100,
+            args: [
+                '--disable-dev-shm-usage',
+                '--no-sandbox',
+                '--disable-setuid-sandbox'
+            ]
+        }
+    },
 
-  // Output directory for test artifacts
-  outputDir: 'test-results',
+    /* Configure projects for major browsers */
+    projects: [
+        {
+            name: 'chromium',
+            use: { 
+                ...devices['Desktop Chrome'],
+                // Use stored auth state explicitly
+                storageState: authFile,
+            },
+        },
+        {
+            name: 'firefox',
+            use: { 
+                ...devices['Desktop Firefox'],
+                storageState: fs.existsSync(authFile) ? authFile : undefined,
+            },
+        },
+        {
+            name: 'webkit',
+            use: { 
+                ...devices['Desktop Safari'],
+                storageState: fs.existsSync(authFile) ? authFile : undefined,
+            },
+        },
+        {
+            name: 'api-tests',
+            testDir: './src/tests/api',
+            use: {
+                // API tests don't need a browser
+                baseURL: config.apiBaseURL,
+                extraHTTPHeaders: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+            },
+        },
+    ],
 
-  // Web server configuration (if needed)
-  // webServer: {
-  //   command: 'npm run start',
-  //   url: 'http://localhost:3000',
-  //   reuseExistingServer: !process.env.CI,
-  //   timeout: 120 * 1000,
-  // },
+    /* Output directory for test artifacts */
+    outputDir: 'test-results',
 
-  // Test file pattern
-  testMatch: '**/*.spec.js',
+    /* Global setup */
+    globalSetup: './global-setup.js',
 
-  // Directory for storing global test data
-  globalSetupDir: path.join(__dirname, 'global-setup'),
+    /* Test file pattern */
+    testMatch: '**/*.spec.js',
 
-  // Custom reporter options
-  reporterOptions: {
-    html: {
-      open: process.env.CI ? 'never' : 'on-failure'
+    /* Custom reporter options */
+    reporterOptions: {
+        html: {
+            open: process.env.CI ? 'never' : 'on-failure'
+        }
     }
-  }
-}); 
+});

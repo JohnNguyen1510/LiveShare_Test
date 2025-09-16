@@ -1,0 +1,31 @@
+{
+  "events": [
+    {
+      "name": "Sample Event 1",
+      "description": "This is a sample event for testing",
+      "tags": [
+        "sample",
+        "test"
+      ]
+    },
+    {
+      "name": "Sample Event 2",
+      "description": "Another sample event for testing",
+      "tags": [
+        "sample",
+        "test",
+        "demo"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "name": "Test User 1",
+      "email": "testuser1@example.com"
+    },
+    {
+      "name": "Test User 2",
+      "email": "testuser2@example.com"
+    }
+  ]
+}

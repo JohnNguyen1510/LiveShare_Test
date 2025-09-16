@@ -1,21 +1,47 @@
 {
   "name": "liveshare-tests",
   "version": "1.0.0",
-  "description": "End-to-end tests for LiveShare using Playwright",
-  "type": "module",
+  "description": "Professional end-to-end testing framework for LiveShare using Playwright",
+  "type": "commonjs",
   "scripts": {
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",
     "test:headed": "playwright test --headed",
+    "test:ui-only": "playwright test src/tests/ui",
+    "test:api-only": "playwright test src/tests/api",
+    "test:auth": "playwright test --grep @auth",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:regression": "playwright test --grep @regression",
+    "test:dev": "MODE=dev playwright test",
+    "test:staging": "MODE=staging playwright test",
+    "test:prod": "MODE=production playwright test",
     "report": "playwright show-report",
-    "install:browsers": "playwright install"
+    "install:browsers": "playwright install",
+    "setup": "node global-setup.js",
+    "clean": "rimraf test-results playwright-report screenshots videos",
+    "lint": "eslint src/**/*.js",
+    "lint:fix": "eslint src/**/*.js --fix"
   },
   "dependencies": {
-    "@playwright/test": "^1.42.1",
-    "dotenv": "^16.5.0"
+    "@playwright/test": "^1.51.1",
+    "dotenv": "^16.5.0",
+    "short-unique-id": "^5.3.2"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "rimraf": "^5.0.5"
   },
   "engines": {
     "node": ">=16.0.0"
-  }
+  },
+  "keywords": [
+    "playwright",
+    "e2e",
+    "testing",
+    "automation",
+    "liveshare"
+  ],
+  "author": "LiveShare Team",
+  "license": "MIT"
 }
