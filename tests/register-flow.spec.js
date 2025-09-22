@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
+import Mailosaur from 'mailosaur';
+import dotenv from 'dotenv';
+dotenv.config();
 
 // Create screenshots directory if it doesn't exist
 const screenshotsDir = path.join(process.cwd(), 'screenshots');
@@ -12,12 +15,22 @@ test.describe('TC-APP-RA-001: App-Register - Verify UI for register new account 
   test.setTimeout(240000);
 
   test('Register via email with terms confirmation and optional OTP', async ({ page }) => {
+    // Check if environment variables are set
+    if (!process.env.MAILOSAUR_API_KEY || !process.env.MAILOSAUR_SERVER_ID) {
+      test.skip('Mailosaur environment variables not set');
+      return;
+    }
+
+    const mailosaurClient = new Mailosaur(process.env.MAILOSAUR_API_KEY);
+    const serverId = process.env.MAILOSAUR_SERVER_ID;
+    const emailAddress = `auto_${Date.now()}@${serverId}.mailosaur.net`;
+
+    console.log(`Using email: ${emailAddress}`);
+
     // 1) Open app
-    await page.goto('https://app.livesharenow.com/');
+    await page.goto('https://dev.livesharenow.com/');
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(1000);
-
-
 
     // 3) Click Create Account
     const createAccountLink = page.locator('text=Create Free Account').first();
@@ -49,10 +62,6 @@ test.describe('TC-APP-RA-001: App-Register - Verify UI for register new account 
     const termsDialog = page.locator('app-terms-dialog').first();
     if (await termsDialog.isVisible({ timeout: 5000 }).catch(() => false)) {
       const checkboxes = termsDialog.locator('input[type="checkbox"]');
-      const count = await checkboxes.count();
-      for (let i = 0; i < count; i++) {
-        await checkboxes.nth(i).click({ force: true });
-      }
       await page.screenshot({ path: path.join(screenshotsDir, 'terms-checked.png') });
       const continueBtn = termsDialog.locator('button:has-text("Continue"), button:has-text("OK")').first();
       if (await continueBtn.isVisible().catch(() => false)) {
@@ -63,7 +72,7 @@ test.describe('TC-APP-RA-001: App-Register - Verify UI for register new account 
 
     // 6) Fill signup form and click Create Account
     const name = `auto_user_${Date.now()}`;
-    const email = `auto_${Date.now()}@gmail.com`;
+    const email = emailAddress; // Use the same email address for Mailosaur
     const password = '123456!';
 
     // Inputs
@@ -71,6 +80,7 @@ test.describe('TC-APP-RA-001: App-Register - Verify UI for register new account 
     const emailInput = page.locator('input[placeholder="Enter Email"]').first();
     const passInput = page.locator('input[placeholder="Enter Password"]').first();
     const confirmInput = page.locator('input[placeholder="Confirm Password"]').first();
+    const createButton = page.locator('button:has-text("Create Account")').first();
 
     expect(nameInput.isVisible()).toBeTruthy();
     expect(emailInput.isVisible()).toBeTruthy();
@@ -90,13 +100,53 @@ test.describe('TC-APP-RA-001: App-Register - Verify UI for register new account 
     await page.keyboard.press('Enter');
     await confirmInput.fill(password);
     await page.waitForTimeout(1000);
-    await passInput.fill(password);
     await page.keyboard.press('Enter');
-    await page.screenshot({ path: path.join(screenshotsDir, 'signup-filled.png') });
 
-
+    await createButton.click();
+    await page.waitForTimeout(1000);
+    await page.waitForLoadState('domcontentloaded');
+    
+    // Wait for email to arrive
+    console.log('Waiting for verification email...');
+    const signUpEmail = await mailosaurClient.messages.get(serverId, {
+      sentTo: emailAddress
+    });
+    const verifyEmail = signUpEmail.html.codes[0].value;
+    console.log(`Received OTP code: ${verifyEmail}`);
+    
+    // Wait for OTP verification dialog to appear
+    await page.waitForTimeout(2000);
+    
+    // Wait for OTP input fields to be visible
+    const otpInputs = page.locator('.otp-box');
+    await otpInputs.first().waitFor({ state: 'visible', timeout: 10000 });
+    
+    // Fill each OTP input field with the corresponding digit
+    const otpCode = verifyEmail.toString();
+    console.log(`Filling OTP code: ${otpCode}`);
+    
+    for (let i = 0; i < otpCode.length && i < 6; i++) {
+      const input = otpInputs.nth(i);
+      await input.waitFor({ state: 'visible', timeout: 5000 });
+      await input.fill(otpCode[i]);
+      await page.waitForTimeout(200); // Small delay between inputs
+    }
+    
+    // Take screenshot after filling OTP
+    await page.screenshot({ path: path.join(screenshotsDir, 'otp-filled.png') });
+    
+    // Click Continue button
+    const continueButton = page.locator('button:has-text("Continue to the Event")').first();
+    await continueButton.waitFor({ state: 'visible', timeout: 10000 });
+    await continueButton.click();
+    
+    // Wait for navigation or success
+    await page.waitForTimeout(3000);
+    await page.waitForLoadState('domcontentloaded');
+    
+    // Take final screenshot
+    await page.screenshot({ path: path.join(screenshotsDir, 'registration-complete.png') });
+    
+    console.log('✅ Registration and OTP verification completed successfully');
   });
 });
-
-
-

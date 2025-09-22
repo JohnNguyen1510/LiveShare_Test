@@ -2,13 +2,17 @@ import { chromium } from '@playwright/test';
 import { LoginPage } from './page-objects/LoginPage.js';
 import fs from 'fs';
 import path from 'path';
+import {fileURLToPath} from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Global setup for tests
  */
 async function globalSetup() {
   // Create auth directory if it doesn't exist
-  const authDir = path.join(process.cwd(), 'auth');
+  const authDir = path.join(__dirname, 'auth');
   if (!fs.existsSync(authDir)) {
     fs.mkdirSync(authDir);
   }
