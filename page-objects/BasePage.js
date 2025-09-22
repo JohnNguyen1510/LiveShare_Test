@@ -265,4 +265,67 @@ export class BasePage {
   async evaluate(expression, ...args) {
     return await this.page.evaluate(expression, ...args);
   }
+
+  /**
+   * Wait for an API response that matches URL substring, status code and method
+   * @param {string} apiUrlSubstring Substring to match in the request URL
+   * @param {number} statusCode Expected HTTP status code
+   * @param {import('http').METHOD} [requestMethod] Optional HTTP method filter (e.g., 'GET','POST')
+   * @param {number} [timeout=30000] Max time to wait in ms
+   * @returns {Promise<import('@playwright/test').APIResponse>} Playwright response
+   */
+  async waitApiResponse(apiUrlSubstring, statusCode, requestMethod, timeout = 30000) {
+    const response = await this.page.waitForResponse(
+      (res) => {
+        try {
+          const urlMatch = res.url().includes(apiUrlSubstring);
+          const statusMatch = res.status() === statusCode;
+          const methodMatch = requestMethod ? res.request().method() === requestMethod : true;
+          return urlMatch && statusMatch && methodMatch;
+        } catch {
+          return false;
+        }
+      },
+      { timeout }
+    );
+    return response;
+  }
+
+  /**
+   * Perform a UI action and wait for a matching API response, then return parsed JSON.
+   * Mirrors DMS helper used across page-objects.
+   * @param {{actionPromise: Promise<any>, apiUrl: string, statusCode: number, requestMethod?: import('http').METHOD}} params
+   * @returns {Promise<any>} Parsed JSON body (if available); otherwise the raw response
+   */
+  async performActionAndWaitForResponse({ actionPromise, apiUrl, statusCode, requestMethod }) {
+    const [response] = await Promise.all([
+      this.page.waitForResponse((res) => {
+        try {
+          const ok = res.url().includes(apiUrl) && res.status() === statusCode;
+          if (!ok) return false;
+          return requestMethod ? res.request().method() === requestMethod : true;
+        } catch {
+          return false;
+        }
+      }),
+      actionPromise
+    ]);
+
+    try {
+      return await response.json();
+    } catch {
+      return response;
+    }
+  }
+
+  /**
+   * Perform an action, wait for a response and assert status code/method match.
+   * Returns parsed JSON when possible.
+   * @param {{actionPromise: Promise<any>, apiUrl: string, statusCode: number, requestMethod?: import('http').METHOD}} params
+   * @returns {Promise<any>} Parsed JSON body (if available); otherwise the raw response
+   */
+  async performActionAndVerifyResponse({ actionPromise, apiUrl, statusCode, requestMethod }) {
+    const data = await this.performActionAndWaitForResponse({ actionPromise, apiUrl, statusCode, requestMethod });
+    return data;
+  }
 } 

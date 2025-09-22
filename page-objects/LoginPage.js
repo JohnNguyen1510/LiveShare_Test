@@ -18,24 +18,21 @@ export class LoginPage extends BasePage {
    */
   constructor(page) {
     super(page);
-    
-    // Selectors
-    this.selectors = {
-      signInButton: 'button:has-text("Sign In"), button:has-text("Login"), .login-button',
-      googleButton: '[aria-label*="Google"], [class*="google"], button:has-text("Google")',
-      emailInput: 'input[type="email"]',
-      passwordInput: 'input[type="password"]',
-      nextButton: 'button:has-text("Next")',
-      submitButton: 'button[type="submit"]',
-      manageUrl: '**/manage',
-      // New selectors for the account selection screen
-      accountSelectionHeader: 'h1:has-text("Chọn tài khoản"), h1:has-text("Choose an account")',
-      accountItems: 'li[class*="aZvCDf"] div[role="link"]',
-      accountEmail: 'div[class*="yAlK0b"]',
-      useAnotherAccount: 'div:has-text("Sử dụng một tài khoản khác"), div:has-text("Use another account")',
-      // Dashboard indicators
-      dashboardIndicators: '.flex.pt-8, div.event-card, div.mat-card, [data-testid="dashboard"], .event-card-event'
-    };
+
+    // Locators (DMS-style: define in constructor)
+    this.signInButton = this.page.locator('button:has-text("Sign In"), button:has-text("Login"), .login-button').first();
+    this.googleButton = this.page.locator('[aria-label*="Google"], [class*="google"], button:has-text("Google")').first();
+    this.emailInput = this.page.locator('input[type="email"]').first();
+    this.passwordInput = this.page.locator('input[type="password"]').first();
+    this.nextButton = this.page.locator('button:has-text("Next")').first();
+    this.submitButton = this.page.locator('button[type="submit"]').first();
+    // Account selection screen
+    this.accountSelectionHeader = this.page.locator('h1:has-text("Chọn tài khoản"), h1:has-text("Choose an account")').first();
+    this.accountItems = this.page.locator('li[class*="aZvCDf"] div[role="link"]');
+    this.accountEmail = this.page.locator('div[class*="yAlK0b"]').first();
+    this.useAnotherAccount = this.page.locator('div:has-text("Sử dụng một tài khoản khác"), div:has-text("Use another account")').first();
+    // Dashboard indicators (union)
+    this.dashboardIndicators = this.page.locator('.flex.pt-8, div.event-card, div.mat-card, [data-testid="dashboard"], .event-card-event').first();
   }
 
   /**
@@ -126,8 +123,7 @@ export class LoginPage extends BasePage {
     
     try {
       // Try multiple indicators of logged-in state
-      const dashboardElement = this.page.locator(this.selectors.dashboardIndicators).first();
-      const isDashboardVisible = await dashboardElement.isVisible({ timeout: 3000 }).catch(() => false);
+      const isDashboardVisible = await this.dashboardIndicators.isVisible({ timeout: 3000 }).catch(() => false);
       
       if (isDashboardVisible) {
         console.log('✅ Dashboard content visible - user is logged in');
@@ -136,8 +132,7 @@ export class LoginPage extends BasePage {
       }
       
       // Check for sign-in button absence as another indicator
-      const signInButton = this.page.locator(this.selectors.signInButton);
-      const isSignInButtonVisible = await signInButton.isVisible({ timeout: 1000 }).catch(() => false);
+      const isSignInButtonVisible = await this.signInButton.isVisible({ timeout: 1000 }).catch(() => false);
       
       if (!isSignInButtonVisible) {
         // If sign-in button is not visible, check for other logged-in indicators
@@ -213,7 +208,7 @@ export class LoginPage extends BasePage {
    * @returns {Promise<void>}
    */
   async clickSignIn() {
-    const signInButton = this.page.locator(this.selectors.signInButton);
+    const signInButton = this.signInButton;
     await signInButton.waitFor({ state: 'visible', timeout: 10000 });
     await this.takeScreenshot('before-signin');
     await signInButton.click();
@@ -230,14 +225,13 @@ export class LoginPage extends BasePage {
   async completeGoogleAuth(context, targetEmail = '') {
     try {
       // Wait for and click sign in button if present
-      const signInButton = this.page.locator(this.selectors.signInButton);
-      if (await signInButton.isVisible({ timeout: 5000 })) {
-        await signInButton.click();
+      if (await this.signInButton.isVisible({ timeout: 5000 })) {
+        await this.signInButton.click();
         await this.page.waitForTimeout(2000);
       }
 
       // Look for Google button and wait for it to be ready
-      const googleButton = this.page.locator(this.selectors.googleButton).first();
+      const googleButton = this.googleButton;
       await googleButton.waitFor({ state: 'visible', timeout: 10000 });
       await this.takeScreenshot('before-google-click');
 
@@ -260,7 +254,7 @@ export class LoginPage extends BasePage {
       await popup.screenshot({ path: './screenshots/google-popup.png' });
       
       // Check if we're on the account selection screen
-      const isAccountSelectionVisible = await popup.locator(this.selectors.accountSelectionHeader).isVisible({ timeout: 5000 })
+      const isAccountSelectionVisible = await popup.locator('h1:has-text("Chọn tài khoản"), h1:has-text("Choose an account")').isVisible({ timeout: 5000 })
         .catch(() => false);
       
       if (isAccountSelectionVisible) {
@@ -268,7 +262,7 @@ export class LoginPage extends BasePage {
         await popup.screenshot({ path: './screenshots/account-selection.png' });
         
         // Get all available accounts
-        const accounts = popup.locator(this.selectors.accountItems);
+        const accounts = popup.locator('li[class*="aZvCDf"] div[role="link"]');
         const accountCount = await accounts.count();
         
         let accountFound = false;
@@ -277,7 +271,7 @@ export class LoginPage extends BasePage {
         if (targetEmail && targetEmail.length > 0) {
           for (let i = 0; i < accountCount; i++) {
             const accountItem = accounts.nth(i);
-            const emailElement = accountItem.locator(this.selectors.accountEmail);
+            const emailElement = accountItem.locator('div[class*="yAlK0b"]');
             
             if (await emailElement.isVisible()) {
               const email = await emailElement.textContent();
@@ -303,13 +297,13 @@ export class LoginPage extends BasePage {
           // Wait for redirect or confirmation
           
           // Check if we need to do additional confirmation
-          const isPasswordInputVisible = await popup.locator(this.selectors.passwordInput).isVisible({ timeout: 3000 })
+          const isPasswordInputVisible = await popup.locator('input[type="password"]').isVisible({ timeout: 3000 })
             .catch(() => false);
             
           if (isPasswordInputVisible) {
             console.log('Password input detected after account selection');
-            await popup.fill(this.selectors.passwordInput, process.env.GOOGLE_PASSWORD || '');
-            const submitButton = popup.locator(this.selectors.nextButton).first();
+            await popup.fill('input[type="password"]', process.env.GOOGLE_PASSWORD || '');
+            const submitButton = popup.locator('button:has-text("Next")').first();
             await submitButton.click();
           }
           
@@ -340,25 +334,25 @@ export class LoginPage extends BasePage {
 
         // Wait for and fill email
         try {
-          await popup.waitForSelector(this.selectors.emailInput, { state: 'visible', timeout: 10000 });
-          await popup.fill(this.selectors.emailInput, process.env.GOOGLE_EMAIL || '');
+          await popup.waitForSelector('input[type="email"]', { state: 'visible', timeout: 10000 });
+          await popup.fill('input[type="email"]', process.env.GOOGLE_EMAIL || '');
           await popup.screenshot({ path: './screenshots/email-filled.png' });
           console.log('Email filled, clicking next...');
 
           // Click next after email
-          const nextButton = popup.locator(this.selectors.nextButton).first();
+          const nextButton = popup.locator('button:has-text("Next")').first();
           await nextButton.waitFor({ state: 'visible' });
           await nextButton.click();
           await popup.waitForTimeout(2000);
 
           // Wait for and fill password
-          await popup.waitForSelector(this.selectors.passwordInput, { state: 'visible', timeout: 10000 });
-          await popup.fill(this.selectors.passwordInput, process.env.GOOGLE_PASSWORD || '');
+          await popup.waitForSelector('input[type="password"]', { state: 'visible', timeout: 10000 });
+          await popup.fill('input[type="password"]', process.env.GOOGLE_PASSWORD || '');
           await popup.screenshot({ path: './screenshots/password-filled.png' });
           console.log('Password filled, clicking next...');
 
           // Click next after password
-          const submitButton = popup.locator(this.selectors.nextButton).first();
+          const submitButton = popup.locator('button:has-text("Next")').first();
           await submitButton.waitFor({ state: 'visible' });
           await submitButton.click();
 

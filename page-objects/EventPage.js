@@ -8,19 +8,18 @@ import * as path from 'path';
 export class EventPage extends BasePage {
   constructor(page) {
     super(page);
-    this.selectors = {
-      settingsButton: 'button.btn.btn-circle.btn-ghost:has(mat-icon:text("settings"))',
-      eventNameInput: 'input[placeholder*="name" i]',
-      accessCodeInput: 'input.input-bordered',
-      eventManagerInput: 'input[placeholder*="email" i]',
-      toggleSwitch: '.toggle, .switch, input[type="checkbox"], .mat-slide-toggle',
-      saveButton: '.mat-dialog-actions .btn:has-text("Save")',
-      eventName: '.event-name-event, .event-name',
-      fileInput: 'input[type="file"][accept*="image"]',
-      addButton: 'label.btn:has-text("Add")',
-      doneButton: 'button:has-text("Done")',
-      urlInput: 'input[placeholder*="url" i]'
-    };
+    // Locators (DMS-style)
+    this.settingsButton = this.page.locator('button.btn.btn-circle.btn-ghost:has(mat-icon:text("settings"))').first();
+    this.eventNameInput = this.page.locator('input[placeholder*="name" i]').first();
+    this.accessCodeInput = this.page.locator('input.input-bordered').first();
+    this.eventManagerInput = this.page.locator('input[placeholder*="email" i]').first();
+    this.toggleSwitch = this.page.locator('.toggle, .switch, input[type="checkbox"], .mat-slide-toggle').first();
+    this.saveButton = this.page.locator('.mat-dialog-actions .btn:has-text("Save")').first();
+    this.eventName = this.page.locator('.event-name-event, .event-name').first();
+    this.fileInput = this.page.locator('input[type="file"][accept*="image"]').first();
+    this.addButton = this.page.locator('label.btn:has-text("Add"), label[for="popupBg"]').first();
+    this.doneButton = this.page.locator('button:has-text("Done"), div.btn:has-text("Done"), .mat-dialog-actions .btn:has-text("Done")').first();
+    this.urlInput = this.page.locator('input[placeholder*="url" i]').first();
 
     this.features = {
       eventName: 'Event Name',
@@ -114,9 +113,9 @@ export class EventPage extends BasePage {
    * Open event settings
    */
   async openSettings() {
-    await this.waitForSelector(this.selectors.settingsButton);
+    await this.settingsButton.waitFor({ state: 'visible', timeout: 50000 });
     await this.takeScreenshot('before-settings');
-    await this.safeClick(this.selectors.settingsButton);
+    await this.settingsButton.click({ force: true });
     await this.page.waitForTimeout(2000);
     await this.takeScreenshot('after-settings-click');
   }
@@ -219,7 +218,7 @@ export class EventPage extends BasePage {
       await this.takeScreenshot('event-header-photo-dialog');
 
       // Enable if toggle exists
-      const toggle = this.page.locator(this.selectors.toggleSwitch).first();
+      const toggle = this.toggleSwitch;
       if (await toggle.isVisible()) {
         const isChecked = await toggle.isChecked().catch(() => null);
         if (isChecked === false) {
@@ -257,7 +256,7 @@ export class EventPage extends BasePage {
 
       // Step 1: Find and click the "Add" button
       console.log('Looking for Add button for header photo...');
-      const addButton = this.page.locator('label.btn:has-text("Add"), label[for="popupBg"]').first();
+      const addButton = this.addButton;
       
       if (await addButton.isVisible().catch(() => false)) {
         console.log('Found Add button, clicking it');
@@ -307,7 +306,7 @@ export class EventPage extends BasePage {
       
       // Step 2: After upload, click the "Done" button
       console.log('Looking for Done button after upload...');
-      const doneButton = this.page.locator('button:has-text("Done"), div.btn:has-text("Done"), .mat-dialog-actions .btn:has-text("Done")').first();
+      const doneButton = this.doneButton;
       
       if (await doneButton.isVisible({ timeout: 2000 }).catch(() => false)) {
         console.log('Found Done button, clicking it');
@@ -353,7 +352,7 @@ export class EventPage extends BasePage {
       await this.takeScreenshot(`${buttonName.toLowerCase().replace(/\s+/g, '-')}-dialog`);
 
       // Enable if toggle exists
-      const toggle = this.page.locator(this.selectors.toggleSwitch).first();
+      const toggle = this.toggleSwitch;
       if (await toggle.isVisible({ timeout: 1000 }).catch(() => false)) {
         const isChecked = await toggle.isChecked().catch(() => null);
         if (isChecked === false) {
@@ -364,7 +363,7 @@ export class EventPage extends BasePage {
 
       // Try multiple selector patterns for name input
       const nameInputSelectors = [
-        this.selectors.eventNameInput,
+        'input[placeholder*="name" i]',
         'input[placeholder*="text" i]',
         'input[placeholder*="label" i]',
         'input[type="text"]:nth-of-type(1)',
@@ -401,7 +400,7 @@ export class EventPage extends BasePage {
 
       // Try multiple selector patterns for URL input
       const urlInputSelectors = [
-        this.selectors.urlInput,
+        'input[placeholder*="url" i]',
         'input[placeholder*="http" i]',
         'input[type="url"]',
         'input[type="text"]:nth-of-type(2)',
@@ -577,7 +576,7 @@ export class EventPage extends BasePage {
 
       if (inputFound) {
         if (shouldEnable) {
-          const toggle = this.page.locator(this.selectors.toggleSwitch).first();
+          const toggle = this.toggleSwitch;
           if (await toggle.isVisible().catch(() => false)) {
             const isChecked = await toggle.isChecked().catch(() => false);
             if (isChecked === false) {
@@ -611,7 +610,7 @@ export class EventPage extends BasePage {
       await this.clickFeature(featureName);
       await this.takeScreenshot(`feature-${featureName.toLowerCase().replace(/\s+/g, '-')}-before-toggle`);
 
-      const toggle = this.page.locator(this.selectors.toggleSwitch).first();
+      const toggle = this.toggleSwitch;
       if (await toggle.isVisible()) {
         const isChecked = await toggle.isChecked().catch(() => null);
         const needsToggle = (enable && !isChecked) || (!enable && isChecked);
@@ -639,7 +638,7 @@ export class EventPage extends BasePage {
    * @private
    */
   async clickSave() {
-    const saveButton = this.page.locator(this.selectors.saveButton);
+    const saveButton = this.saveButton;
     if (await saveButton.isVisible()) {
       await saveButton.click({ force: true });
       await this.page.waitForTimeout(2000);
