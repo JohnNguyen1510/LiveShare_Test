@@ -6,7 +6,7 @@ import path from 'path';
 
 const screenshotsDir = path.join(process.cwd(), 'screenshots');
 
-test.describe('Event Settings (POM) preserves current flow', () => {
+test.describe('Event Settings', () => {
   let loginPage;
   let eventPage;
   let settingsPage;

@@ -11,10 +11,10 @@ if (!fs.existsSync(screenshotsDir)) {
   fs.mkdirSync(screenshotsDir, { recursive: true });
 }
 
-test.describe('TC-APP-RA-001: App-Register - Verify UI for register new account flow', () => {
+test.describe('App-Register', () => {
   test.setTimeout(240000);
 
-  test('Register via email with terms confirmation and optional OTP', async ({ page }) => {
+  test('TC-APP-RA-001', async ({ page }) => {
     // Check if environment variables are set
     if (!process.env.MAILOSAUR_API_KEY || !process.env.MAILOSAUR_SERVER_ID) {
       test.skip('Mailosaur environment variables not set');

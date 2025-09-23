@@ -11,7 +11,7 @@ if (!fs.existsSync(screenshotsDir)) {
   fs.mkdirSync(screenshotsDir);
 }
 
-test.describe('Event Avatar Icon - POM Structure', () => {
+test.describe('Event Avatar Icon', () => {
   test.setTimeout(240000);
   
   let loginPage;

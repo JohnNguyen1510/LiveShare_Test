@@ -34,17 +34,19 @@ LIVESHARE_PASSWORD=t123
 ##  Running Tests
 
 ```bash
-# Run all tests (headless mode)
-npm test
+
+#Save token for login
+npm run setup:full
 
 # Run with UI mode for debugging
 npm run test:ui
 
 # Run specific test file
-npm test -- tests/event-settings.spec.js
+npm test --grep tests/event-settings.spec.js
+npm test --grep 'TC-APP-001' --ui
 
 # Run with specific browser
-npm test -- --project=chromium
+npm test --grep --project=chromium
 ```
 
 ##  Project Structure

@@ -15,7 +15,7 @@ if (!fs.existsSync(screenshotsDir)) {
 // Increase test timeout
 test.setTimeout(5 * 60 * 1000); // 5 minutes
 
-test.describe('Event Detail UI - POM Structure', () => {
+test.describe('Event Detail UI', () => {
   let loginPage;
   let eventListPage;
   let eventDetailPage;

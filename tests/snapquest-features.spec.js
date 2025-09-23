@@ -11,7 +11,7 @@ if (!fs.existsSync(screenshotsDir)) {
   fs.mkdirSync(screenshotsDir, { recursive: true });
 }
 
-test.describe('SnapQuest Additional Feature Tests - POM Structure', () => {
+test.describe('SnapQuest Additional Feature Tests', () => {
   // Increase timeout for the entire test suite
   test.setTimeout(240000);
   

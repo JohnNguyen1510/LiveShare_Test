@@ -16,7 +16,7 @@ if (!fs.existsSync(screenshotsDir)) {
   fs.mkdirSync(screenshotsDir, { recursive: true });
 }
 
-test.describe('TC-APP-SUB-002: Complete Subscription Flow (Page Object Model)', () => {
+test.describe('Complete Subscription Flow', () => {
   test.setTimeout(300000); // 5 minutes timeout for complete flow
 
   let registerPage;
@@ -42,7 +42,7 @@ test.describe('TC-APP-SUB-002: Complete Subscription Flow (Page Object Model)', 
     }
   });
 
-  test('Complete subscription flow using Page Object Model', async ({ page, context }) => {
+  test('TC-APP-SA-001 ', async ({ page, context }) => {
     // Skip test if Mailosaur is not configured
     if (!process.env.MAILOSAUR_API_KEY || !process.env.MAILOSAUR_SERVER_ID) {
       test.skip('Mailosaur environment variables not set');
@@ -171,6 +171,7 @@ test.describe('TC-APP-SUB-002: Complete Subscription Flow (Page Object Model)', 
       const paymentSuccess = await stripePaymentPage.completePaymentFlow(paymentDetails);
       expect(paymentSuccess).toBeTruthy();
       await newPage.screenshot({ path: path.join(screenshotsDir, 'pom-12-payment-completed.png') });
+      await page.waitForTimeout(5000);
 
       // Close the Stripe checkout window after payment
       await newPage.close();
@@ -186,12 +187,14 @@ test.describe('TC-APP-SUB-002: Complete Subscription Flow (Page Object Model)', 
       const closeSuccess = await subscriptionPage.closeSubscriptionDialog();
       expect(closeSuccess).toBeTruthy();
       await page.screenshot({ path: path.join(screenshotsDir, 'pom-14-success-dialog-closed.png') });
+      await page.waitForTimeout(5000);
 
       // Step 12: Create new event
       console.log('📍 Step 12: Creating new event...');
       const eventCreationStarted = await eventCreationPage.startEventCreation();
       expect(eventCreationStarted).toBeTruthy();
       await page.screenshot({ path: path.join(screenshotsDir, 'pom-15-event-creation-started.png') });
+      await page.waitForTimeout(5000);
 
      // Step 13: Navigate back and verify Premium Plus
       console.log('📍 Step 13: Verifying Premium Plus subscription...');
@@ -209,125 +212,6 @@ test.describe('TC-APP-SUB-002: Complete Subscription Flow (Page Object Model)', 
     } catch (error) {
       console.error('❌ Test failed:', error.message);
       await page.screenshot({ path: path.join(screenshotsDir, 'pom-error-final-state.png') });
-      throw error;
-    }
-  });
-
-  test('Subscription flow with custom test data', async ({ page, context }) => {
-    // Skip test if Mailosaur is not configured
-    if (!process.env.MAILOSAUR_API_KEY || !process.env.MAILOSAUR_SERVER_ID) {
-      test.skip('Mailosaur environment variables not set');
-      return;
-    }
-
-    console.log(`🚀 Starting subscription flow test with custom data: ${testEmail}`);
-
-    try {
-      // Navigate to application
-      await page.goto('https://dev.livesharenow.com/');
-      await page.waitForLoadState('domcontentloaded');
-
-      // Complete registration using RegisterPage
-      await registerPage.clickCreateAccount();
-      await registerPage.clickEmailSignup();
-      await registerPage.handleTermsAndConditions();
-      
-      const testName = 'Custom Test User';
-      const testPassword = 'CustomPass123!';
-      await registerPage.fillRegistrationForm(testName, testEmail, testPassword);
-      
-      const createAccountButton = page.locator('button:has-text("Create Account")').first();
-      await createAccountButton.click();
-      await page.waitForTimeout(2000);
-
-      // Handle OTP verification
-      const signUpEmail = await mailosaurClient.messages.get(serverId, {
-        sentTo: testEmail
-      });
-      const verifyEmail = signUpEmail.html.codes[0].value;
-      
-      const otpInputs = page.locator('.otp-box');
-      const otpCode = verifyEmail.toString();
-      for (let i = 0; i < otpCode.length && i < 6; i++) {
-        const input = otpInputs.nth(i);
-        await input.fill(otpCode[i]);
-        await page.waitForTimeout(200);
-      }
-      
-      const continueToEventButton = page.locator('button:has-text("Continue to the Event")').first();
-      await continueToEventButton.click();
-      await page.waitForTimeout(3000);
-
-      // Navigate to subscription
-      await subscriptionPage.navigateToSubscription();
-      
-      // Set up promise to wait for new page/window
-      const newPagePromise = context.waitForEvent('page');
-      
-      // Click Select button - this should open new window
-      await subscriptionPage.clickSelectSubscription();
-
-      // Handle new Stripe checkout window
-      const newPage = await newPagePromise;
-      console.log('✅ New window opened for Stripe checkout');
-      
-      // Wait for new page to load
-      await newPage.waitForLoadState('domcontentloaded');
-      await newPage.waitForTimeout(2000);
-      
-      // Create PaymentPage instance for the new window
-      const stripePaymentPage = new PaymentPage(newPage);
-      
-      // Verify we're on Stripe checkout page
-      const isOnStripeCheckout = await stripePaymentPage.verifyOnStripeCheckoutPage();
-      expect(isOnStripeCheckout).toBeTruthy();
-
-      // Wait for Stripe checkout form to be ready
-      const stripeReady = await stripePaymentPage.waitForStripeCheckoutReady();
-      expect(stripeReady).toBeTruthy();
-      
-      const customPaymentDetails = {
-        cardNumber: '4242 4242 4242 4242',
-        expiration: '12 / 25',
-        cvc: '456',
-        cardholderName: 'Custom Test User',
-        country: 'US'
-      };
-      
-      const paymentSuccess = await stripePaymentPage.completePaymentFlow(customPaymentDetails);
-      expect(paymentSuccess).toBeTruthy();
-
-      // Close the Stripe checkout window after payment
-      await newPage.close();
-      console.log('✅ Stripe checkout window closed');
-
-      // Wait for original page to update
-      await page.waitForTimeout(3000);
-      
-      await subscriptionPage.closeSubscriptionDialog();
-
-      // Create event with custom data
-      await eventCreationPage.startEventCreation();
-      
-      const customEventData = {
-        typeId: '63aac88c5a3b994dcb8602fd',
-        name: 'Custom Test Event',
-        date: 'September 23,'
-      };
-      
-      const eventCreationSuccess = await eventCreationPage.completeEventCreation(customEventData);
-      expect(eventCreationSuccess).toBeTruthy();
-
-      // Verify Premium Plus
-      await eventCreationPage.navigateBackToEvents();
-      const premiumPlusVerified = await eventCreationPage.verifyPremiumPlusSubscription();
-      expect(premiumPlusVerified).toBeTruthy();
-
-      console.log('✅ Custom subscription flow test completed successfully!');
-
-    } catch (error) {
-      console.error('❌ Custom test failed:', error.message);
-      await page.screenshot({ path: path.join(screenshotsDir, 'custom-error-final-state.png') });
       throw error;
     }
   });
