@@ -12,7 +12,9 @@ export class ImageDetailPage extends BasePage {
     // Action buttons in image detail
     this.pinButton = this.page.locator('button:has(mat-icon:text("push_pin"))').first();
     this.giftButton = this.page.locator('button:has(mat-icon:text("redeem"))').first();
-    this.ellipsisButton = this.page.locator('button.mat-menu-trigger:has(mat-icon:text("more_vert"))').first();
+    this.ellipsisButton = this.page.locator(
+      'button.mat-menu-trigger[tabindex="0"]:has(mat-icon:has-text("more_vert"))'
+    );
     this.searchButton = this.page.locator('button:has(mat-icon:text("search")), button:has(mat-icon:text("zoom_in")), button:has(mat-icon:text("crop"))').first();
     
     // Menu options

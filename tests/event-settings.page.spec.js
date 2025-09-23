@@ -18,9 +18,6 @@ test.describe('Event Settings (POM) preserves current flow', () => {
   });
 
   test('Open event, open settings, enable key options, save', async ({ page, context }) => {
-    await page.goto('https://app.livesharenow.com/');
-    const success = await loginPage.authenticateWithRetry(context, '', 3);
-    expect(success).toBeTruthy();
 
     await eventPage.navigateToEvents();
     await eventPage.clickFirstEvent();

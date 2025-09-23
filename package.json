@@ -9,12 +9,15 @@
     "test:debug": "playwright test --debug",
     "test:headed": "playwright test --headed",
     "report": "playwright show-report",
-    "install:browsers": "playwright install"
+    "install:browsers": "playwright install",
+    "auth:email": "node ./e2e-tests/save-email-auth.js",
+    "auth:clear": "node -e \"const fs=require('fs');const path='auth/user-auth.json';if(fs.existsSync(path)){fs.unlinkSync(path);console.log('✅ Cleared auth state');}else{console.log('⚠️ No auth state to clear');}\"",
+    "setup:full": "npm run auth:clear && npm run auth:email"
   },
   "dependencies": {
     "@playwright/test": "^1.42.1",
     "dotenv": "^16.5.0",
-    "mailosaur": "^8.6.1"
+    "mailosaur": "^8.8.1"
   },
   "engines": {
     "node": ">=16.0.0"

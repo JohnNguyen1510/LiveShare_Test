@@ -29,7 +29,7 @@ export default defineConfig({
   
   use: {
     // Base URL for navigation
-    baseURL: 'https://app.livesharenow.com',
+    baseURL: 'https://dev.livesharenow.com',
 
     // Browser configurations
     headless: false,

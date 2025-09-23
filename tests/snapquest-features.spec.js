@@ -29,13 +29,6 @@ test.describe('SnapQuest Additional Feature Tests - POM Structure', () => {
 
   test('TC-APP-FSQ-006: Verify "Details" button functionality using POM', async ({ page, context }) => {
     try {
-    console.log('Starting test: TC-APP-FSQ-006');
-    
-      // Navigate to app and login
-    await page.goto('https://app.livesharenow.com/');
-    const success = await loginPage.authenticateWithRetry(context);
-    expect(success, 'Google authentication should be successful').toBeTruthy();
-    
       // Verify details panel functionality using POM method
       const detailsPanelFound = await snapQuestPage.verifyDetailsPanel();
       
@@ -52,7 +45,7 @@ test.describe('SnapQuest Additional Feature Tests - POM Structure', () => {
     console.log('Starting test: TC-APP-FSQ-007');
     
       // Navigate to app and login
-    await page.goto('https://app.livesharenow.com/');
+    await page.goto('https://dev.livesharenow.com/');
     const success = await loginPage.authenticateWithRetry(context);
     expect(success, 'Google authentication should be successful').toBeTruthy();
     
@@ -72,7 +65,7 @@ test.describe('SnapQuest Additional Feature Tests - POM Structure', () => {
     console.log('Starting test: TC-APP-FSQ-008');
     
       // Navigate to app and login
-    await page.goto('https://app.livesharenow.com/');
+    await page.goto('https://dev.livesharenow.com/');
     const success = await loginPage.authenticateWithRetry(context);
     expect(success, 'Google authentication should be successful').toBeTruthy();
     
@@ -92,7 +85,7 @@ test.describe('SnapQuest Additional Feature Tests - POM Structure', () => {
     console.log('Starting test: TC-APP-FSQ-009');
     
       // Navigate to app and login
-    await page.goto('https://app.livesharenow.com/');
+    await page.goto('https://dev.livesharenow.com/');
     const success = await loginPage.authenticateWithRetry(context);
     expect(success, 'Google authentication should be successful').toBeTruthy();
     
@@ -112,7 +105,7 @@ test.describe('SnapQuest Additional Feature Tests - POM Structure', () => {
     console.log('Starting test: TC-APP-FSQ-0010');
     
       // Navigate to app and login
-    await page.goto('https://app.livesharenow.com/');
+    await page.goto('https://dev.livesharenow.com/');
     const success = await loginPage.authenticateWithRetry(context);
     expect(success, 'Google authentication should be successful').toBeTruthy();
     
@@ -132,7 +125,7 @@ test.describe('SnapQuest Additional Feature Tests - POM Structure', () => {
     console.log('Starting test: TC-APP-FSQ-0011');
     
       // Navigate to app and login
-    await page.goto('https://app.livesharenow.com/');
+    await page.goto('https://dev.livesharenow.com/');
     const success = await loginPage.authenticateWithRetry(context);
     expect(success, 'Google authentication should be successful').toBeTruthy();
     

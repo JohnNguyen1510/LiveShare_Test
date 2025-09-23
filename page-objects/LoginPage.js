@@ -26,6 +26,13 @@ export class LoginPage extends BasePage {
     this.passwordInput = this.page.locator('input[type="password"]').first();
     this.nextButton = this.page.locator('button:has-text("Next")').first();
     this.submitButton = this.page.locator('button[type="submit"]').first();
+    
+    // Email login specific selectors
+    this.emailSignInButton = this.page.locator('button:has-text("Sign in with Email"), .btn-hover-email').first();
+    this.emailLoginInput = this.page.locator('input[placeholder="Enter Email"], input[type="email"]').first();
+    this.emailPasswordInput = this.page.locator('input[placeholder="Enter Password"], input[type="password"]').first();
+    this.continueButton = this.page.locator('button:has-text("Continue")').first();
+    this.backToLoginButton = this.page.locator('button:has-text("Back to Login")').first();
     // Account selection screen
     this.accountSelectionHeader = this.page.locator('h1:has-text("Chọn tài khoản"), h1:has-text("Choose an account")').first();
     this.accountItems = this.page.locator('li[class*="aZvCDf"] div[role="link"]');
@@ -115,13 +122,24 @@ export class LoginPage extends BasePage {
   }
   
   /**
-   * Check if already logged in by looking for dashboard content
+   * Check if already logged in by looking for dashboard content and ACCESSTOKEN
    * @returns {Promise<boolean>}
    */
   async checkIfAlreadyLoggedIn() {
     console.log('🔍 Checking if already logged in...');
     
     try {
+      // First, check for ACCESSTOKEN in localStorage (most reliable indicator)
+      const hasAccessToken = await this.page.evaluate(() => {
+        return localStorage.getItem('ACCESSTOKEN') !== null;
+      });
+      
+      if (hasAccessToken) {
+        console.log('✅ ACCESSTOKEN found in localStorage - user is logged in');
+        await this.takeScreenshot('access-token-found');
+        return true;
+      }
+      
       // Try multiple indicators of logged-in state
       const isDashboardVisible = await this.dashboardIndicators.isVisible({ timeout: 3000 }).catch(() => false);
       
@@ -163,6 +181,30 @@ export class LoginPage extends BasePage {
   }
   
   /**
+   * Get test event data from localStorage
+   * @returns {Promise<object|null>} Event data or null if not found
+   */
+  async getTestEventData() {
+    try {
+      const eventData = await this.page.evaluate(() => {
+        const data = localStorage.getItem('TEST_EVENT_DATA');
+        return data ? JSON.parse(data) : null;
+      });
+      
+      if (eventData) {
+        console.log(`📊 Found test event data: ${eventData.name} (${eventData.eventCode})`);
+      } else {
+        console.log('⚠️ No test event data found in localStorage');
+      }
+      
+      return eventData;
+    } catch (error) {
+      console.log(`Error getting test event data: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
    * Reset page state for retry
    * @returns {Promise<void>}
    */
@@ -171,7 +213,7 @@ export class LoginPage extends BasePage {
       console.log('🔄 Resetting page state for retry...');
       
       // Try to navigate to the homepage to reset state
-      await this.page.goto('https://app.livesharenow.com/');
+      await this.page.goto('https://dev.livesharenow.com/');
       await this.page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
       await this.page.waitForTimeout(1000);
       
@@ -214,6 +256,165 @@ export class LoginPage extends BasePage {
     await signInButton.click();
     await this.page.waitForTimeout(3000);
     await this.takeScreenshot('auth-modal');
+  }
+
+  /**
+   * Complete Email Login flow - similar to DMS save-complete-auth approach
+   * @param {string} email Email address to login with
+   * @param {string} [password] Password (if required by the flow)
+   * @returns {Promise<boolean>} Success status
+   */
+  async completeEmailLogin(email, password = '') {
+    try {
+      console.log(`🔐 Starting email login for: ${email}`);
+      
+      // Step 1: Wait for and click sign in button if present
+      if (await this.signInButton.isVisible({ timeout: 5000 })) {
+        console.log('Clicking Sign In button...');
+        await this.signInButton.click();
+        await this.page.waitForTimeout(2000);
+        await this.takeScreenshot('after-signin-click');
+      }
+
+      // Step 2: Wait for and click "Sign in with Email" button
+      console.log('Looking for "Sign in with Email" button...');
+      await this.emailSignInButton.waitFor({ state: 'visible', timeout: 10000 });
+      await this.takeScreenshot('before-email-signin-click');
+      await this.emailSignInButton.click();
+      await this.page.waitForTimeout(2000);
+      await this.takeScreenshot('after-email-signin-click');
+
+      // Step 3: Fill email input
+      console.log('Filling email input...');
+      await this.emailLoginInput.waitFor({ state: 'visible', timeout: 10000 });
+      await this.emailLoginInput.fill(email);
+      await this.takeScreenshot('email-filled');
+
+      // Step 4: Click Continue button
+      console.log('Clicking Continue button...');
+      await this.continueButton.waitFor({ state: 'visible', timeout: 5000 });
+      await this.continueButton.click();
+      await this.page.waitForTimeout(3000);
+      await this.takeScreenshot('after-continue-click');
+      // Step 5: Fill password input
+      console.log('Filling password input...');
+      await this.emailPasswordInput.waitFor({ state: 'visible', timeout: 5000 });
+      await this.emailPasswordInput.fill(password);
+      await this.takeScreenshot('password-filled');
+      // Step 6: Click Submit button
+      await this.continueButton.click();
+      await this.page.waitForTimeout(3000);
+      await this.takeScreenshot('after-submit-click');
+
+      // Step 5: Wait for authentication success indicators
+      console.log('Waiting for authentication success...');
+      
+      // Wait for either dashboard content or redirect
+      try {
+        // Wait for dashboard indicators or successful navigation
+        await this.page.waitForSelector('.flex.pt-8, div.event-card, div.mat-card, [data-testid="dashboard"], .event-card-event', { 
+          timeout: 30000 
+        });
+        console.log('✅ Dashboard content detected - email login successful');
+        await this.takeScreenshot('email-login-success');
+        return true;
+      } catch (dashboardError) {
+        // Alternative: check for absence of login elements
+        const isSignInVisible = await this.signInButton.isVisible({ timeout: 2000 }).catch(() => false);
+        if (!isSignInVisible) {
+          console.log('✅ Login elements not visible - assuming login successful');
+          await this.takeScreenshot('email-login-success-alt');
+          return true;
+        }
+        
+        console.log('❌ Dashboard not detected and login elements still visible');
+        await this.takeScreenshot('email-login-failed');
+        return false;
+      }
+
+    } catch (error) {
+      console.error('❌ Email login error:', error);
+      await this.takeScreenshot('email-login-error');
+      throw error;
+    }
+  }
+
+  /**
+   * Email login with retry mechanism - main method for email authentication
+   * @param {string} email Email address to login with
+   * @param {string} [password] Password (if required)
+   * @param {number} [maxRetries=3] Maximum number of retry attempts
+   * @returns {Promise<boolean>} Success status
+   */
+  async authenticateWithEmailRetry(email, password = '', maxRetries = 3) {
+    console.log(`🔐 Starting email authentication with ${maxRetries} retry attempts for: ${email}`);
+    
+    // Check if already logged in before attempting login
+    const isAlreadyLoggedIn = await this.checkIfAlreadyLoggedIn();
+    if (isAlreadyLoggedIn) {
+      console.log('✅ Already logged in - authentication successful');
+      return true;
+    }
+    
+    let success = false;
+    let attempt = 0;
+    let lastError = null;
+    
+    while (attempt < maxRetries && !success) {
+      attempt++;
+      console.log(`🔄 Email authentication attempt ${attempt}/${maxRetries}`);
+      
+      try {
+        // Try email authentication
+        success = await this.completeEmailLogin(email, password);
+        
+        if (success) {
+          console.log(`✅ Email authentication successful on attempt ${attempt}`);
+          break;
+        } else {
+          console.log(`❌ Email authentication failed on attempt ${attempt} without throwing an error`);
+          
+          // Check if we're already logged in despite the auth flow indicating failure
+          success = await this.checkIfAlreadyLoggedIn();
+          if (success) {
+            console.log('✅ User appears to be logged in despite auth flow failure');
+            break;
+          }
+          
+          // Reset the page state on failure
+          await this.resetPageState();
+        }
+      } catch (error) {
+        lastError = error;
+        console.log(`❌ Email authentication error on attempt ${attempt}: ${error.message}`);
+        await this.takeScreenshot(`email-auth-failure-attempt-${attempt}`);
+        
+        // Check if we're already logged in despite the error
+        success = await this.checkIfAlreadyLoggedIn();
+        if (success) {
+          console.log('✅ User appears to be logged in despite auth error');
+          break;
+        }
+        
+        // Reset the page state on error
+        await this.resetPageState();
+      }
+      
+      // Wait before retry
+      if (!success && attempt < maxRetries) {
+        const delayMs = 3000 * attempt; // Increasing backoff delay
+        console.log(`⏳ Waiting ${delayMs}ms before retry attempt ${attempt + 1}`);
+        await this.page.waitForTimeout(delayMs);
+      }
+    }
+    
+    if (!success && lastError) {
+      console.error(`❌ All ${maxRetries} email authentication attempts failed. Last error: ${lastError.message}`);
+    } else if (!success) {
+      console.error(`❌ All ${maxRetries} email authentication attempts failed without errors.`);
+    }
+    
+    return success;
   }
 
   /**

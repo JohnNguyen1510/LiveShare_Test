@@ -13,7 +13,7 @@ export class BasePage {
    */
   constructor(page) {
     this.page = page;
-    this.baseUrl = 'https://app.livesharenow.com';
+    this.baseUrl = 'https://dev.livesharenow.com';
   }
 
   /**

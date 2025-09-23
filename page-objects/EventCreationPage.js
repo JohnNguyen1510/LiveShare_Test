@@ -222,7 +222,75 @@ export class EventCreationPage extends BasePage {
    * @param {Object} eventData - Event data object
    * @param {string} eventData.typeId - Event type ID
    * @param {string} eventData.name - Event name
+   * @param {string} eventData.date - Event date
+   * @param {string} eventData.location - Event location
+   * @param {string} eventData.description - Event description
+   * @returns {Promise<boolean>} Success status
    */
+  async createEvent(eventData = {}) {
+    try {
+      console.log('🎯 Starting complete event creation flow...');
+      
+      // Use provided data or defaults
+      const data = {
+        typeId: eventData.typeId || this.defaultEventData.typeId,
+        name: eventData.name || this.defaultEventData.name,
+        date: eventData.date || this.defaultEventData.date,
+        location: eventData.location || 'Test Location',
+        description: eventData.description || 'Test event created by automation'
+      };
+      
+      console.log(`Creating event: ${data.name}`);
+      
+      // Click add event button
+      await this.addEventButton.waitFor({ state: 'visible', timeout: 10000 });
+      await this.addEventButton.click();
+      await this.page.waitForTimeout(1000);
+      await this.takeScreenshot('add-event-clicked');
+      
+      // Select event type
+      await this.eventTypeSelect.waitFor({ state: 'visible', timeout: 10000 });
+      await this.eventTypeSelect.selectOption({ label: 'Anniversary' });
+      await this.page.waitForTimeout(500);
+      
+      // Fill event name
+      await this.eventNameInput.waitFor({ state: 'visible', timeout: 10000 });
+      await this.eventNameInput.fill(data.name);
+      await this.page.waitForTimeout(500);
+      
+      // Select date
+      await this.dateInput.click();
+      await this.calendarHeader.click();
+      await this.yearButton.click();
+      await this.monthButton.click();
+      await this.dayButton.click();
+      await this.page.waitForTimeout(500);
+      
+      // Click Next
+      await this.nextButton.waitFor({ state: 'visible', timeout: 10000 });
+      await this.nextButton.click();
+      await this.page.waitForTimeout(1000);
+      
+      // Select theme
+      await this.themeOption.waitFor({ state: 'visible', timeout: 10000 });
+      await this.themeOption.click();
+      await this.page.waitForTimeout(500);
+      
+      // Launch event
+      await this.launchEventButton.waitFor({ state: 'visible', timeout: 10000 });
+      await this.launchEventButton.click();
+      await this.page.waitForTimeout(3000);
+      
+      console.log('✅ Event creation completed successfully');
+      await this.takeScreenshot('event-creation-completed');
+      return true;
+      
+    } catch (error) {
+      console.error('❌ Error in event creation:', error.message);
+      await this.takeScreenshot('error-event-creation');
+      return false;
+    }
+  }
 
     /**
    * Verify Premium Plus subscription is active in events list
