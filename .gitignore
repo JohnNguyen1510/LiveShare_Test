@@ -15,7 +15,7 @@ package-lock.json
 /screenshots/*
 !/screenshots/.gitkeep
 /test-results/*
-/test-assets/*
+/videos/*
 
 # Authentication state
 /auth/*
