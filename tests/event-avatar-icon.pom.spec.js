@@ -26,18 +26,6 @@ test.describe('Event Avatar Icon - POM Structure', () => {
 
   test('TC-APP-AI-001-005: Verify Avatar Icon in Event Page using POM', async ({ page, context }) => {
     try {
-      // Non-blocking wait for event settings completion
-      try {
-        await basePage.waitForEventSettingsCompletion(2000);
-      } catch {
-        console.warn('⚠️ Skipping event-settings wait to continue test');
-      }
-
-      await page.goto('https://app.livesharenow.com/');
-      const success = await loginPage.authenticateWithRetry(context);
-      expect(success, 'Google authentication should be successful').toBeTruthy();
-
-      await page.waitForTimeout(3000);
       
       // Navigate to events page and verify it loads
       await eventListPage.goToEventsPage();
@@ -63,7 +51,11 @@ test.describe('Event Avatar Icon - POM Structure', () => {
       expect(anyMenuItemVisible, 'At least one account menu option should be visible').toBeTruthy();
       
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-ava-icon-${Date.now()}.png`) });
+      try {
+        await page.screenshot({ path: path.join(screenshotsDir, `error-ava-icon-${Date.now()}.png`) });
+      } catch (screenshotError) {
+        console.log('Could not take screenshot:', screenshotError.message);
+      }
       throw error;
     }
   });
@@ -119,7 +111,7 @@ test.describe('Event Avatar Icon - POM Structure', () => {
     if (jsClicked) return true;
 
     // Last resort: navigate to profile directly
-    await page.goto('https://app.livesharenow.com/profile').catch(() => {});
+    await page.goto('https://dev.livesharenow.com/profile').catch(() => {});
     await page.waitForTimeout(2000);
     return true;
   }

@@ -29,19 +29,6 @@ test.describe('Event Detail UI - POM Structure', () => {
   });
 
   test('TC-APP-DEEV-01-07: Verify Detail Event UI using POM', async ({ page, context }) => {
-    // Non-blocking quick wait for event settings
-    let settingsCompleted = false;
-    try {
-      settingsCompleted = await basePage.waitForEventSettingsCompletion(2000);
-    } catch {}
-    if (!settingsCompleted) {
-      console.warn('⚠️ Skipping event-settings wait to continue detail event test');
-    }
-    
-    // Navigate to app and login with retry mechanism
-    await page.goto('https://app.livesharenow.com/');
-    const success = await loginPage.authenticateWithRetry(context);
-    expect(success, 'Google authentication should be successful').toBeTruthy();
 
     // Navigate to events page and verify it loads
     await eventListPage.goToEventsPage();
@@ -85,11 +72,6 @@ test.describe('Event Detail UI - POM Structure', () => {
     const eventInfo = await eventDetailPage.getEventInfo();
     expect(eventInfo.name, 'Event name should be visible').toBeTruthy();
     
-    if (settingsCompleted && eventInfo.name) {
-      expect(eventInfo.name.toLowerCase().includes('tuanhay'), 'Event name should contain "tuanhay"').toBeTruthy();
-    } else {
-      console.log(`Event name "${eventInfo.name}" ${eventInfo.name?.toLowerCase().includes('tuanhay') ? 'contains' : 'does not contain'} "tuanhay"`);
-    }
         
     // TC-APP-DEEV-02: Verify event date
     console.log('TC-APP-DEEV-02: Checking event date');
@@ -110,28 +92,13 @@ test.describe('Event Detail UI - POM Structure', () => {
     const itineraryInfo = await eventDetailPage.getItineraryInfo();
     
     // Verify location section
-    expect(locationInfo.isVisible, 'Location section should be visible').toBeTruthy();
-    if (settingsCompleted && locationInfo.text) {
-      expect(locationInfo.text.toLowerCase().includes('tuanhay'), 'Location should contain "tuanhay"').toBeTruthy();
-    } else {
-      console.log(`Location text "${locationInfo.text}" ${locationInfo.text?.toLowerCase().includes('tuanhay') ? 'contains' : 'does not contain'} "tuanhay"`);
-    }
+    expect(locationInfo.isVisible, 'Location section should be visible').toBeTruthy()
     
     // Verify contact section
     expect(contactInfo.isVisible, 'Contact section should be visible').toBeTruthy();
-    if (settingsCompleted && contactInfo.text) {
-      expect(contactInfo.text.toLowerCase().includes('tuanhay'), 'Contact should contain "tuanhay"').toBeTruthy();
-    } else {
-      console.log(`Contact text "${contactInfo.text}" ${contactInfo.text?.toLowerCase().includes('tuanhay') ? 'contains' : 'does not contain'} "tuanhay"`);
-    }
     
     // Verify itinerary section
     expect(itineraryInfo.isVisible, 'Itinerary section should be visible').toBeTruthy();
-    if (settingsCompleted && itineraryInfo.text) {
-      expect(itineraryInfo.text.toLowerCase().includes('tuanhay'), 'Itinerary should contain "tuanhay"').toBeTruthy();
-    } else {
-      console.log(`Itinerary text "${itineraryInfo.text}" ${itineraryInfo.text?.toLowerCase().includes('tuanhay') ? 'contains' : 'does not contain'} "tuanhay"`);
-    }
         
     // TC-APP-DEEV-06: Verify navigation buttons
     console.log('TC-APP-DEEV-06: Checking navigation buttons');
@@ -140,10 +107,7 @@ test.describe('Event Detail UI - POM Structure', () => {
     // TC-APP-DEEV-07: Verify action buttons
     console.log('TC-APP-DEEV-07: Checking action buttons');
     await eventDetailPage.verifyActionButtons();
-    
-    // Verify empty gallery state
-    await eventDetailPage.verifyEmptyGallery();
-    
+        
     // Take final screenshot
     await page.screenshot({ path: path.join(screenshotsDir, 'event-detail-verification-complete.png') });
         

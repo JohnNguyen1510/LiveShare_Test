@@ -77,7 +77,7 @@ export class SnapQuestPage extends BasePage {
 
   async navigateToNonDashboardPage() {
     console.log('Navigating to nondashboard URL...');
-    await this.page.goto('https://app.livesharenow.com/?brand=null');
+    await this.page.goto('https://dev.livesharenow.com/?brand=null');
     await this.page.waitForTimeout(2000);
   }
 
@@ -884,7 +884,7 @@ export class SnapQuestPage extends BasePage {
     await this.confirmJoin();
     
     // Navigate to app and login
-    await this.page.goto('https://app.livesharenow.com/');
+    await this.page.goto('https://dev.livesharenow.com/');
     
     // Navigate to Joined Events tab
     await this.navigateToJoinedEvents();

@@ -29,21 +29,7 @@ test.describe('Plus Icon Features Verification - POM Structure', () => {
   });
   test('TC-APP-VIEW-001-008: Verify Plus Features in View Detail using POM', async ({ page, context }) => {
     try {
-      // Non-blocking wait for event settings completion
-      try {
-        await basePage.waitForEventSettingsCompletion(2000);
-      } catch {
-        console.warn('⚠️ Skipping event-settings wait to continue plus icon test');
-      }
 
-      console.log('Starting test: TC-APP-VIEW-001-008');
-      
-      // Navigate to app and login with retry mechanism
-      console.log('Navigating to app and logging in...');
-      await page.goto('https://app.livesharenow.com/');
-      const success = await loginPage.authenticateWithRetry(context);
-      expect(success, 'Google authentication should be successful').toBeTruthy();
-      
       // Navigate to events page and verify it loads
       console.log('Navigating to events page...');
       await eventListPage.goToEventsPage();

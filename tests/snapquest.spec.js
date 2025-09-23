@@ -31,7 +31,7 @@ test.describe('SnapQuest Feature Tests - POM Structure', () => {
     console.log('Starting test: TC-APP-SQ-001');
 
     // Navigate to app and login
-    await page.goto('https://app.livesharenow.com/');
+    await page.goto('https://dev.livesharenow.com/');
     const success = await loginPage.authenticateWithRetry(context);
     expect(success, 'Google authentication should be successful').toBeTruthy();
     
@@ -66,7 +66,7 @@ test.describe('SnapQuest Feature Tests - POM Structure', () => {
       console.log('Starting test: TC-APP-FSQ-001');
       
       // Navigate to app and login
-      await page.goto('https://app.livesharenow.com/');
+      await page.goto('https://dev.livesharenow.com/');
       const success = await loginPage.authenticateWithRetry(context);
       expect(success, 'Authentication should be successful').toBeTruthy();
       
@@ -86,7 +86,7 @@ test.describe('SnapQuest Feature Tests - POM Structure', () => {
       console.log('Starting test: TC-APP-FSQ-002');
       
       // Navigate to app and login
-      await page.goto('https://app.livesharenow.com/');
+      await page.goto('https://dev.livesharenow.com/');
       const success = await loginPage.authenticateWithRetry(context);
       expect(success, 'Google authentication should be successful').toBeTruthy();
       
@@ -103,13 +103,6 @@ test.describe('SnapQuest Feature Tests - POM Structure', () => {
 
   test('TC-APP-FSQ-003 & TC-APP-FSQ-004: Verify "Button link #1 #2" functionality using POM', async ({ page, context }) => {
     try {
-      console.log('Starting test: TC-APP-FSQ-003 & TC-APP-FSQ-004');
-      
-      // Navigate to app and login
-      await page.goto('https://app.livesharenow.com/');
-      const success = await loginPage.authenticateWithRetry(context);
-      expect(success, 'Authentication should be successful').toBeTruthy();
-      
       // Verify button links functionality using POM method
       const result = await snapQuestPage.verifyButtonLinks();
       

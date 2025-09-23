@@ -23,6 +23,12 @@ npx playwright install
 GOOGLE_EMAIL=your.test@email.com
 GOOGLE_PASSWORD=your-test-password
 BASE_URL=https://app.livesharenow.com
+
+MAILOSAUR_API_KEY=Sc9PZWQWvHFvzQPOB7NEWQh0ldSOWVis
+MAILOSAUR_SERVER_ID=rh4q55kj
+
+LIVESHARE_EMAIL=goes-silver@rh4q55kj.mailosaur.net
+LIVESHARE_PASSWORD=t123
 ```
 
 ##  Running Tests

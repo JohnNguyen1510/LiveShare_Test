@@ -39,7 +39,7 @@ export class EventListPage extends BasePage {
   }
 
   async goToEventsPage() {
-    await this.page.goto('https://app.livesharenow.com/events');
+    await this.page.goto('https://dev.livesharenow.com/events');
     await this.page.waitForLoadState('networkidle');
     await this.eventsHeading.waitFor({ state: 'visible', timeout: 30000 });
   }
