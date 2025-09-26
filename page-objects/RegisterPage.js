@@ -1,10 +1,14 @@
 import { expect } from '@playwright/test';
 import { BasePage } from './BasePage.js';
+import path from 'path';
+import fs from 'fs';
 
 export class RegisterPage extends BasePage {
   constructor(page) {
     super(page);
     this.page = page;
+
+    this.code = '62ME18'
 
     // Registration flow locators
     this.createAccountLink = this.page.locator('text=Create Free Account').first();
@@ -27,6 +31,17 @@ export class RegisterPage extends BasePage {
     this.passwordInput = this.page.locator('input[placeholder="Enter Password"]').first();
     this.confirmPasswordInput = this.page.locator('input[placeholder="Confirm Password"]').first();
     this.createAccountButton = this.page.locator('button:has-text("Create Account")').first();
+
+    //Join into event
+    this.buttonJoin = this.page.locator('button:has-text("Join")')
+    this.uniqueCode = this.page.locator('input[placeholder="Enter Unique ID"]')
+    this.joinConfirmButton = this.page.locator('button:has-text("JOIN AN EVENT")')
+
+  }
+
+  async NavigateToLoginPage(){
+    await this.page.goto('https://dev.livesharenow.com/')
+    await this.page.waitForLoadState('networkidle');
   }
 
   async clickCreateAccount() {
@@ -118,6 +133,80 @@ export class RegisterPage extends BasePage {
     }
     return false;
   }
+
+  async verifyJoinEventByCode() {
+    // 1. Navigate to login page and click Join button
+    await this.NavigateToLoginPage()
+    await this.buttonJoin.waitFor({ state: 'visible', timeout: 10000 });
+    await this.buttonJoin.click()
+    
+    await this.page.waitForTimeout(1000)
+
+    // 2. Fill unique code and confirm
+    await this.uniqueCode.waitFor({ state: 'visible', timeout: 10000 });
+    await this.uniqueCode.fill(this.code)
+
+    await this.joinConfirmButton.waitFor({ state: 'visible', timeout: 10000 });
+    await this.joinConfirmButton.click()
+    await this.page.waitForTimeout(2000)
+    await this.page.waitForLoadState('networkidle');
+
+    // Take screenshot after joining event
+    await this.page.screenshot({ path: path.join(process.cwd(), 'screenshots', 'joined-event.png') });
+
+    // 3. Click on menu (3 dots) to access login
+    const menuButton = this.page.locator('button.mat-menu-trigger:has(mat-icon:has-text("more_vert"))').first();
+    await menuButton.waitFor({ state: 'visible', timeout: 10000 });
+    await menuButton.click();
+    await this.page.waitForTimeout(1000);
+
+    // 4. Click Login option from menu
+    const loginOption = this.page.locator('button[mat-menu-item]:has-text("Login")').first();
+    await loginOption.waitFor({ state: 'visible', timeout: 10000 });
+    await loginOption.click();
+    await this.page.waitForTimeout(2000);
+
+    // Take screenshot of login dialog
+    await this.page.screenshot({ path: path.join(process.cwd(), 'screenshots', 'login-dialog.png') });
+
+    // 5. Fill nickname and click Post as Guest
+    const nicknameInput = this.page.locator('input[placeholder="Enter a Nickname"]').first();
+    await nicknameInput.waitFor({ state: 'visible', timeout: 10000 });
+    await nicknameInput.fill(`Guest_${Date.now()}`);
+    await this.page.waitForTimeout(500);
+
+    const postAsGuestButton = this.page.locator('button:has-text("Post as Guest")').first();
+    await postAsGuestButton.waitFor({ state: 'visible', timeout: 10000 });
+    await postAsGuestButton.click();
+    await this.page.waitForTimeout(2000);
+    await this.page.waitForLoadState('networkidle');
+
+    // Take screenshot after posting as guest
+    await this.page.screenshot({ path: path.join(process.cwd(), 'screenshots', 'posted-as-guest.png') });
+
+    // 6. Navigate back to event page and verify logout option
+    await this.page.waitForTimeout(1000);
+
+    // Click menu again to verify logout option is present
+    const menuButtonAgain = this.page.locator('button.mat-menu-trigger:has(mat-icon:has-text("more_vert"))').first();
+    await menuButtonAgain.waitFor({ state: 'visible', timeout: 10000 });
+    await menuButtonAgain.click();
+    await this.page.waitForTimeout(1000);
+
+    // Verify logout option is visible (this means user is logged in)
+    const logoutOption = this.page.locator('button[mat-menu-item]:has-text("Logout")').first();
+    const isLogoutVisible = await logoutOption.isVisible({ timeout: 5000 }).catch(() => false);
+    
+    // Take final screenshot
+    await this.page.screenshot({ path: path.join(process.cwd(), 'screenshots', 'final-verification.png') });
+
+    console.log('✅ Join event by code and guest login completed successfully');
+    
+    // Return verification result
+    return isLogoutVisible;
+  }
+
 }
+
 
 

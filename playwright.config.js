@@ -50,17 +50,16 @@ export default defineConfig({
     maxRetries: 3,
     
     // Test isolation
-    isolatePages: true,
-    
-    // Storage state for auth
-    storageState: 'auth/user-auth.json'
+    isolatePages: true
   },
 
   projects: [
     {
-      name: 'chromium',
+      name: 'authenticated-tests',
+      testMatch: '**/!(register.spec.js)', // Tất cả test trừ register.spec.js
       use: { 
         ...devices['Desktop Chrome'],
+        storageState: 'auth/user-auth.json', // Có authentication cho các test khác
         launchOptions: {
           args: [
             '--disable-dev-shm-usage',
@@ -70,7 +69,22 @@ export default defineConfig({
         }
       },
     },
-  
+    {
+      name: 'guest-tests',
+      testMatch: '**/register.spec.js', // Chỉ register.spec.js
+      use: { 
+        ...devices['Desktop Chrome'],
+        // Không có storageState - clean state cho guest tests
+        launchOptions: {
+          args: [
+            '--disable-dev-shm-usage',
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--incognito' // Thêm incognito mode để đảm bảo clean state
+          ]
+        }
+      },
+    }
   ],
 
   // Output directory for test artifacts
