@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import Mailosaur from 'mailosaur';
 import dotenv from 'dotenv';
+import {RegisterPage} from '../page-objects/RegisterPage'
 dotenv.config();
 
 // Create screenshots directory if it doesn't exist
@@ -13,8 +14,14 @@ if (!fs.existsSync(screenshotsDir)) {
 
 test.describe('App-Register', () => {
   test.setTimeout(240000);
+  let registerPage
 
-  test('TC-APP-RA-001', async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
+    registerPage = new RegisterPage(page);
+  }); 
+
+
+  test('TC-APP-RA-001', async () => {
     // Check if environment variables are set
     if (!process.env.MAILOSAUR_API_KEY || !process.env.MAILOSAUR_SERVER_ID) {
       test.skip('Mailosaur environment variables not set');
@@ -148,5 +155,14 @@ test.describe('App-Register', () => {
     await page.screenshot({ path: path.join(screenshotsDir, 'registration-complete.png') });
     
     console.log('✅ Registration and OTP verification completed successfully');
+  });
+
+  test('TC-APP-RA-002', async ({ page }) => {
+    // Test này chạy trong guest-tests project với clean state
+    const result = await registerPage.verifyJoinEventByCode()
+    
+    // Verify that logout option is present (meaning login was successful)
+    expect(result).toBeTruthy();
+    console.log('✅ TC-APP-RA-002: Join event by code and guest login test passed');
   });
 });

@@ -378,3 +378,4 @@ export class EventCreationPage extends BasePage {
   }
 }
 
+
