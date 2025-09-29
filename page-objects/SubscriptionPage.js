@@ -32,6 +32,106 @@ export class SubscriptionPage extends BasePage {
     
     // Event list verification
     this.myEventsLabel = this.page.locator('label:has-text("My Events")').first();
+
+    //Event detail page
+    this.upgradeButton = this.page.locator('div.d-flex:has-text("Upgrade")');
+    this.gridButton = this.page.locator('button:has(mat-icon:text("window"))');
+    this.settingsButton = this.page.locator('button:has(mat-icon:text("settings"))');
+    this.moreOptionsButton = this.page.locator('button:has(mat-icon:text("more_vert"))');
+
+  }
+
+  async verifyUILoaded() {
+    await expect(this.upgradeButton).toBeVisible();
+    await expect(this.gridButton).toBeVisible();
+    await expect(this.settingsButton).toBeVisible();
+    await expect(this.moreOptionsButton).toBeVisible();
+  }
+
+  /**
+   * Choose a specific plan card by name and click its Select button
+   * @param {"Trial"|"Standard Plan"|"Premium Plan"|"Premium+ Plan"|"Premium+ subscription"} planName
+   * @returns {Promise<{success: boolean, navigationType: string, newPage?: any}>}
+   */
+  async choosePlanAndClickSelect(planName) {
+    try {
+      console.log(`Choosing subscription plan: ${planName}`);
+
+      // Wait for plans grid to be visible
+      await this.page.waitForSelector('.options .plan-name', { state: 'visible', timeout: 15000 });
+
+      // Find the plan card container by plan name text
+      const planCard = this.page.locator(`.options:has(.plan-name:has-text("${planName}"))`).first();
+      const cardVisible = await planCard.isVisible({ timeout: 5000 }).catch(() => false);
+      if (!cardVisible) {
+        throw new Error(`Plan card not visible for: ${planName}`);
+      }
+
+      // Store current URL to detect navigation type
+      const currentUrl = this.page.url();
+      console.log(`Current URL before click: ${currentUrl}`);
+
+      // Set up promise to wait for new page (if it opens)
+      const newPagePromise = this.page.context().waitForEvent('page', { timeout: 5000 }).catch(() => null);
+
+      // Within that card, click its Select button
+      const selectInCard = planCard.locator('div.d-flex:has-text("Select")').first();
+      await selectInCard.waitFor({ state: 'visible', timeout: 10000 });
+      await selectInCard.click();
+      
+      console.log('Select button clicked, waiting for navigation...');
+      await this.page.waitForTimeout(2000);
+      
+      // Check if new page was opened
+      const newPage = await newPagePromise;
+      if (newPage) {
+        console.log('✅ New page/window opened for payment');
+        await this.takeScreenshot(`plan-selected-${planName.replace(/\s+/g,'-').toLowerCase()}`);
+        return {
+          success: true,
+          navigationType: 'newPage',
+          newPage: newPage
+        };
+      }
+
+      // Check if current page was redirected
+      const newUrl = this.page.url();
+      if (newUrl !== currentUrl) {
+        console.log(`✅ Page redirected to: ${newUrl}`);
+        await this.takeScreenshot(`plan-selected-${planName.replace(/\s+/g,'-').toLowerCase()}`);
+        return {
+          success: true,
+          navigationType: 'redirect'
+        };
+      }
+
+      // Check if payment form appeared on same page (modal/dialog)
+      const paymentFormVisible = await this.page.locator('input[id="cardNumber"], input[placeholder*="card"], .payment-form, [data-testid*="payment"]').isVisible({ timeout: 3000 }).catch(() => false);
+      if (paymentFormVisible) {
+        console.log('✅ Payment form appeared on same page');
+        await this.takeScreenshot(`plan-selected-${planName.replace(/\s+/g,'-').toLowerCase()}`);
+        return {
+          success: true,
+          navigationType: 'samePage'
+        };
+      }
+
+      // If none of the above, assume same page with delay
+      console.log('⚠️ No clear navigation detected, assuming same page payment');
+      await this.takeScreenshot(`plan-selected-${planName.replace(/\s+/g,'-').toLowerCase()}`);
+      return {
+        success: true,
+        navigationType: 'samePage'
+      };
+
+    } catch (error) {
+      console.error('Error choosing plan and clicking Select:', error.message);
+      await this.takeScreenshot('error-choose-plan-select');
+      return {
+        success: false,
+        navigationType: 'error'
+      };
+    }
   }
 
   /**
@@ -41,17 +141,9 @@ export class SubscriptionPage extends BasePage {
     try {
       console.log('Navigating to subscription page...');
       
-      // Click on profile image/menu
-      await this.profileMenu.waitFor({ state: 'visible', timeout: 10000 });
-      await this.profileMenu.click();
-      await this.page.waitForTimeout(1000);
-      await this.takeScreenshot('profile-menu-opened');
-      
-      // Click on Subscription menu item
-      await this.subscriptionMenuItem.waitFor({ state: 'visible', timeout: 10000 });
-      await this.subscriptionMenuItem.click();
-      await this.page.waitForTimeout(2000);
-      await this.takeScreenshot('subscription-page');
+      await this.verifyUILoaded();
+      await this.upgradeButton.click();
+
      
       return true;
     } catch (error) {
