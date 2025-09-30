@@ -51,7 +51,7 @@ export class SubscriptionPage extends BasePage {
   /**
    * Choose a specific plan card by name and click its Select button
    * @param {"Trial"|"Standard Plan"|"Premium Plan"|"Premium+ Plan"|"Premium+ subscription"} planName
-   * @returns {Promise<{success: boolean, navigationType: string, newPage?: any}>}
+   * @returns {Promise<{success: boolean, navigationType?: string, newPage?: import('@playwright/test').Page}>}
    */
   async choosePlanAndClickSelect(planName) {
     try {
@@ -67,70 +67,47 @@ export class SubscriptionPage extends BasePage {
         throw new Error(`Plan card not visible for: ${planName}`);
       }
 
-      // Store current URL to detect navigation type
-      const currentUrl = this.page.url();
-      console.log(`Current URL before click: ${currentUrl}`);
-
-      // Set up promise to wait for new page (if it opens)
-      const newPagePromise = this.page.context().waitForEvent('page', { timeout: 5000 }).catch(() => null);
-
       // Within that card, click its Select button
       const selectInCard = planCard.locator('div.d-flex:has-text("Select")').first();
       await selectInCard.waitFor({ state: 'visible', timeout: 10000 });
+      
+      // Set up listeners for navigation detection
+      const currentUrl = this.page.url();
+      let navigationResult = { success: true, navigationType: 'same' };
+
+      // Listen for new page/popup
+      const newPagePromise = this.page.context().waitForEvent('page', { timeout: 5000 }).catch(() => null);
+      
+      // Click the select button
       await selectInCard.click();
-      
-      console.log('Select button clicked, waiting for navigation...');
-      await this.page.waitForTimeout(2000);
-      
-      // Check if new page was opened
+      await this.page.waitForTimeout(1500);
+
+      // Check if a new page was opened
       const newPage = await newPagePromise;
       if (newPage) {
-        console.log('✅ New page/window opened for payment');
-        await this.takeScreenshot(`plan-selected-${planName.replace(/\s+/g,'-').toLowerCase()}`);
-        return {
-          success: true,
-          navigationType: 'newPage',
-          newPage: newPage
-        };
+        console.log('✅ New page/window detected for payment');
+        navigationResult.navigationType = 'newPage';
+        navigationResult.newPage = newPage;
+      } else {
+        // Check if URL changed (redirect)
+        await this.page.waitForTimeout(2000);
+        const newUrl = this.page.url();
+        if (newUrl !== currentUrl) {
+          console.log('✅ Page redirect detected for payment');
+          navigationResult.navigationType = 'redirect';
+        } else {
+          console.log('✅ Same page payment (modal/dialog)');
+          navigationResult.navigationType = 'same';
+        }
       }
 
-      // Check if current page was redirected
-      const newUrl = this.page.url();
-      if (newUrl !== currentUrl) {
-        console.log(`✅ Page redirected to: ${newUrl}`);
-        await this.takeScreenshot(`plan-selected-${planName.replace(/\s+/g,'-').toLowerCase()}`);
-        return {
-          success: true,
-          navigationType: 'redirect'
-        };
-      }
-
-      // Check if payment form appeared on same page (modal/dialog)
-      const paymentFormVisible = await this.page.locator('input[id="cardNumber"], input[placeholder*="card"], .payment-form, [data-testid*="payment"]').isVisible({ timeout: 3000 }).catch(() => false);
-      if (paymentFormVisible) {
-        console.log('✅ Payment form appeared on same page');
-        await this.takeScreenshot(`plan-selected-${planName.replace(/\s+/g,'-').toLowerCase()}`);
-        return {
-          success: true,
-          navigationType: 'samePage'
-        };
-      }
-
-      // If none of the above, assume same page with delay
-      console.log('⚠️ No clear navigation detected, assuming same page payment');
       await this.takeScreenshot(`plan-selected-${planName.replace(/\s+/g,'-').toLowerCase()}`);
-      return {
-        success: true,
-        navigationType: 'samePage'
-      };
+      return navigationResult;
 
     } catch (error) {
       console.error('Error choosing plan and clicking Select:', error.message);
       await this.takeScreenshot('error-choose-plan-select');
-      return {
-        success: false,
-        navigationType: 'error'
-      };
+      return { success: false };
     }
   }
 
