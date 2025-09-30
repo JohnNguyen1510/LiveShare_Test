@@ -28,7 +28,7 @@ test.describe('SnapQuest Feature Tests ', () => {
 
   test('TC-APP-SQ-001: Verify accessing "Join to events button" from plus icon in Joined Events page using POM', async ({ page, context }) => {
     try {
-      console.log('Starting test: TC-APP-SQ-001');
+    console.log('Starting test: TC-APP-SQ-001');
 
       await page.goto('https://dev.livesharenow.com/events');
       await page.waitForTimeout(2000);
