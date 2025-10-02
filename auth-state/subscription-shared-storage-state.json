@@ -1,0 +1,95 @@
+{
+  "cookies": [
+    {
+      "name": "_ga",
+      "value": "GA1.1.1385992193.1759115302",
+      "domain": ".livesharenow.com",
+      "path": "/",
+      "expires": 1793680277.871237,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "NID",
+      "value": "525=lbXpTcpacgmKxkeOxPBEY18FSNPKhSylY9fKQXly8lmwUGclwet9E2LOb7dqZyEipu9xzIoPdqzH7iJ7yMTrEt3jIT1iI_5cHJuoxZaBpuueavH7hA8MgjtoW7Dpnle1-UKcrlRtc6yRCShTg3z9rAwXEpJhR9vIx6S9cWty_Yrjs_pUCLMJqpS81Wb3UgqA",
+      "domain": ".google.com",
+      "path": "/",
+      "expires": 1774926511.052983,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "_hp2_ses_props.3135015402",
+      "value": "%7B%22ts%22%3A1759120273451%2C%22d%22%3A%22dev.livesharenow.com%22%2C%22h%22%3A%22%2F%22%7D",
+      "domain": ".livesharenow.com",
+      "path": "/",
+      "expires": 1759122095,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "_ga_HYG2Z6HE51",
+      "value": "GS2.1.s1759120273$o2$g1$t1759120277$j56$l0$h0",
+      "domain": ".livesharenow.com",
+      "path": "/",
+      "expires": 1793680277.903115,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "ACCESSTOKEN",
+      "value": "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImNyZWF0ZWRBdCI6IjIwMjUtMDktMjlUMDQ6MzE6MjYuMzIyWiIsIl9pZCI6IjY4ZGEwYjlkNjgyNjY3OTZjMzI5M2Y2MCIsIm5hbWUiOiJTdWJzY3JpcHRpb24gVGVzdCBVc2VyIiwiZW1haWwiOiJzdWJzY3JpcHRpb25fc2hhcmVkXzE3NTkxMjAyNzIxMjRAcmg0cTU1a2oubWFpbG9zYXVyLm5ldCIsImhpbnRzQW5kVGlwcyI6dHJ1ZSwiZXZlbnRTdWJzY3JpcHRpb25zIjpbXSwiaGFzaCI6IjAzNDAxNjY0ZDlkOGQ4MjNiMDhlZjNjMDliNWRjYWJhODY1ZmYxMzQzMDRjMjA3OTQyMjBiNjhkMzEyNGRiZGJmZWRlNGVlYzNiMDBlYjRmM2Q3ODAzMDA4OGVjNDIzZmI1ZmM3ZTY5MzRmNmY2NTdmMzFlODZiZDY2ZTUwNDNjYjVmMmEyYmIzMzAzMmQ2N2M1NTcxMDJjZjJkZGZkOTc2MDU3NmQxODFmODhlZWNmNDI5MzdiMTE5NWM4YWE3OTM2MTI5MmIxMTJkZjZiYTgwZjdkOGVlNmNhOThkNTc2ZTA4YTczODk5M2FhOTE3MDY3MDkxYTViYWNhMzU0YzM1MjUwZTRhMjE3OTFiZWYxMTMzYmU5NGQ2MGUwZTMxNDU2NDRlOTBmZjBmZTM3MWJmZjNlYWFjYzYzMjg2MTBiZTM4Yzg0NDdkNmQ3OGU2ZThhYmE2YWRkMzNjZTZiODFhNWUwNjMwNzY0M2ZkMjI4MDg1ODU4ZWE2M2IzNjgwYzc0YTM5MzdkNmYxNjA4NzlkNGJiOGUyNGNjMjY4OTgyNDViMjQwMWI5YTc5OTJmYjk4MzRiZDQyOTMxZjlhNGY5ZjhmNTJkNWIxNjZmOWRlOWE0NjhlNjkxM2Q3NjY0ZWQ0MDc4YzllYzRkMzIwNGZhZTJhYjZkZjRlYmQ2NTIyNGUzODM0MTY2ZDI2YzY0OTUxODU3ZmU1ZjlkYmZhZThjOTQ3Yzc1MmI1MTM5MzQ0OTAxZWQ1M2NhZjFiMGQ1MDdhYWI4M2E3MDRiYWRjZTc2Y2NiYjVhMzdkZjA3ZTViMWEyOTljZThiNDFmYTFlNDNmZTllM2ZhZTdhYWE4N2VkYTYzODhhYWNkNjkxOTM0YTFlZmIxNDZhZmFlNjkwZGZlYmFmYjA5M2JiYzNjZWJlMWM3N2M2ZjI5YjdiMTgzYjNjMTJkNmZiMDcyYTUwMzlmMWM0ZDRhN2FmOGI4N2U5ZDdmMzkxM2Q5YWJmNWQ2OThhN2VjMGFjYWZlYjViNzExMDMwNjVmOTQ5MWI2ZmFjMWIzODkzNjY4NThjZTBhNjRkNmQxNjdkNjU0OTVmMWU4MWRjNjYwYTc2YzQ4ZmM1MTNkZDcxZDM2MjM0OGQ2NzhkYjhhNzdkMGJhYjA4ZmI2ZjMwNmI5ZGNiNjgxOGY5ZTNiMmYzNWFhOGQxYjkyZjkzN2EwZWFjZDMxMjU0ZTRlYjFmN2UyNDU2OTNhMDFjYWQ3ZWNhNDFmNmNlYjVlNzBkNjlmNjA4NDc4ODI4ZWQyMzAxZjM4YzJhODM2NjI4N2I5ODdlMGZhMWVkYThlZTU1Y2Q2NGI3YTlkNWUzZDU1ZmJjMmNlYTdlMzgwNzEiLCJzYWx0IjoiZDMxYzE5OTY4Yjk2ODJmMGNjZDE4YjJmMTk0N2VmNmYiLCJzdGF0dXMiOiJBY3RpdmUiLCJwbGFuIjoiQmFzaWMiLCJfX3YiOjB9LCJleHAiOjE3NTkyMDY2OTQsImlhdCI6MTc1OTEyMDI5NH0.o9A1yGfiIS8UOdoybiw0MJXt7_uGLzxkX4QiF3W9M4GN8VWGhWHYn0-5VuaECXkRXqENgxNXY-13Ie1msOqDPw",
+      "domain": "dev.livesharenow.com",
+      "path": "/",
+      "expires": 1759206694,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_hp2_id.3135015402",
+      "value": "%7B%22userId%22%3A%227415003758877758%22%2C%22pageviewId%22%3A%225253345895745926%22%2C%22sessionId%22%3A%226518253234499869%22%2C%22identity%22%3Anull%2C%22trackerVersion%22%3A%224.0%22%7D",
+      "domain": ".livesharenow.com",
+      "path": "/",
+      "expires": 1793197895,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "https://dev.livesharenow.com",
+      "localStorage": [
+        {
+          "name": "ACCESSTOKEN",
+          "value": "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImNyZWF0ZWRBdCI6IjIwMjUtMDktMjlUMDQ6MzE6MjYuMzIyWiIsIl9pZCI6IjY4ZGEwYjlkNjgyNjY3OTZjMzI5M2Y2MCIsIm5hbWUiOiJTdWJzY3JpcHRpb24gVGVzdCBVc2VyIiwiZW1haWwiOiJzdWJzY3JpcHRpb25fc2hhcmVkXzE3NTkxMjAyNzIxMjRAcmg0cTU1a2oubWFpbG9zYXVyLm5ldCIsImhpbnRzQW5kVGlwcyI6dHJ1ZSwiZXZlbnRTdWJzY3JpcHRpb25zIjpbXSwiaGFzaCI6IjAzNDAxNjY0ZDlkOGQ4MjNiMDhlZjNjMDliNWRjYWJhODY1ZmYxMzQzMDRjMjA3OTQyMjBiNjhkMzEyNGRiZGJmZWRlNGVlYzNiMDBlYjRmM2Q3ODAzMDA4OGVjNDIzZmI1ZmM3ZTY5MzRmNmY2NTdmMzFlODZiZDY2ZTUwNDNjYjVmMmEyYmIzMzAzMmQ2N2M1NTcxMDJjZjJkZGZkOTc2MDU3NmQxODFmODhlZWNmNDI5MzdiMTE5NWM4YWE3OTM2MTI5MmIxMTJkZjZiYTgwZjdkOGVlNmNhOThkNTc2ZTA4YTczODk5M2FhOTE3MDY3MDkxYTViYWNhMzU0YzM1MjUwZTRhMjE3OTFiZWYxMTMzYmU5NGQ2MGUwZTMxNDU2NDRlOTBmZjBmZTM3MWJmZjNlYWFjYzYzMjg2MTBiZTM4Yzg0NDdkNmQ3OGU2ZThhYmE2YWRkMzNjZTZiODFhNWUwNjMwNzY0M2ZkMjI4MDg1ODU4ZWE2M2IzNjgwYzc0YTM5MzdkNmYxNjA4NzlkNGJiOGUyNGNjMjY4OTgyNDViMjQwMWI5YTc5OTJmYjk4MzRiZDQyOTMxZjlhNGY5ZjhmNTJkNWIxNjZmOWRlOWE0NjhlNjkxM2Q3NjY0ZWQ0MDc4YzllYzRkMzIwNGZhZTJhYjZkZjRlYmQ2NTIyNGUzODM0MTY2ZDI2YzY0OTUxODU3ZmU1ZjlkYmZhZThjOTQ3Yzc1MmI1MTM5MzQ0OTAxZWQ1M2NhZjFiMGQ1MDdhYWI4M2E3MDRiYWRjZTc2Y2NiYjVhMzdkZjA3ZTViMWEyOTljZThiNDFmYTFlNDNmZTllM2ZhZTdhYWE4N2VkYTYzODhhYWNkNjkxOTM0YTFlZmIxNDZhZmFlNjkwZGZlYmFmYjA5M2JiYzNjZWJlMWM3N2M2ZjI5YjdiMTgzYjNjMTJkNmZiMDcyYTUwMzlmMWM0ZDRhN2FmOGI4N2U5ZDdmMzkxM2Q5YWJmNWQ2OThhN2VjMGFjYWZlYjViNzExMDMwNjVmOTQ5MWI2ZmFjMWIzODkzNjY4NThjZTBhNjRkNmQxNjdkNjU0OTVmMWU4MWRjNjYwYTc2YzQ4ZmM1MTNkZDcxZDM2MjM0OGQ2NzhkYjhhNzdkMGJhYjA4ZmI2ZjMwNmI5ZGNiNjgxOGY5ZTNiMmYzNWFhOGQxYjkyZjkzN2EwZWFjZDMxMjU0ZTRlYjFmN2UyNDU2OTNhMDFjYWQ3ZWNhNDFmNmNlYjVlNzBkNjlmNjA4NDc4ODI4ZWQyMzAxZjM4YzJhODM2NjI4N2I5ODdlMGZhMWVkYThlZTU1Y2Q2NGI3YTlkNWUzZDU1ZmJjMmNlYTdlMzgwNzEiLCJzYWx0IjoiZDMxYzE5OTY4Yjk2ODJmMGNjZDE4YjJmMTk0N2VmNmYiLCJzdGF0dXMiOiJBY3RpdmUiLCJwbGFuIjoiQmFzaWMiLCJfX3YiOjB9LCJleHAiOjE3NTkyMDY2OTQsImlhdCI6MTc1OTEyMDI5NH0.o9A1yGfiIS8UOdoybiw0MJXt7_uGLzxkX4QiF3W9M4GN8VWGhWHYn0-5VuaECXkRXqENgxNXY-13Ie1msOqDPw"
+        },
+        {
+          "name": "evenCreatedBy",
+          "value": "68d20f13682667ace928915e"
+        },
+        {
+          "name": "loginMode",
+          "value": ""
+        },
+        {
+          "name": "userId",
+          "value": "68d20f13682667ace928915e"
+        },
+        {
+          "name": "TEST_EVENT_DATA",
+          "value": "{\"name\":\"Test Event 1759115335379\",\"createdAt\":\"2025-09-29T03:09:44.308Z\"}"
+        },
+        {
+          "name": "first_time",
+          "value": "68d9f84e682667a7e0293bbf"
+        }
+      ]
+    }
+  ]
+}

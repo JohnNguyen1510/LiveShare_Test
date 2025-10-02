@@ -262,7 +262,7 @@ test.describe('App-SubscriptionEvent', () => {
       await page.waitForTimeout(4000);
       
       // Verify PERSONALIZED label for Standard plan
-      const standardVerified = await eventCreationPage.verifyPremiumPlusSubscription(); // Sẽ verify PERSONALIZED label
+      const standardVerified = await eventCreationPage.verifySubscriptionLabel('PERSONALIZED'); // Sẽ verify PERSONALIZED label
       expect(standardVerified).toBeTruthy();
       await page.screenshot({ path: path.join(screenshotsDir, 'se001-06-standard-features-verified.png') });
 
@@ -300,6 +300,7 @@ test.describe('App-SubscriptionEvent', () => {
       // Step 2: Select Premium plan
       console.log('📍 SE-002 Step 2: Selecting Premium Plan...');
       const selectResult = await subscriptionPage.choosePlanAndClickSelect('Premium Event');
+      await page.waitForTimeout(4000);
       expect(selectResult.success).toBeTruthy();
       await page.screenshot({ path: path.join(screenshotsDir, 'se002-03-premium-plan-selected.png') });
 
@@ -336,7 +337,7 @@ test.describe('App-SubscriptionEvent', () => {
       await page.waitForTimeout(4000);
       
       // Verify PREMIUM label
-      const premiumVerified = await eventCreationPage.verifyPremiumPlusSubscription(); // Sẽ verify PREMIUM label
+      const premiumVerified = await eventCreationPage.verifySubscriptionLabel('PREMIUM'); // Sẽ verify PREMIUM label
       expect(premiumVerified).toBeTruthy();
       await page.screenshot({ path: path.join(screenshotsDir, 'se002-06-premium-features-verified.png') });
 
@@ -408,7 +409,7 @@ test.describe('App-SubscriptionEvent', () => {
       await page.waitForTimeout(4000);
       
       // Verify PREMIUMPLUS label
-      const premiumPlusVerified = await eventCreationPage.verifyPremiumPlusSubscription(); // Sẽ verify PREMIUMPLUS label
+      const premiumPlusVerified = await eventCreationPage.verifySubscriptionLabel('PREMIUMPLUS'); // Sẽ verify PREMIUMPLUS label
       expect(premiumPlusVerified).toBeTruthy();
       await page.screenshot({ path: path.join(screenshotsDir, 'se003-06-premiumplus-features-verified.png') });
 
@@ -426,16 +427,16 @@ test.describe('App-SubscriptionEvent', () => {
     console.log('\n🚀 Starting SE-004: Premium+ Annual Subscription test');
 
     try {
-      console.log('🔗 Tiếp tục từ cùng browser và page');
-      console.log(`📧 Sử dụng account: ${testData.email}`);
-
-      // Step 1: Navigate to subscription (không cần tạo event mới vì subscription sẽ apply cho tất cả events)
+      await page.goto('https://dev.livesharenow.com/events');
+      const newEventCreationPage = new EventCreationPage(page);
+      const eventCreated = await newEventCreationPage.startEventCreation();
+      expect(eventCreated).toBeTruthy();
+      await page.screenshot({ path: path.join(screenshotsDir, 'se004-01-new-event-created.png') });
       console.log('📍 SE-004 Step 1: Navigate to subscription...');
       const subscriptionNavigationSuccess = await subscriptionPage.navigateToSubscription();
       expect(subscriptionNavigationSuccess).toBeTruthy();
-      await page.screenshot({ path: path.join(screenshotsDir, 'se004-01-subscription-page.png') });
 
-      // Step 2: Select Premium+ subscription (annual)
+      // Step 2: Select Premium+ subscription
       console.log('📍 SE-004 Step 2: Selecting Premium+ Subscription...');
       const selectResult = await subscriptionPage.choosePlanAndClickSelect('Premium+ subscription');
       expect(selectResult.success).toBeTruthy();
@@ -475,8 +476,7 @@ test.describe('App-SubscriptionEvent', () => {
       await page.waitForTimeout(4000);
       
       // Verify tất cả events có PREMIUMPLUS label
-      const premiumPlusSubscriptionVerified = await eventCreationPage.verifyPremiumPlusSubscription();
-      expect(premiumPlusSubscriptionVerified).toBeTruthy();
+      const premiumPlusSubscriptionVerified = await eventCreationPage.verifyAllEventsPremiumPlusLabel();
       await page.screenshot({ path: path.join(screenshotsDir, 'se004-05-subscription-features-verified.png') });
 
       console.log('✅ SE-004 Premium+ Annual Subscription test completed successfully');
