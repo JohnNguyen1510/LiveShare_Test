@@ -39,9 +39,11 @@ export class SubscriptionPage extends BasePage {
     this.settingsButton = this.page.locator('button:has(mat-icon:text("settings"))');
     this.moreOptionsButton = this.page.locator('button:has(mat-icon:text("more_vert"))');
 
+
   }
 
   async verifyUILoaded() {
+    await this.page.waitForTimeout(3000);
     await expect(this.upgradeButton).toBeVisible();
     await expect(this.gridButton).toBeVisible();
     await expect(this.settingsButton).toBeVisible();
@@ -156,6 +158,7 @@ export class SubscriptionPage extends BasePage {
   async closeSubscriptionDialog() {
     try {
       console.log('Closing subscription success dialog...');
+      await this.page.waitForTimeout(3000);
       
       await this.closeButton.waitFor({ state: 'visible', timeout: 10000 });
       await this.closeButton.click();

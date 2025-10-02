@@ -7,7 +7,7 @@ export class SnapQuestPage extends BasePage {
     this.page = page;
 
     // Event codes for testing
-    this.eventCodes = ['95LZ85', '37FB49'];
+    this.eventCodes = ['82MR51', '27BP58'];
 
     // Navigation locators
     this.joinedEventsTab = this.page.locator('div.mat-tab-label:has-text("Joined Events")');
@@ -60,9 +60,18 @@ export class SnapQuestPage extends BasePage {
 
   async navigateToJoinedEvents() {
     console.log('Clicking on Joined Events tab...');
+    await this.page.goto('https://dev.livesharenow.com/events');
     await this.joinedEventsTab.waitFor({ state: 'visible', timeout: 10000 });
     await this.joinedEventsTab.click();
     await this.page.waitForTimeout(2000);
+  }
+
+  async verifyUILoadForSnapQuest() {
+    expect(this.shareButton).toBeVisible()
+    expect(this.shareDialog).toBeVisible()
+    expect(this.buttonLink1).toBeVisible()
+    expect(this.buttonLink2).toBeVisible()
+    console.log('UI loaded for SnapQuest');
   }
 
   async selectFirstJoinedEvent() {
@@ -77,7 +86,7 @@ export class SnapQuestPage extends BasePage {
 
   async navigateToNonDashboardPage() {
     console.log('Navigating to nondashboard URL...');
-    await this.page.goto('https://dev.livesharenow.com/?brand=null');
+    await this.page.goto('https://dev.livesharenow.com');
     await this.page.waitForTimeout(2000);
   }
 
@@ -202,6 +211,7 @@ export class SnapQuestPage extends BasePage {
     }
     
     expect(joinButtonFound, 'Join button should be found in non-dashboard page').toBeTruthy();
+    await this.page.waitForTimeout(2000);
     
     // Look for input field to enter code
     const codeInputSelectors = [
@@ -224,9 +234,14 @@ export class SnapQuestPage extends BasePage {
         break;
       }
     }
-    
+
+    await this.page.waitForTimeout(2000);
+
     expect(codeInputFound, 'Input field for event code should be found').toBeTruthy();
-    
+    await this.confirmJoin();
+    await this.verifyUILoadForSnapQuest();
+    await this.page.waitForTimeout(2000);
+
     return { joinButtonFound, codeInputFound };
   }
 

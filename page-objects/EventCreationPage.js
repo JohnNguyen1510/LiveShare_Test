@@ -52,12 +52,29 @@ export class EventCreationPage extends BasePage {
       'PREMIUMPLUS': this.page.locator('button.btn.btn-xs.btn-info:has-text("PremiumPlus")').first()
     };
 
+    //Premium subscription access
+    this.eventCards = this.page.locator('div.event-card-event');
+
     // Default event data
     this.defaultEventData = {
       typeId: '63aac88c5a3b994dcb8602fd',
       name: 'Test Event',
       date: 'September 23,'
     };
+  }
+
+  async verifyAllEventsPremiumPlusLabel(){
+    try {
+      const eventCount = await this.eventCards.count();
+      for (let i=0 ; i< eventCount; i++){
+        eventLabel = await this.eventCards.nth(i).locator('label:has-text("Premium")');
+        expect(eventLabel).toBeVisible();
+      }
+    } catch (error) {
+      console.error('Error verifying Premium subscription access:', error.message);
+      await this.takeScreenshot('error-verify-premium');
+      return false;
+    }
   }
 
   /**
@@ -213,10 +230,9 @@ export class EventCreationPage extends BasePage {
     try {
       console.log('Navigating back to events list...');
       
-      await this.backButton.waitFor({ state: 'visible', timeout: 10000 });
-      await this.backButton.click();
-      await this.page.waitForTimeout(2000);
-      await this.takeScreenshot('back-to-events');
+      await this.page.goto('https://dev.livesharenow.com/events');
+      await this.page.waitForTimeout(3000);
+      await this.takeScreenshot('navigate-back-to-events');
       
       return true;
     } catch (error) {
@@ -330,14 +346,11 @@ export class EventCreationPage extends BasePage {
    * Verify Premium Plus subscription is active in events list
    * @deprecated Use verifySubscriptionLabel('PREMIUMPLUS') instead
    */
-  async verifyPremiumPlusSubscription() {
+  async verifyPremiumSubscription(label) {
     try {
       console.log('Verifying Premium Plus subscription...');
       
-      // Cố gắng tìm bất kỳ subscription label nào có sẵn
-      const labels = ['PREMIUMPLUS', 'PREMIUM', 'PERSONALIZED'];
       
-      for (const label of labels) {
         const labelLocator = this.subscriptionLabels[label];
         const isVisible = await labelLocator.isVisible({ timeout: 3000 }).catch(() => false);
         
@@ -345,15 +358,10 @@ export class EventCreationPage extends BasePage {
           console.log(`✅ Found subscription label: ${label}`);
           await this.takeScreenshot(`subscription-${label.toLowerCase()}-found`);
           return true;
+          }
         }
-      }
-      
-      // Nếu không tìm thấy label nào, vẫn return true vì có thể là expected behavior
-      console.log('⚠️ No subscription labels found - this may be expected');
-      await this.takeScreenshot('no-subscription-labels-found');
-      return true;
-      
-    } catch (error) {
+       
+    catch (error) {
       console.error('Error verifying Premium Plus subscription:', error.message);
       await this.takeScreenshot('error-verify-premium-plus');
       return false;
