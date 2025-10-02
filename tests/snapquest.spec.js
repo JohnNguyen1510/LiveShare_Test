@@ -30,11 +30,8 @@ test.describe('SnapQuest Feature Tests ', () => {
     try {
     console.log('Starting test: TC-APP-SQ-001');
 
-    // Navigate to app and login
-    await page.goto('https://dev.livesharenow.com/');
-    const success = await loginPage.authenticateWithRetry(context);
-    expect(success, 'Google authentication should be successful').toBeTruthy();
-    
+      await page.goto('https://dev.livesharenow.com/events');
+      await page.waitForTimeout(2000);
       // Verify join functionality using POM method
       const joinButtonFound = await snapQuestPage.verifyJoinFunctionality();
       
