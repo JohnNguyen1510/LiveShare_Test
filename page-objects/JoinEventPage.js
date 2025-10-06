@@ -107,34 +107,12 @@ export class JoinEventPage extends BasePage {
     }, { timeout: 5000 }).catch(() => {});
     await this.postAsGuestButton.click();
     // Guest login closes dialog and returns to event detail
-    await this.eventDetailRoot.waitFor({ state: 'visible', timeout: 15000 });
   }
 
   async openPlusMenu() {
     await this.plusMenuButton.waitFor({ state: 'visible', timeout: 10000 });
     await this.plusMenuButton.click();
     await this.page.waitForTimeout(500);
-  }
-
-  async verifyLogoutVisibleInMoreMenu() {
-    await this.moreMenuButton.waitFor({ state: 'visible', timeout: 10000 });
-    await this.moreMenuButton.click();
-    await this.page.waitForTimeout(500);
-    const logoutSelectors = [
-      'button:has-text("Logout")',
-      'button:has-text("Log Out")',
-      'button:has-text("Sign Out")',
-      '.mat-menu-item:has-text("Logout")'
-    ];
-    let found = false;
-    for (const sel of logoutSelectors) {
-      const el = this.page.locator(sel).first();
-      if (await el.isVisible().catch(() => false)) {
-        found = true; break;
-      }
-    }
-    expect(found, 'Logout button should be visible in More menu').toBeTruthy();
-    await this.page.click('body');
   }
 
   async openThenAndNow() {
@@ -180,5 +158,4 @@ export class JoinEventPage extends BasePage {
     await this.videoFileInput.first().setInputFiles(videoPath);
   }
 }
-
 

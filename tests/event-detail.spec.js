@@ -107,14 +107,68 @@ test.describe('Event Detail UI', () => {
     // TC-APP-DEEV-07: Verify action buttons
     console.log('TC-APP-DEEV-07: Checking action buttons');
     await eventDetailPage.verifyActionButtons();
-        
-    // Take final screenshot
-    await page.screenshot({ path: path.join(screenshotsDir, 'event-detail-verification-complete.png') });
-        
+    
     // Summary
     console.log('✅ All Detail Event UI checks completed using POM structure');
   });
+
+  test('TC-APP-DEEV-08: Verify Share Event UI', async ({ page, context }) => {
+    // Navigate to events page and verify it loads
+    await eventListPage.goToEventsPage();
+    await eventListPage.waitForEventsToLoad();
+    await eventListPage.verifyEventsPageLoaded();
+
+    //TC-APP-DEEV-08: Grid View
+    console.log('TC-APP-DEEV-08: Checking grid view');
+    await eventDetailPage.verifyGridView();
+    
+  });
+
+  test('TC-APP-DEEV-09: Verify Comprehensive Grid Layout Testing', async ({ page, context }) => {
+    // Navigate to events page and verify it loads
+    await eventListPage.goToEventsPage();
+    await eventListPage.waitForEventsToLoad();
+    await eventListPage.verifyEventsPageLoaded();
+
+    //TC-APP-DEEV-09: Comprehensive Grid Layout Testing
+    console.log('TC-APP-DEEV-09: Testing all grid layouts (2x2, 3x3, Timeline)');
+    await eventDetailPage.testAllGridLayouts();
+  });
+  test('TC-APP-DEEV-10: Verify Share Functionality', async ({ page, context }) => {
+    // Navigate to events page and verify it loads
+    await eventListPage.goToEventsPage();
+    await eventListPage.waitForEventsToLoad();
+    await eventListPage.verifyEventsPageLoaded();
+
+    // If no "tuanhay" event found, click first available event
+    await eventListPage.clickEventByIndex(0);
+  
+        
+    // Wait for event detail page to load
+    await eventDetailPage.waitForEventDetailToLoad();
+    await eventDetailPage.verifyEventDetailLoaded();
+    await page.screenshot({ path: path.join(screenshotsDir, 'detail-event-loaded.png') });
+
+    //TC-APP-DEEV-10: Share Functionality
+    console.log('TC-APP-DEEV-10: Testing share functionality');
+    await eventDetailPage.verifyShareFunctionality();
+  });
+
+  test('TC-APP-DEEV-11: Verify movie editor work correctly' , async({page,context})=>{
+        // Navigate to events page and verify it loads
+        await eventListPage.goToEventsPage();
+        await eventListPage.waitForEventsToLoad();
+        await eventListPage.verifyEventsPageLoaded();
+    
+        // If no "tuanhay" event found, click first available event
+        await eventListPage.clickEventByIndex(0);
+      
+            
+        // Wait for event detail page to load
+        await eventDetailPage.waitForEventDetailToLoad();
+        await eventDetailPage.verifyEventDetailLoaded();
+        await page.screenshot({ path: path.join(screenshotsDir, 'detail-event-loaded.png') });
+
+        await eventDetailPage.verifyMovieEditorFunctionality()
+  })
 });
-
-
-

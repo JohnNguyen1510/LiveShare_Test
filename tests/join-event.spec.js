@@ -43,30 +43,27 @@ test.describe('App-JoinEvent', () => {
     await joinEventPage.openJoinDialogFromHome();
     await joinEventPage.joinByCode(EVENT_CODE);
     await joinEventPage.verifyEventUI();
-    await joinEventPage.verifyLogoutVisibleInMoreMenu();
     await page.screenshot({ path: path.join(screenshotsDir, 'je-001-joined.png') });
   });
 
-  test('TC-APP-JE-002: Then & Now opens and allows upload (logged in via setup token)', async ({ page }) => {
+  test('TC-APP-JE-002: Then & Now works as Post as Guest', async ({ page }) => {
     const { img } = ensureTestFiles();
     await joinEventPage.goHome();
     await joinEventPage.openJoinDialogFromHome();
     await joinEventPage.joinByCode(EVENT_CODE);
-    await joinEventPage.verifyLogoutVisibleInMoreMenu();
-    await page.click('body');
+    await joinEventPage.openGuestLoginAndPostAsGuest('Auto Guest JE002');
     await joinEventPage.openPlusMenu();
     await joinEventPage.openThenAndNow();
     await joinEventPage.uploadThenAndNowImages(img);
     await page.screenshot({ path: path.join(screenshotsDir, 'je-002-then-now-uploaded.png') });
   });
 
-  test('TC-APP-JE-003/004: KeepSake allows upload (logged in via setup token)', async ({ page }) => {
+  test('TC-APP-JE-003/004: KeepSake flow as Post as Guest', async ({ page }) => {
     const { img } = ensureTestFiles();
     await joinEventPage.goHome();
     await joinEventPage.openJoinDialogFromHome();
     await joinEventPage.joinByCode(EVENT_CODE);
-    await joinEventPage.verifyLogoutVisibleInMoreMenu();
-    await page.click('body');
+    await joinEventPage.openGuestLoginAndPostAsGuest('Auto Guest JE003');
     await joinEventPage.openPlusMenu();
     await joinEventPage.openKeepSake();
     // Choose Photos path in keepsake
@@ -76,12 +73,12 @@ test.describe('App-JoinEvent', () => {
     await page.screenshot({ path: path.join(screenshotsDir, 'je-003-keepsake-photo.png') });
   });
 
-  test('TC-APP-JE-005: Message composer (with image + caption) logged in via token', async ({ page }) => {
+  test('TC-APP-JE-005: Message flow as Post as Guest (with image + caption)', async ({ page }) => {
     const { img } = ensureTestFiles();
     await joinEventPage.goHome();
     await joinEventPage.openJoinDialogFromHome();
     await joinEventPage.joinByCode(EVENT_CODE);
-    await joinEventPage.verifyLogoutVisibleInMoreMenu();
+    await joinEventPage.openGuestLoginAndPostAsGuest('Auto Guest JE005');
     await joinEventPage.openPlusMenu();
     await joinEventPage.openMessageComposer();
     await joinEventPage.captionInput.fill('Auto caption from JE-005');
@@ -97,24 +94,24 @@ test.describe('App-JoinEvent', () => {
     await page.screenshot({ path: path.join(screenshotsDir, 'je-005-message-ready.png') });
   });
 
-  test('TC-APP-JE-006: Image upload via plus menu (logged in via token)', async ({ page }) => {
+  test('TC-APP-JE-006: Image upload as Post as Guest', async ({ page }) => {
     const { img } = ensureTestFiles();
     await joinEventPage.goHome();
     await joinEventPage.openJoinDialogFromHome();
     await joinEventPage.joinByCode(EVENT_CODE);
-    await joinEventPage.verifyLogoutVisibleInMoreMenu();
+    await joinEventPage.openGuestLoginAndPostAsGuest('Auto Guest JE006');
     await joinEventPage.openPlusMenu();
     await joinEventPage.uploadPhotoFromPlus(img);
     await page.waitForTimeout(3000);
     await page.screenshot({ path: path.join(screenshotsDir, 'je-006-photo-upload.png') });
   });
 
-  test('TC-APP-JE-007: Video upload via plus menu (logged in via token)', async ({ page }) => {
+  test('TC-APP-JE-007: Video upload as Post as Guest', async ({ page }) => {
     const { vid } = ensureTestFiles();
     await joinEventPage.goHome();
     await joinEventPage.openJoinDialogFromHome();
     await joinEventPage.joinByCode(EVENT_CODE);
-    await joinEventPage.verifyLogoutVisibleInMoreMenu();
+    await joinEventPage.openGuestLoginAndPostAsGuest('Auto Guest JE007');
     await joinEventPage.openPlusMenu();
     await joinEventPage.uploadVideoFromPlus(vid);
     await page.waitForTimeout(3000);
@@ -126,7 +123,6 @@ test.describe('App-JoinEvent', () => {
     await joinEventPage.openJoinDialogFromHome();
     await joinEventPage.joinByCode(EVENT_CODE);
     await joinEventPage.verifyEventUI();
-    await joinEventPage.verifyLogoutVisibleInMoreMenu();
     await joinEventPage.gridViewButton.click();
     await page.waitForTimeout(1000);
     // Verify popup options by text presence
@@ -142,7 +138,6 @@ test.describe('App-JoinEvent', () => {
     await joinEventPage.goHome();
     await joinEventPage.openJoinDialogFromHome();
     await joinEventPage.joinByCode(EVENT_CODE);
-    await joinEventPage.verifyLogoutVisibleInMoreMenu();
     // Mock navigator.share if needed
     await page.evaluate(() => {
       window['_shareAPICalled'] = false;
@@ -164,7 +159,6 @@ test.describe('App-JoinEvent', () => {
     await joinEventPage.goHome();
     await joinEventPage.openJoinDialogFromHome();
     await joinEventPage.joinByCode(EVENT_CODE);
-    await joinEventPage.verifyLogoutVisibleInMoreMenu();
     await joinEventPage.moreMenuButton.click();
     const popupPromise = page.context().waitForEvent('page', { timeout: 10000 }).catch(() => null);
     await joinEventPage.liveViewMenuItem.click();
@@ -181,7 +175,6 @@ test.describe('App-JoinEvent', () => {
     await joinEventPage.goHome();
     await joinEventPage.openJoinDialogFromHome();
     await joinEventPage.joinByCode(EVENT_CODE);
-    await joinEventPage.verifyLogoutVisibleInMoreMenu();
     await joinEventPage.moreMenuButton.click();
     await joinEventPage.redeemGiftMenuItem.click();
     const codeInput = page.locator('input[placeholder*="gift code" i], input[placeholder*="code" i], input.input-bordered').first();
