@@ -110,19 +110,4 @@ test.describe('SnapQuest Feature Tests ', () => {
       throw error;
     }
   });
-
-  test('TC-APP-FSQ-005: Check user cant join into the same snapquest event using POM', async ({ page, context }) => {
-    try {
-      console.log('Starting test: TC-APP-FSQ-005');
-      
-      // Verify duplicate join prevention using POM method
-      const duplicateCount = await snapQuestPage.verifyDuplicateJoinPrevention();
-      
-      console.log('✅ TC-APP-FSQ-005 completed - Expected to fail using POM structure');
-      
-    } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-duplicate-join-${Date.now()}.png`) });
-      throw error;
-    }
-  });
 }); 

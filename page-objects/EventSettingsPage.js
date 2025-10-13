@@ -573,6 +573,9 @@ export class EventSettingsPage extends BasePage {
       
       const dialogSaveButton = huntDialog.locator('.mat-dialog-actions button.btn:has-text("Save")');
       await dialogSaveButton.click();
+      const huntConfirmDialog = this.page.locator('mat-dialog-container:has(h2:has-text("No tempates Selected?"))');
+      const dialogConfirm = huntConfirmDialog.locator('.mat-dialog-actions button.btn:has-text("Yes")');
+      await dialogConfirm.click();
       await this.page.waitForTimeout(1500);
       
       console.log(`  ✅ Scavenger Hunt ${enable ? 'enabled' : 'disabled'} successfully`);

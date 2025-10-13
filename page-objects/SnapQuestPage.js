@@ -67,6 +67,7 @@ export class SnapQuestPage extends BasePage {
   }
 
   async verifyUILoadForSnapQuest() {
+    this.shareButton.click()
     expect(this.shareButton).toBeVisible()
     expect(this.shareDialog).toBeVisible()
     expect(this.buttonLink1).toBeVisible()

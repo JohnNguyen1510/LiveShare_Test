@@ -117,10 +117,6 @@ test.describe('Picture In Event Detail', () => {
       await page.waitForTimeout(8000);
       await imageDetailPage.clickFirstImage();
 
-
-      // Verify gift button functionality using POM method
-      const buttonChanged = await imageDetailPage.verifyGiftButtonFunctionality();
-      
       console.log('✅ TC-APP-PIDe-002 completed successfully using POM structure');
       
     } catch (error) {

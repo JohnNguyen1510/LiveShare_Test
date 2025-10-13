@@ -51,7 +51,7 @@ test.describe('App-JoinEvent', () => {
     await joinEventPage.goHome();
     await joinEventPage.openJoinDialogFromHome();
     await joinEventPage.joinByCode(EVENT_CODE);
-    await joinEventPage.openGuestLoginAndPostAsGuest('Auto Guest JE002');
+    await joinEventPage.openGuestLoginAndPostAsGuest('Auto Guest JE002', EVENT_CODE);
     await joinEventPage.openPlusMenu();
     await joinEventPage.openThenAndNow();
     await joinEventPage.uploadThenAndNowImages(img);
@@ -63,7 +63,7 @@ test.describe('App-JoinEvent', () => {
     await joinEventPage.goHome();
     await joinEventPage.openJoinDialogFromHome();
     await joinEventPage.joinByCode(EVENT_CODE);
-    await joinEventPage.openGuestLoginAndPostAsGuest('Auto Guest JE003');
+    await joinEventPage.openGuestLoginAndPostAsGuest('Auto Guest JE003' , EVENT_CODE);
     await joinEventPage.openPlusMenu();
     await joinEventPage.openKeepSake();
     // Choose Photos path in keepsake
@@ -78,7 +78,7 @@ test.describe('App-JoinEvent', () => {
     await joinEventPage.goHome();
     await joinEventPage.openJoinDialogFromHome();
     await joinEventPage.joinByCode(EVENT_CODE);
-    await joinEventPage.openGuestLoginAndPostAsGuest('Auto Guest JE005');
+    await joinEventPage.openGuestLoginAndPostAsGuest('Auto Guest JE005' , EVENT_CODE);
     await joinEventPage.openPlusMenu();
     await joinEventPage.openMessageComposer();
     await joinEventPage.captionInput.fill('Auto caption from JE-005');
@@ -99,7 +99,7 @@ test.describe('App-JoinEvent', () => {
     await joinEventPage.goHome();
     await joinEventPage.openJoinDialogFromHome();
     await joinEventPage.joinByCode(EVENT_CODE);
-    await joinEventPage.openGuestLoginAndPostAsGuest('Auto Guest JE006');
+    await joinEventPage.openGuestLoginAndPostAsGuest('Auto Guest JE006' , EVENT_CODE  );
     await joinEventPage.openPlusMenu();
     await joinEventPage.uploadPhotoFromPlus(img);
     await page.waitForTimeout(3000);
@@ -111,7 +111,7 @@ test.describe('App-JoinEvent', () => {
     await joinEventPage.goHome();
     await joinEventPage.openJoinDialogFromHome();
     await joinEventPage.joinByCode(EVENT_CODE);
-    await joinEventPage.openGuestLoginAndPostAsGuest('Auto Guest JE007');
+    await joinEventPage.openGuestLoginAndPostAsGuest('Auto Guest JE007', EVENT_CODE);
     await joinEventPage.openPlusMenu();
     await joinEventPage.uploadVideoFromPlus(vid);
     await page.waitForTimeout(3000);
