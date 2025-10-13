@@ -117,6 +117,8 @@ test.describe('Event Detail UI', () => {
     await eventListPage.goToEventsPage();
     await eventListPage.waitForEventsToLoad();
     await eventListPage.verifyEventsPageLoaded();
+    await eventListPage.clickEventByIndex(0);
+
 
     //TC-APP-DEEV-08: Grid View
     console.log('TC-APP-DEEV-08: Checking grid view');
@@ -129,6 +131,8 @@ test.describe('Event Detail UI', () => {
     await eventListPage.goToEventsPage();
     await eventListPage.waitForEventsToLoad();
     await eventListPage.verifyEventsPageLoaded();
+    await eventListPage.clickEventByIndex(0);
+
 
     //TC-APP-DEEV-09: Comprehensive Grid Layout Testing
     console.log('TC-APP-DEEV-09: Testing all grid layouts (2x2, 3x3, Timeline)');

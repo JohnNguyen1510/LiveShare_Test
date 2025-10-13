@@ -28,6 +28,8 @@ export class JoinEventPage extends BasePage {
 
     // Guest login dialog
     this.moreLoginItem = this.page.locator('div.mat-menu-content button:has-text("Login"), button:has-text("Login")').first();
+    this.moreLogoutItem = this.page.locator('div.mat-menu-content button:has-text("Logout"), button:has-text("Logout")').first();
+    this.yesConfirmButton = this.page.locator('button:has-text("Yes")').first();
     this.guestDialog = this.page.locator('#guest-login-dialog');
     this.nicknameInput = this.page.locator('#guest-login-dialog input[placeholder="Enter a Nickname"], input[placeholder*="Nickname"]').first();
     this.postAsGuestButton = this.page.locator('#guest-login-dialog button:has-text("Post as Guest")').first();
@@ -91,9 +93,25 @@ export class JoinEventPage extends BasePage {
     await expect(this.detailsHeader).toBeVisible();
   }
 
-  async openGuestLoginAndPostAsGuest(nickname = 'Auto Guest') {
+
+  async openGuestLoginAndPostAsGuest(nickname , eventCode) {
     await this.moreMenuButton.click();
     await this.page.waitForTimeout(500);
+    if (await this.moreLogoutItem.isVisible().catch(() => false)) {
+      await this.moreLogoutItem.click();
+      await this.yesConfirmButton.click();
+      await this.page.waitForTimeout(2000);
+      await this.goHome();
+      await this.openJoinDialogFromHome();
+      console.log('EVENT_CODE:', eventCode)
+      await this.joinByCode(eventCode);
+      await this.page.waitForTimeout(2000);
+      await this.moreMenuButton.click();
+      
+    }
+
+
+    
     if (await this.moreLoginItem.isVisible().catch(() => false)) {
       await this.moreLoginItem.click();
       await this.page.waitForTimeout(500);

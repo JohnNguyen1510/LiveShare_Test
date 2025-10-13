@@ -77,7 +77,7 @@ export class EventDetailPage extends BasePage {
     this.titleShare = this.page.locator('div.mat-dialog-title');
     this.qrCode = this.page.locator('img#qrcode').first();
     this.idCode = this.page.locator('span#event-code').first();
-    this.closeButton = this.page.locator('button mat-icon:text("close")');
+    this.closeButton = this.page.locator('button:text("Close")');
 
     //movie editor
     this.movieEditorButton = this.page.locator('button span:text("Movie Editor")')
