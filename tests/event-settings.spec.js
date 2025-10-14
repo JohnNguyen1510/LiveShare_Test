@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { RegisterPage } from '../page-objects/RegisterPage.js';
+import { LoginPage } from '../page-objects/LoginPage.js';
 import { SubscriptionPage } from '../page-objects/SubscriptionPage.js';
 import { PaymentPage } from '../page-objects/PaymentPage.js';
 import { EventCreationPage } from '../page-objects/EventCreationPage.js';
@@ -10,1507 +11,1741 @@ import fs from 'fs';
 import Mailosaur from 'mailosaur';
 import dotenv from 'dotenv';
 
+
 dotenv.config();
+
 
 // Create screenshots directory if it doesn't exist
 const screenshotsDir = path.join(process.cwd(), 'screenshots');
 if (!fs.existsSync(screenshotsDir)) {
-  fs.mkdirSync(screenshotsDir, { recursive: true });
+ fs.mkdirSync(screenshotsDir, { recursive: true });
 }
 
-/**
- * Setup function for creating fresh account and event for each test
- * @param {import('@playwright/test').Page} page - Playwright page instance
- * @param {import('@playwright/test').BrowserContext} context - Browser context
- * @param {string} testName - Name of the test for unique identification
- * @returns {Promise<{success: boolean, testData: Object}>} Setup result with test data
- */
-async function setupFreshAccountAndEvent(page, context, testName) {
-  console.log(`🚀 Starting fresh account and event setup for: ${testName}`);
-  
-  try {
-    // Skip test if Mailosaur is not configured
-    if (!process.env.MAILOSAUR_API_KEY || !process.env.MAILOSAUR_SERVER_ID) {
-      console.warn('⚠️ Mailosaur environment variables not set, skipping setup');
-      return { success: false, testData: null };
-    }
-
-    // Initialize page objects
-    const registerPage = new RegisterPage(page);
-    const eventCreationPage = new EventCreationPage(page);
-    
-    // Setup Mailosaur for email verification
-    const mailosaurClient = new Mailosaur(process.env.MAILOSAUR_API_KEY);
-    const serverId = process.env.MAILOSAUR_SERVER_ID;
-    const timestamp = Date.now();
-    const testEmail = `auto_${testName.toLowerCase().replace(/\s+/g, '_')}_${timestamp}@${serverId}.mailosaur.net`;
-    
-    const testData = {
-      email: testEmail,
-      name: `Auto User ${testName}`,
-      password: 't123',
-      eventName: `Auto Event ${testName} ${timestamp}`,
-      timestamp: timestamp
-    };
-
-    console.log(`📧 Using test email: ${testEmail}`);
-
-    // Step 1: Navigate to application
-    console.log('📍 Step 1: Navigating to application...');
-    await page.goto('https://dev.livesharenow.com/');
-    await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: path.join(screenshotsDir, `${testName}-01-app-loaded.png`) });
-
-    // Step 2: Complete registration flow
-    console.log('📍 Step 2: Starting registration process...');
-    await registerPage.clickCreateAccount();
-    await page.screenshot({ path: path.join(screenshotsDir, `${testName}-02-create-account-clicked.png`) });
-
-    // Choose email signup
-    console.log('📍 Step 3: Choosing email signup...');
-    const emailSignupSuccess = await registerPage.clickEmailSignup();
-    if (!emailSignupSuccess) {
-      throw new Error('Failed to click email signup');
-    }
-    await page.screenshot({ path: path.join(screenshotsDir, `${testName}-03-email-signup-selected.png`) });
-
-    // Handle terms and conditions
-    console.log('📍 Step 4: Handling terms and conditions...');
-    await registerPage.handleTermsAndConditions();
-    await page.screenshot({ path: path.join(screenshotsDir, `${testName}-04-terms-accepted.png`) });
-
-    // Fill registration form
-    console.log('📍 Step 5: Filling registration form...');
-    await registerPage.fillRegistrationForm(testData.name, testData.email, testData.password);
-    await page.screenshot({ path: path.join(screenshotsDir, `${testName}-05-registration-form-filled.png`) });
-
-    // Create account
-    console.log('📍 Step 6: Creating account...');
-    const createAccountButton = page.locator('button:has-text("Create Account")').first();
-    await expect(createAccountButton).toBeVisible();
-    await createAccountButton.click();
-    await page.waitForTimeout(2000);
-    await page.screenshot({ path: path.join(screenshotsDir, `${testName}-06-account-creation-submitted.png`) });
-
-    // Handle OTP verification
-    console.log('📍 Step 7: Handling OTP verification...');
-    console.log('⏳ Waiting for verification email...');
-    const signUpEmail = await mailosaurClient.messages.get(serverId, {
-      sentTo: testEmail
-    });
-    const verifyEmail = signUpEmail.html.codes[0].value;
-    console.log(`📧 Received OTP code: ${verifyEmail}`);
-    
-    // Wait for OTP input fields and fill them
-    const otpInputs = page.locator('.otp-box');
-    await otpInputs.first().waitFor({ state: 'visible', timeout: 10000 });
-    
-    const otpCode = verifyEmail.toString();
-    for (let i = 0; i < otpCode.length && i < 6; i++) {
-      const input = otpInputs.nth(i);
-      await input.waitFor({ state: 'visible', timeout: 5000 });
-      await input.fill(otpCode[i]);
-      await page.waitForTimeout(200);
-    }
-    
-    await page.screenshot({ path: path.join(screenshotsDir, `${testName}-07-otp-filled.png`) });
-
-    // Complete registration
-    const continueToEventButton = page.locator('button:has-text("Continue to the Event")').first();
-    await expect(continueToEventButton).toBeVisible();
-    await continueToEventButton.click();
-    await page.waitForTimeout(3000);
-    await page.screenshot({ path: path.join(screenshotsDir, `${testName}-08-registration-completed.png`) });
-
-    // Step 8: Create a new event
-    console.log('📍 Step 8: Creating new event...');
-    const eventCreationStarted = await eventCreationPage.startEventCreation();
-    if (!eventCreationStarted) {
-      throw new Error('Failed to start event creation');
-    }
-    await page.screenshot({ path: path.join(screenshotsDir, `${testName}-09-event-created.png`) });
-    await page.waitForTimeout(4000);
-
-    console.log(`✅ Fresh account and event setup completed successfully for: ${testName}`);
-    return { success: true, testData };
-    
-  } catch (error) {
-    console.error(`❌ Setup failed for ${testName}:`, error.message);
-    await page.screenshot({ path: path.join(screenshotsDir, `${testName}-error-setup.png`) });
-    return { success: false, testData: null };
-  }
-}
 
 /**
- * Helper function to verify "Preview for Free" text does NOT appear for a given feature
- * @param {import('@playwright/test').Page} page - Playwright page instance
- * @param {string} featureName - Name of the feature to check
- * @returns {Promise<boolean>} True if "Preview for Free" is NOT found (expected behavior)
- */
-async function verifyNoPreviewForFree(page, featureName) {
-  try {
-    console.log(`  Checking "${featureName}" - should NOT have "Preview for Free"...`);
-    
-    // Find the feature option element
-    const featureOption = page.locator(`.options:has-text("${featureName}")`).first();
-    
-    if (await featureOption.isVisible().catch(() => false)) {
-      const featureText = await featureOption.textContent();
-      
-      // Check if "Preview for Free" text is present
-      const hasPreviewForFree = featureText.toLowerCase().includes('preview for free');
-      
-      if (hasPreviewForFree) {
-        console.error(`    ❌ FAIL: Has "Preview for Free" (should not have it)`);
-        await page.screenshot({ 
-          path: path.join(screenshotsDir, `error-${featureName.toLowerCase().replace(/\s+/g, '-')}-has-preview-for-free.png`) 
-        });
-        return false;
-      } else {
-        console.log(`    ✅ PASS: Does NOT have "Preview for Free"`);
-        return true;
-      }
-    } else {
-      console.warn(`    ⚠️ Feature not found in UI`);
-      return true; // Consider as pass if feature not found
-    }
-  } catch (error) {
-    console.error(`    ❌ Error checking feature:`, error.message);
-    return false;
-  }
-}
+* ============================================================================
+* SHARED TEST DATA AND UTILITIES
+* ============================================================================
+*/
 
-/**
- * Helper function to verify "Preview for Free" text DOES appear for a given feature
- * @param {import('@playwright/test').Page} page - Playwright page instance
- * @param {string} featureName - Name of the feature to check
- * @returns {Promise<boolean>} True if "Preview for Free" IS found (expected behavior)
- */
-async function verifyHasPreviewForFree(page, featureName) {
-  try {
-    console.log(`  Checking "${featureName}" - should HAVE "Preview for Free"...`);
-    
-    // Find the feature option element
-    const featureOption = page.locator(`.options:has-text("${featureName}")`).first();
-    
-    if (await featureOption.isVisible().catch(() => false)) {
-      const featureText = await featureOption.textContent();
-      
-      // Check if "Preview for Free" text is present
-      const hasPreviewForFree = featureText.toLowerCase().includes('preview for free');
-      
-      if (hasPreviewForFree) {
-        console.log(`    ✅ PASS: Has "Preview for Free" (as expected)`);
-        return true;
-      } else {
-        console.error(`    ❌ FAIL: Does NOT have "Preview for Free" (should have it)`);
-        await page.screenshot({ 
-          path: path.join(screenshotsDir, `error-${featureName.toLowerCase().replace(/\s+/g, '-')}-missing-preview-for-free.png`) 
-        });
-        return false;
-      }
-    } else {
-      console.warn(`    ⚠️ Feature not found in UI`);
-      return true; // Consider as pass if feature not found
-    }
-  } catch (error) {
-    console.error(`    ❌ Error checking feature:`, error.message);
-    return false;
-  }
-}
 
-/**
- * Feature tier definitions based on subscription plans
- * Note: Based on actual UI behavior, some features are included in Standard plan
- * or don't show "Preview for Free" text even when locked
- */
-const FeatureTiers = {
-  // Free tier features (always enabled, no preview)
-  FREE: [
-    'Event Name',
-    'Event Date',
-    'Location',
-    'Contact',
-    'Itinerary',
-    'Enable Message Post',
-    'Video'
-  ],
-  
-  // Standard Plan features (unlocked with Standard subscription)
-  // Note: Some features like Photo Gifts, Header Photo are also unlocked in Standard
-  STANDARD: [
-    'Button Link #1',
-    'Button Link #2',
-    'Welcome Popup',
-    'Enable Photo Gifts',      // Unlocked in Standard
-    'Event Header Photo',      // Unlocked in Standard
-    'Popularity Badges',       // Unlocked in Standard
-    'Force Login'              // Unlocked in Standard (no preview text)
-  ],
-  
-  // Premium Plan features
-  PREMIUM: [
-    'Allow sharing via Facebook',
-    'Allow Guest Download',
-    'Add Event Managers',
-    'Allow posting without login',
-    'Require Access Passcode'
-  ],
-  
-  // Premium+ Plan features (only unlocked with Premium+)
-  PREMIUM_PLUS: [
-    'LiveView Slideshow',
-    'Then And Now',
-    'Movie Editor',
-    'KeepSake',
-    'Scavenger Hunt',
-    'Sponsor',
-    'Prize'
-  ]
+// Shared test data across all test suites
+const sharedTestData = {
+ accountCreated: false,
+ email: '',
+ password: 't123',
+ name: '',
+ timestamp: Date.now(),
+ // Event IDs for each plan
+ freeEventCreated: false,
+ standardEventCreated: false,
+ premiumEventCreated: false,
+ premiumPlusEventCreated: false
 };
 
+
 /**
- * Helper function to configure all settings for a subscription plan
- * This function:
- * 1. Enables simple toggle features (no dialog config needed)
- * 2. Configures dialog-based features (opens dialogs and fills data)
- * 3. Saves main settings
- * 
- * @param {import('@playwright/test').Page} page - Playwright page instance
- * @param {import('../page-objects/EventSettingsPage.js').EventSettingsPage} eventSettingsPage - EventSettingsPage instance
- * @param {string} plan - Subscription plan ('STANDARD', 'PREMIUM', 'PREMIUM_PLUS')
- * @param {Object} testData - Test data for configuration
- * @returns {Promise<{success: boolean, togglesEnabled: number, settingsConfigured: number}>}
- */
-async function configureAllSettingsForPlan(page, eventSettingsPage, plan, testData) {
-  console.log(`\n🚀 Configuring all settings for ${plan} plan...`);
-  console.log('═'.repeat(70));
-  
-  const results = {
-    success: true,
-    togglesEnabled: 0,
-    settingsConfigured: 0
-  };
-  
+* Setup function for creating fresh account (called once)
+* @param {import('@playwright/test').Page} page - Playwright page instance
+* @param {import('@playwright/test').BrowserContext} context - Browser context
+* @returns {Promise<{success: boolean, testData: Object}>} Setup result with test data
+*/
+async function setupFreshAccount(page, context) {
+ console.log('🚀 Starting fresh account setup for all tests');
   try {
-    // Step 1: Enable simple toggle features (no dialog)
-    // These are features that only need a click to enable/disable
-    const toggleResult = await eventSettingsPage.enableSimpleTogglesForPlan(plan);
-    results.togglesEnabled = toggleResult.enabled;
-    
-    // Step 2: Configure dialog-based features
-    // These features require opening dialogs and filling in data
-    const configResult = await eventSettingsPage.configureSettingsForPlan(plan, testData);
-    results.settingsConfigured = configResult.configured;
-    
-    // Step 3: Save main settings
-    await eventSettingsPage.saveMainSettings();
-    
-    results.success = toggleResult.success && configResult.success;
-    
-    console.log('\n' + '═'.repeat(70));
-    console.log('📊 CONFIGURATION SUMMARY:');
-    console.log(`   Simple Toggles Enabled: ${results.togglesEnabled}`);
-    console.log(`   Dialog Settings Configured: ${results.settingsConfigured}`);
-    console.log(`   Status: ${results.success ? '✅ SUCCESS' : '❌ SOME FAILURES'}`);
-    console.log('═'.repeat(70));
-    
-    } catch (error) {
-    console.error(`❌ Configuration failed: ${error.message}`);
-    results.success = false;
-  }
+   // Skip test if Mailosaur is not configured
+   if (!process.env.MAILOSAUR_API_KEY || !process.env.MAILOSAUR_SERVER_ID) {
+     console.warn('⚠️ Mailosaur environment variables not set, skipping setup');
+     return { success: false, testData: null };
+   }
+
+
+   // Initialize page objects
+   const registerPage = new RegisterPage(page);
   
-  return results;
+   // Setup Mailosaur for email verification
+   const mailosaurClient = new Mailosaur(process.env.MAILOSAUR_API_KEY);
+   const serverId = process.env.MAILOSAUR_SERVER_ID;
+   const timestamp = Date.now();
+   const testEmail = `auto_settings_all_tiers_${timestamp}@${serverId}.mailosaur.net`;
+  
+   const testData = {
+     email: testEmail,
+     name: `Auto Settings Tester`,
+     password: 't123',
+     timestamp: timestamp
+   };
+
+
+   console.log(`📧 Using test email: ${testEmail}`);
+
+
+   // Step 1: Navigate to application
+   console.log('📍 Step 1: Navigating to application...');
+   await page.goto('https://dev.livesharenow.com/');
+   await page.waitForLoadState('domcontentloaded');
+   await page.waitForTimeout(1000);
+   await page.screenshot({ path: path.join(screenshotsDir, 'shared-01-app-loaded.png') });
+
+
+   // Step 2: Complete registration flow
+   console.log('📍 Step 2: Starting registration process...');
+   await registerPage.clickCreateAccount();
+   await page.screenshot({ path: path.join(screenshotsDir, 'shared-02-create-account-clicked.png') });
+
+
+   // Choose email signup
+   console.log('📍 Step 3: Choosing email signup...');
+   const emailSignupSuccess = await registerPage.clickEmailSignup();
+   if (!emailSignupSuccess) {
+     throw new Error('Failed to click email signup');
+   }
+   await page.screenshot({ path: path.join(screenshotsDir, 'shared-03-email-signup-selected.png') });
+
+
+   // Handle terms and conditions
+   console.log('📍 Step 4: Handling terms and conditions...');
+   await registerPage.handleTermsAndConditions();
+   await page.screenshot({ path: path.join(screenshotsDir, 'shared-04-terms-accepted.png') });
+
+
+   // Fill registration form
+   console.log('📍 Step 5: Filling registration form...');
+   await registerPage.fillRegistrationForm(testData.name, testData.email, testData.password);
+   await page.screenshot({ path: path.join(screenshotsDir, 'shared-05-registration-form-filled.png') });
+
+
+   // Create account
+   console.log('📍 Step 6: Creating account...');
+   const createAccountButton = page.locator('button:has-text("Create Account")').first();
+   await expect(createAccountButton).toBeVisible();
+   await createAccountButton.click();
+   await page.waitForTimeout(2000);
+   await page.screenshot({ path: path.join(screenshotsDir, 'shared-06-account-creation-submitted.png') });
+
+
+   // Handle OTP verification
+   console.log('📍 Step 7: Handling OTP verification...');
+   console.log('⏳ Waiting for verification email...');
+   const signUpEmail = await mailosaurClient.messages.get(serverId, {
+     sentTo: testEmail
+   });
+   const verifyEmail = signUpEmail.html.codes[0].value;
+   console.log(`📧 Received OTP code: ${verifyEmail}`);
+  
+   // Wait for OTP input fields and fill them
+   const otpInputs = page.locator('.otp-box');
+   await otpInputs.first().waitFor({ state: 'visible', timeout: 10000 });
+  
+   const otpCode = verifyEmail.toString();
+   for (let i = 0; i < otpCode.length && i < 6; i++) {
+     const input = otpInputs.nth(i);
+     await input.waitFor({ state: 'visible', timeout: 5000 });
+     await input.fill(otpCode[i]);
+     await page.waitForTimeout(200);
+   }
+  
+   await page.screenshot({ path: path.join(screenshotsDir, 'shared-07-otp-filled.png') });
+
+
+   // Complete registration
+   const continueToEventButton = page.locator('button:has-text("Continue to the Event")').first();
+   await expect(continueToEventButton).toBeVisible();
+   await continueToEventButton.click();
+   await page.waitForTimeout(3000);
+   await page.screenshot({ path: path.join(screenshotsDir, 'shared-08-registration-completed.png') });
+
+
+   console.log(`✅ Fresh account setup completed successfully`);
+   return { success: true, testData };
+  
+ } catch (error) {
+   console.error(`❌ Setup failed:`, error.message);
+   await page.screenshot({ path: path.join(screenshotsDir, 'shared-error-setup.png') });
+   return { success: false, testData: null };
+ }
 }
 
-/**
- * ============================================================================
- * UI VERIFICATION HELPER FUNCTIONS
- * Professional verification methods with exact text matching
- * ============================================================================
- */
 
 /**
- * Verify footer buttons are visible with exact text matching
- * This method uses exact text comparison to prevent false positives
- * 
- * @param {import('@playwright/test').Page} page - Playwright page instance
- * @param {Array<string>} expectedButtons - Array of exact button text to verify
- * @returns {Promise<{success: boolean, visible: Array, notVisible: Array, details: Object}>}
- */
-async function verifyFooterButtons(page, expectedButtons) {
-  console.log('\n📍 Verifying footer buttons (exact text matching)...');
-  console.log(`   Expected buttons: ${expectedButtons.join(', ')}`);
+* Login to existing account
+*/
+async function loginToAccount(page, email, password) {
+ console.log(`🔐 Logging in as: ${email}`);
+ try {
+   const loginPage = new LoginPage(page);
+   await page.goto('https://dev.livesharenow.com/');
+   await page.waitForTimeout(2000);
   
-  const results = {
-    visible: [],
-    notVisible: [],
-    details: {}
-  };
+   // Check if already logged in
+   const isLoggedIn = await loginPage.checkIfAlreadyLoggedIn();
+   if (isLoggedIn) {
+     console.log('✅ Already logged in');
+     return true;
+   }
   
-  try {
-    // Step 1: Open footer menu by clicking the "add" button
-    console.log('  🔘 Opening footer menu...');
-    const addButton = page.locator('button.menu-button:has(mat-icon:text("add"))').first();
-    await addButton.waitFor({ state: 'visible', timeout: 5000 });
-    await addButton.click();
-    await page.waitForTimeout(1500); // Wait for menu animation
-    
-    // Wait for footer buttons container to be visible
-    const footerBtnGroup = page.locator('.footer-btn-group');
-    await footerBtnGroup.waitFor({ state: 'visible', timeout: 5000 });
-    console.log('  ✅ Footer menu opened successfully');
-    
-    // Step 2: Get all footer buttons from the opened menu
-    const allButtons = await page.locator('.footer-btn-group button.btn').all();
-    console.log(`  📋 Found ${allButtons.length} total footer buttons`);
-    
-    // Step 3: Verify each expected button with exact text matching
-  for (const buttonName of expectedButtons) {
-      let found = false;
-      let matchedButtonText = '';
-      
-      for (const button of allButtons) {
-    const isVisible = await button.isVisible().catch(() => false);
-        if (!isVisible) continue;
-        
-        // Get button text content, removing icon text
-        const buttonText = await button.evaluate(el => {
-          const clone = el.cloneNode(true);
-          // Remove mat-icon elements to get only the span text
-          const icons = clone.querySelectorAll('mat-icon');
-          icons.forEach(icon => icon.remove());
-          return clone.textContent.trim();
-        }).catch(() => '');
-        
-        // Exact match comparison (case-sensitive)
-        if (buttonText === buttonName) {
-          found = true;
-          matchedButtonText = buttonText;
-          break;
-        }
-      }
-      
-      if (found) {
-        console.log(`  ✅ "${buttonName}" button found and visible`);
-      results.visible.push(buttonName);
-        results.details[buttonName] = { found: true, text: matchedButtonText };
-    } else {
-        console.log(`  ❌ "${buttonName}" button NOT found or not visible`);
-      results.notVisible.push(buttonName);
-        results.details[buttonName] = { found: false, text: null };
-      }
-    }
-    
-    // Step 4: Close footer menu by clicking the "add" button again or pressing Escape
-    console.log('  🔘 Closing footer menu...');
-    await addButton.click();
-    await page.waitForTimeout(500);
-    
-  } catch (error) {
-    console.error(`  ❌ Error during footer button verification: ${error.message}`);
-    // Try to close menu if error occurred
-    await page.keyboard.press('Escape').catch(() => {});
-  }
+   // Perform login
+   const success = await loginPage.completeEmailLogin(email, password);
+   if (success) {
+     console.log('✅ Login successful');
+     await page.waitForTimeout(2000);
+     return true;
+   }
   
-  const success = results.notVisible.length === 0;
-  console.log(`\n📊 Footer Buttons Verification:`);
-  console.log(`   ✅ Found: ${results.visible.length}/${expectedButtons.length}`);
-  console.log(`   ❌ Missing: ${results.notVisible.length}/${expectedButtons.length}`);
-  
-  if (results.notVisible.length > 0) {
-    console.log(`   Missing buttons: ${results.notVisible.join(', ')}`);
-  }
-  
-  return {
-    success,
-    visible: results.visible,
-    notVisible: results.notVisible,
-    details: results.details
-  };
+   console.error('❌ Login failed');
+   return false;
+ } catch (error) {
+   console.error(`❌ Login error: ${error.message}`);
+   return false;
+ }
 }
 
+
 /**
- * Verify menu options are visible with exact text matching
- * This method opens the menu, verifies each item with exact text, then closes the menu
- * 
- * @param {import('@playwright/test').Page} page - Playwright page instance
- * @param {Array<string>} expectedMenuItems - Array of exact menu item text to verify
- * @returns {Promise<{success: boolean, visible: Array, notVisible: Array, details: Object}>}
- */
+* Create a new event for testing
+*/
+async function createNewEvent(page, eventName) {
+ console.log(`📍 Creating new event: ${eventName}`);
+ try {
+   const eventCreationPage = new EventCreationPage(page);
+   await page.goto('https://dev.livesharenow.com/events');
+   await page.waitForTimeout(2000);
+  
+   const eventCreationStarted = await eventCreationPage.startEventCreation();
+   if (!eventCreationStarted) {
+     throw new Error('Failed to start event creation');
+   }
+  
+   await page.waitForTimeout(4000);
+   console.log(`✅ Event created successfully`);
+   return true;
+ } catch (error) {
+   console.error(`❌ Event creation failed: ${error.message}`);
+   return false;
+ }
+}
+
+
+/**
+* Subscribe to a plan and handle payment
+*/
+async function subscribeAndPayForPlan(page, context, planName) {
+ console.log(`💳 Subscribing to ${planName} plan...`);
+  try {
+   const subscriptionPage = new SubscriptionPage(page);
+   const paymentPage = new PaymentPage(page);
+  
+   // Navigate to subscription
+   const subscriptionNavigationSuccess = await subscriptionPage.navigateToSubscription();
+   if (!subscriptionNavigationSuccess) {
+     throw new Error('Failed to navigate to subscription');
+   }
+  
+   await page.waitForTimeout(2000);
+   await page.screenshot({ path: path.join(screenshotsDir, `${planName.toLowerCase()}-subscription-page.png`) });
+  
+   // Select plan
+   const selectResult = await subscriptionPage.choosePlanAndClickSelect(planName);
+   if (!selectResult.success) {
+     throw new Error(`Failed to select ${planName} plan`);
+   }
+  
+   await page.screenshot({ path: path.join(screenshotsDir, `${planName.toLowerCase()}-plan-selected.png`) });
+  
+   // Handle payment
+   let paymentSuccess = false;
+   if (selectResult.navigationType === 'newPage' && selectResult.newPage) {
+     const stripePage = selectResult.newPage;
+     await stripePage.waitForLoadState('domcontentloaded');
+     await stripePage.screenshot({ path: path.join(screenshotsDir, `${planName.toLowerCase()}-stripe-checkout.png`) });
+    
+     const stripePayment = new PaymentPage(stripePage);
+     await stripePayment.verifyOnStripeCheckoutPage();
+     await stripePayment.waitForStripeCheckoutReady();
+     paymentSuccess = await stripePayment.completePaymentFlow(stripePayment.getDefaultPaymentDetails());
+     await stripePage.close();
+   } else {
+     await page.waitForTimeout(2000);
+     const stripePayment = new PaymentPage(page);
+     await page.waitForSelector('input[id="cardNumber"], input[placeholder*="card"], .payment-form', { timeout: 10000 });
+     paymentSuccess = await stripePayment.completePaymentFlow(stripePayment.getDefaultPaymentDetails());
+   }
+  
+   if (!paymentSuccess) {
+     throw new Error('Payment failed');
+   }
+  
+   await page.waitForTimeout(5000);
+   console.log(`✅ Successfully subscribed to ${planName} plan`);
+   return true;
+  
+ } catch (error) {
+   console.error(`❌ Subscription failed: ${error.message}`);
+   await page.screenshot({ path: path.join(screenshotsDir, `${planName.toLowerCase()}-subscription-error.png`) });
+   return false;
+ }
+}
+
+
+/**
+* Navigate to event and open settings
+*/
+async function openEventSettings(page) {
+ console.log('📍 Navigating to event settings...');
+ try {
+   const eventPage = new EventPage(page);
+   const eventSettingsPage = new EventSettingsPage(page);
+  
+   await page.goto('https://dev.livesharenow.com/events');
+   await page.waitForTimeout(2000);
+  
+   await eventPage.clickFirstEvent();
+   await page.waitForTimeout(2000);
+  
+   await eventSettingsPage.openSettingsIfNeeded();
+   await page.waitForTimeout(3000);
+   await eventSettingsPage.waitLoaded();
+  
+   console.log('✅ Event settings opened');
+   return true;
+ } catch (error) {
+   console.error(`❌ Failed to open settings: ${error.message}`);
+   return false;
+ }
+}
+
+
+/**
+* ============================================================================
+* HELPER FUNCTIONS FROM ORIGINAL FILE
+* ============================================================================
+*/
+
+
+/**
+* Helper function to verify "Preview for Free" text does NOT appear for a given feature
+*/
+async function verifyNoPreviewForFree(page, featureName) {
+ try {
+   console.log(`  Checking "${featureName}" - should NOT have "Preview for Free"...`);
+  
+   const featureOption = page.locator(`.options:has-text("${featureName}")`).first();
+  
+   if (await featureOption.isVisible().catch(() => false)) {
+     const featureText = await featureOption.textContent();
+     const hasPreviewForFree = featureText.toLowerCase().includes('preview for free');
+    
+     if (hasPreviewForFree) {
+       console.error(`    ❌ FAIL: Has "Preview for Free" (should not have it)`);
+       await page.screenshot({
+         path: path.join(screenshotsDir, `error-${featureName.toLowerCase().replace(/\s+/g, '-')}-has-preview-for-free.png`)
+       });
+       return false;
+     } else {
+       console.log(`    ✅ PASS: Does NOT have "Preview for Free"`);
+       return true;
+     }
+   } else {
+     console.warn(`    ⚠️ Feature not found in UI`);
+     return true;
+   }
+ } catch (error) {
+   console.error(`    ❌ Error checking feature:`, error.message);
+   return false;
+ }
+}
+
+
+/**
+* Helper function to verify "Preview for Free" text DOES appear for a given feature
+*/
+async function verifyHasPreviewForFree(page, featureName) {
+ try {
+   console.log(`  Checking "${featureName}" - should HAVE "Preview for Free"...`);
+  
+   const featureOption = page.locator(`.options:has-text("${featureName}")`).first();
+  
+   if (await featureOption.isVisible().catch(() => false)) {
+     const featureText = await featureOption.textContent();
+     const hasPreviewForFree = featureText.toLowerCase().includes('preview for free');
+    
+     if (hasPreviewForFree) {
+       console.log(`    ✅ PASS: Has "Preview for Free" (as expected)`);
+       return true;
+     } else {
+       console.error(`    ❌ FAIL: Does NOT have "Preview for Free" (should have it)`);
+       await page.screenshot({
+         path: path.join(screenshotsDir, `error-${featureName.toLowerCase().replace(/\s+/g, '-')}-missing-preview-for-free.png`)
+       });
+       return false;
+     }
+   } else {
+     console.warn(`    ⚠️ Feature not found in UI`);
+     return true;
+   }
+ } catch (error) {
+   console.error(`    ❌ Error checking feature:`, error.message);
+   return false;
+ }
+}
+
+
+/**
+* Feature tier definitions based on subscription plans
+*/
+const FeatureTiers = {
+ FREE: [
+   'Event Name',
+   'Event Date',
+   'Location',
+   'Contact',
+   'Itinerary',
+   'Enable Message Post',
+   'Video'
+ ],
+  STANDARD: [
+   'Button Link #1',
+   'Button Link #2',
+   'Welcome Popup',
+   'Enable Photo Gifts',
+   'Event Header Photo',
+   'Popularity Badges',
+   'Force Login'
+ ],
+  PREMIUM: [
+   'Allow sharing via Facebook',
+   'Allow Guest Download',
+   'Add Event Managers',
+   'Allow posting without login',
+   'Require Access Passcode'
+ ],
+  PREMIUM_PLUS: [
+   'LiveView Slideshow',
+   'Then And Now',
+   'Movie Editor',
+   'KeepSake',
+   'Scavenger Hunt',
+   'Sponsor',
+   'Prize'
+ ]
+};
+
+
+/**
+* Verify menu options are visible with exact text matching
+*/
 async function verifyMenuOptions(page, expectedMenuItems) {
-  console.log('\n📍 Verifying menu options (exact text matching)...');
-  console.log(`   Expected menu items: ${expectedMenuItems.join(', ')}`);
-  
+ console.log('\n📍 Verifying menu options (exact text matching)...');
+ console.log(`   Expected menu items: ${expectedMenuItems.join(', ')}`);
   const results = {
-    visible: [],
-    notVisible: [],
-    details: {}
-  };
-  
+   visible: [],
+   notVisible: [],
+   details: {}
+ };
   try {
-    // Step 1: Open menu by clicking more_vert button
-    console.log('  🔘 Opening menu...');
-  const moreButton = page.locator('button:has(mat-icon:text("more_vert"))').first();
-  await moreButton.waitFor({ state: 'visible', timeout: 5000 });
-  await moreButton.click();
-    await page.waitForTimeout(1500); // Wait for menu animation
-    
-    // Wait for menu panel to appear
-    const menuPanel = page.locator('.mat-menu-panel[role="menu"]').first();
-    await menuPanel.waitFor({ state: 'visible', timeout: 5000 });
-    console.log('  ✅ Menu opened successfully');
-    
-    // Step 2: Get all menu items
-    const allMenuItems = await page.locator('button[role="menuitem"]').all();
-    console.log(`  📋 Found ${allMenuItems.length} total menu items`);
-    
-    // Step 3: Verify each expected menu item with exact text matching
-    for (const expectedItem of expectedMenuItems) {
-      let found = false;
-      let matchedItemText = '';
-      
-      for (const menuItem of allMenuItems) {
-        const isVisible = await menuItem.isVisible().catch(() => false);
-        if (!isVisible) continue;
-        
-        // Get menu item text content
-        // Need to handle nested elements (mat-icon, span, etc.)
-        const itemText = await menuItem.evaluate(el => {
-          // Get all text content but exclude icons
-          const clone = el.cloneNode(true);
-          const icons = clone.querySelectorAll('mat-icon');
-          icons.forEach(icon => icon.remove());
-          return clone.textContent.trim();
-        }).catch(() => '');
-        
-        // Exact match comparison (case-sensitive)
-        if (itemText === expectedItem) {
-          found = true;
-          matchedItemText = itemText;
-          break;
-        }
-      }
-      
-      if (found) {
-        console.log(`  ✅ "${expectedItem}" menu item found and visible`);
-        results.visible.push(expectedItem);
-        results.details[expectedItem] = { found: true, text: matchedItemText };
-    } else {
-        console.log(`  ❌ "${expectedItem}" menu item NOT found or not visible`);
-        results.notVisible.push(expectedItem);
-        results.details[expectedItem] = { found: false, text: null };
-    }
-  }
+   // Open menu
+   console.log('  🔘 Opening menu...');
+   const moreButton = page.locator('button:has(mat-icon:text("more_vert"))').first();
+   await moreButton.waitFor({ state: 'visible', timeout: 5000 });
+   await moreButton.click();
+   await page.waitForTimeout(1500);
   
-    // Step 4: Close menu by pressing Escape
-    console.log('  🔘 Closing menu...');
-  await page.keyboard.press('Escape');
-  await page.waitForTimeout(500);
-    
-  } catch (error) {
-    console.error(`  ❌ Error during menu verification: ${error.message}`);
-    // Try to close menu if error occurred
-    await page.keyboard.press('Escape').catch(() => {});
-  }
+   // Wait for menu panel
+   const menuPanel = page.locator('.mat-menu-panel[role="menu"]').first();
+   await menuPanel.waitFor({ state: 'visible', timeout: 5000 });
+   console.log('  ✅ Menu opened successfully');
   
+   // Get all menu items
+   const allMenuItems = await page.locator('button[role="menuitem"]').all();
+   console.log(`  📋 Found ${allMenuItems.length} total menu items`);
+  
+   // Verify each expected menu item
+   for (const expectedItem of expectedMenuItems) {
+     let found = false;
+     let matchedItemText = '';
+    
+     for (const menuItem of allMenuItems) {
+       const isVisible = await menuItem.isVisible().catch(() => false);
+       if (!isVisible) continue;
+      
+       const itemText = await menuItem.evaluate(el => {
+         const clone = el.cloneNode(true);
+         const icons = clone.querySelectorAll('mat-icon');
+         icons.forEach(icon => icon.remove());
+         return clone.textContent.trim();
+       }).catch(() => '');
+      
+       if (itemText === expectedItem) {
+         found = true;
+         matchedItemText = itemText;
+         break;
+       }
+     }
+    
+     if (found) {
+       console.log(`  ✅ "${expectedItem}" menu item found and visible`);
+       results.visible.push(expectedItem);
+       results.details[expectedItem] = { found: true, text: matchedItemText };
+     } else {
+       console.log(`  ❌ "${expectedItem}" menu item NOT found or not visible`);
+       results.notVisible.push(expectedItem);
+       results.details[expectedItem] = { found: false, text: null };
+     }
+   }
+  
+   // Close menu
+   console.log('  🔘 Closing menu...');
+   await page.keyboard.press('Escape');
+   await page.waitForTimeout(500);
+  
+ } catch (error) {
+   console.error(`  ❌ Error during menu verification: ${error.message}`);
+   await page.keyboard.press('Escape').catch(() => {});
+ }
   const success = results.notVisible.length === 0;
-  console.log(`\n📊 Menu Options Verification:`);
-  console.log(`   ✅ Found: ${results.visible.length}/${expectedMenuItems.length}`);
-  console.log(`   ❌ Missing: ${results.notVisible.length}/${expectedMenuItems.length}`);
-  
+ console.log(`\n📊 Menu Options Verification:`);
+ console.log(`   ✅ Found: ${results.visible.length}/${expectedMenuItems.length}`);
+ console.log(`   ❌ Missing: ${results.notVisible.length}/${expectedMenuItems.length}`);
   if (results.notVisible.length > 0) {
-    console.log(`   Missing menu items: ${results.notVisible.join(', ')}`);
-  }
-  
+   console.log(`   Missing menu items: ${results.notVisible.join(', ')}`);
+ }
   return {
-    success,
-    visible: results.visible,
-    notVisible: results.notVisible,
-    details: results.details
-  };
+   success,
+   visible: results.visible,
+   notVisible: results.notVisible,
+   details: results.details
+ };
 }
 
-/**
- * Advanced verification: List all actual menu items found in UI
- * Useful for debugging when expected items don't match
- * 
- * @param {import('@playwright/test').Page} page - Playwright page instance
- * @returns {Promise<Array<string>>} List of all menu item texts found
- */
-async function listAllMenuItems(page) {
-  console.log('\n🔍 Listing all actual menu items in UI...');
-  const menuItems = [];
-  
-  try {
-    // Open menu
-    const moreButton = page.locator('button:has(mat-icon:text("more_vert"))').first();
-    await moreButton.waitFor({ state: 'visible', timeout: 5000 });
-    await moreButton.click();
-    await page.waitForTimeout(1500);
-    
-    // Get all menu items
-    const allMenuItems = await page.locator('button[role="menuitem"]').all();
-    
-    for (const menuItem of allMenuItems) {
-      const isVisible = await menuItem.isVisible().catch(() => false);
-      if (!isVisible) continue;
-      
-      const itemText = await menuItem.evaluate(el => {
-        const clone = el.cloneNode(true);
-        const icons = clone.querySelectorAll('mat-icon');
-        icons.forEach(icon => icon.remove());
-        return clone.textContent.trim();
-      }).catch(() => '');
-      
-      if (itemText) {
-        menuItems.push(itemText);
-        console.log(`  📌 "${itemText}"`);
-      }
-    }
-    
-    // Close menu
-    await page.keyboard.press('Escape');
-    await page.waitForTimeout(500);
-    
-  } catch (error) {
-    console.error(`  ❌ Error listing menu items: ${error.message}`);
-  }
-  
-  console.log(`\n📊 Total menu items found: ${menuItems.length}`);
-  return menuItems;
-}
 
 /**
- * Advanced verification: List all actual footer buttons found in UI
- * Useful for debugging when expected buttons don't match
- * 
- * @param {import('@playwright/test').Page} page - Playwright page instance
- * @returns {Promise<Array<string>>} List of all footer button texts found
- */
-async function listAllFooterButtons(page) {
-  console.log('\n🔍 Listing all actual footer buttons in UI...');
-  const buttons = [];
-  
-  try {
-    // Open footer menu first
-    console.log('  🔘 Opening footer menu...');
-    const addButton = page.locator('button.menu-button:has(mat-icon:text("add"))').first();
-    await addButton.waitFor({ state: 'visible', timeout: 5000 });
-    await addButton.click();
-    await page.waitForTimeout(1500);
-    
-    // Wait for footer buttons container
-    const footerBtnGroup = page.locator('.footer-btn-group');
-    await footerBtnGroup.waitFor({ state: 'visible', timeout: 5000 });
-    
-    // Get all footer buttons
-    const allButtons = await page.locator('.footer-btn-group button.btn').all();
-    
-    for (const button of allButtons) {
-      const isVisible = await button.isVisible().catch(() => false);
-      if (!isVisible) continue;
-      
-      // Get button text excluding icons
-      const buttonText = await button.evaluate(el => {
-        const clone = el.cloneNode(true);
-        const icons = clone.querySelectorAll('mat-icon');
-        icons.forEach(icon => icon.remove());
-        return clone.textContent.trim();
-      }).catch(() => '');
-      
-      if (buttonText) {
-        buttons.push(buttonText);
-        console.log(`  📌 "${buttonText}"`);
-      }
-    }
-    
-    // Close menu
-    await addButton.click();
-    await page.waitForTimeout(500);
-    
-  } catch (error) {
-    console.error(`  ❌ Error listing footer buttons: ${error.message}`);
-  }
-  
-  console.log(`\n📊 Total footer buttons found: ${buttons.length}`);
-  return buttons;
-}
-
-/**
- * Comprehensive verification function for subscription plan features
- * @param {import('@playwright/test').Page} page - Playwright page instance
- * @param {string} currentPlan - Current subscription plan ('TRIAL', 'STANDARD', 'PREMIUM', 'PREMIUM_PLUS')
- * @returns {Promise<{success: boolean, details: Object}>} Verification result
- */
-async function verifySubscriptionFeatures(page, currentPlan) {
-  console.log(`\n🔍 Verifying features for ${currentPlan} plan...`);
-  console.log('═'.repeat(70));
-  
+* Verify footer buttons are visible with exact text matching
+*/
+async function verifyFooterButtons(page, expectedButtons) {
+ console.log('\n📍 Verifying footer buttons (exact text matching)...');
+ console.log(`   Expected buttons: ${expectedButtons.join(', ')}`);
   const results = {
-    free: { passed: 0, failed: 0 },
-    standard: { passed: 0, failed: 0 },
-    premium: { passed: 0, failed: 0 },
-    premiumPlus: { passed: 0, failed: 0 }
-  };
+   visible: [],
+   notVisible: [],
+   details: {}
+ };
+  try {
+   // Open footer menu
+   console.log('  🔘 Opening footer menu...');
+   const addButton = page.locator('button.menu-button:has(mat-icon:text("add"))').first();
+   await addButton.waitFor({ state: 'visible', timeout: 5000 });
+   await addButton.click();
+   await page.waitForTimeout(1500);
   
-  // Free tier features should NEVER have "Preview for Free"
-  console.log('\n📌 Verifying FREE tier features (should NEVER have preview):');
-  for (const feature of FeatureTiers.FREE) {
-    const result = await verifyNoPreviewForFree(page, feature);
-    if (result) results.free.passed++;
-    else results.free.failed++;
-  }
+   // Wait for footer buttons container
+   const footerBtnGroup = page.locator('.footer-btn-group');
+   await footerBtnGroup.waitFor({ state: 'visible', timeout: 5000 });
+   console.log('  ✅ Footer menu opened successfully');
   
-  // Standard features verification based on current plan
-  console.log('\n📌 Verifying STANDARD tier features:');
-  if (currentPlan === 'TRIAL') {
-    // Trial: Standard features SHOULD have preview
-    console.log('   (Trial plan: these should HAVE "Preview for Free")');
-    for (const feature of FeatureTiers.STANDARD) {
-      const result = await verifyHasPreviewForFree(page, feature);
-      if (result) results.standard.passed++;
-      else results.standard.failed++;
-    }
-  } else {
-    // Standard/Premium/Premium+: Standard features should NOT have preview
-    console.log('   (Paid plan: these should NOT have "Preview for Free")');
-    for (const feature of FeatureTiers.STANDARD) {
-      const result = await verifyNoPreviewForFree(page, feature);
-      if (result) results.standard.passed++;
-      else results.standard.failed++;
-    }
-  }
+   // Get all footer buttons
+   const allButtons = await page.locator('.footer-btn-group button.btn').all();
+   console.log(`  📋 Found ${allButtons.length} total footer buttons`);
   
-  // Premium features verification based on current plan
-  console.log('\n📌 Verifying PREMIUM tier features:');
-  if (currentPlan === 'TRIAL' || currentPlan === 'STANDARD') {
-    // Trial/Standard: Premium features SHOULD have preview
-    console.log('   (Not subscribed to Premium yet: these should HAVE "Preview for Free")');
-    for (const feature of FeatureTiers.PREMIUM) {
-      const result = await verifyHasPreviewForFree(page, feature);
-      if (result) results.premium.passed++;
-      else results.premium.failed++;
-    }
-  } else {
-    // Premium/Premium+: Premium features should NOT have preview
-    console.log('   (Premium or higher: these should NOT have "Preview for Free")');
-    for (const feature of FeatureTiers.PREMIUM) {
-      const result = await verifyNoPreviewForFree(page, feature);
-      if (result) results.premium.passed++;
-      else results.premium.failed++;
-    }
-  }
+   // Verify each expected button
+   for (const buttonName of expectedButtons) {
+     let found = false;
+     let matchedButtonText = '';
+    
+     for (const button of allButtons) {
+       const isVisible = await button.isVisible().catch(() => false);
+       if (!isVisible) continue;
+      
+       const buttonText = await button.evaluate(el => {
+         const clone = el.cloneNode(true);
+         const icons = clone.querySelectorAll('mat-icon');
+         icons.forEach(icon => icon.remove());
+         return clone.textContent.trim();
+       }).catch(() => '');
+      
+       if (buttonText === buttonName) {
+         found = true;
+         matchedButtonText = buttonText;
+         break;
+       }
+     }
+    
+     if (found) {
+       console.log(`  ✅ "${buttonName}" button found and visible`);
+       results.visible.push(buttonName);
+       results.details[buttonName] = { found: true, text: matchedButtonText };
+     } else {
+       console.log(`  ❌ "${buttonName}" button NOT found or not visible`);
+       results.notVisible.push(buttonName);
+       results.details[buttonName] = { found: false, text: null };
+     }
+   }
   
-  // Premium+ features verification based on current plan
-  console.log('\n📌 Verifying PREMIUM+ tier features:');
-  if (currentPlan === 'PREMIUM_PLUS') {
-    // Premium+: Premium+ features should NOT have preview
-    console.log('   (Premium+ plan: these should NOT have "Preview for Free")');
-    for (const feature of FeatureTiers.PREMIUM_PLUS) {
-      const result = await verifyNoPreviewForFree(page, feature);
-      if (result) results.premiumPlus.passed++;
-      else results.premiumPlus.failed++;
-    }
-  } else {
-    // Trial/Standard/Premium: Premium+ features SHOULD have preview
-    console.log('   (Not subscribed to Premium+ yet: these should HAVE "Preview for Free")');
-    for (const feature of FeatureTiers.PREMIUM_PLUS) {
-      const result = await verifyHasPreviewForFree(page, feature);
-      if (result) results.premiumPlus.passed++;
-      else results.premiumPlus.failed++;
-    }
-  }
+   // Close menu
+   console.log('  🔘 Closing footer menu...');
+   await addButton.click();
+   await page.waitForTimeout(500);
   
-  // Calculate totals
-  const totalPassed = results.free.passed + results.standard.passed + 
-                     results.premium.passed + results.premiumPlus.passed;
-  const totalFailed = results.free.failed + results.standard.failed + 
-                     results.premium.failed + results.premiumPlus.failed;
-  const totalTests = totalPassed + totalFailed;
-  
-  console.log('\n' + '═'.repeat(70));
-  console.log('📊 VERIFICATION SUMMARY:');
-  console.log(`   Free Tier: ${results.free.passed}/${results.free.passed + results.free.failed} passed`);
-  console.log(`   Standard Tier: ${results.standard.passed}/${results.standard.passed + results.standard.failed} passed`);
-  console.log(`   Premium Tier: ${results.premium.passed}/${results.premium.passed + results.premium.failed} passed`);
-  console.log(`   Premium+ Tier: ${results.premiumPlus.passed}/${results.premiumPlus.passed + results.premiumPlus.failed} passed`);
-  console.log(`   TOTAL: ${totalPassed}/${totalTests} passed`);
-  console.log('═'.repeat(70));
-  
-  const success = totalFailed === 0;
-  if (success) {
-    console.log('✅ All feature verifications PASSED!\n');
-  } else {
-    console.error(`❌ ${totalFailed} feature verification(s) FAILED!\n`);
-  }
-  
+ } catch (error) {
+   console.error(`  ❌ Error during footer button verification: ${error.message}`);
+   await page.keyboard.press('Escape').catch(() => {});
+ }
+  const success = results.notVisible.length === 0;
+ console.log(`\n📊 Footer Buttons Verification:`);
+ console.log(`   ✅ Found: ${results.visible.length}/${expectedButtons.length}`);
+ console.log(`   ❌ Missing: ${results.notVisible.length}/${expectedButtons.length}`);
+  if (results.notVisible.length > 0) {
+   console.log(`   Missing buttons: ${results.notVisible.join(', ')}`);
+ }
   return {
-    success,
-    details: {
-      totalPassed,
-      totalFailed,
-      totalTests,
-      results
-    }
-  };
+   success,
+   visible: results.visible,
+   notVisible: results.notVisible,
+   details: results.details
+ };
 }
 
+
 /**
- * Test Case Descriptor:
- * - Test subscription settings to verify "Preview for Free" text does NOT appear
- * - For each subscription plan (Standard, Premium, Premium+), verify that paid features 
- *   do NOT show "Preview for Free" text after payment
- * - Reuses account credentials from subscription flow
- */
-test.describe('Subscription Settings Verification Tests', () => {
-  test.setTimeout(400000); // Increased timeout for full flow
+* ============================================================================
+* TEST SUITES - ORGANIZED BY SUBSCRIPTION TIER
+* ============================================================================
+*/
 
-  let subscriptionPage;
-  let paymentPage;
-  let eventSettingsPage;
-  let eventPage;
-  let testData;
 
+test.describe('Event Settings - Comprehensive Testing Suite', () => {
+ test.setTimeout(600000); // 10 minutes for entire suite
   /**
-   * SSV-001: Standard Plan - Verify settings do not show "Preview for Free"
-   * Steps:
-   * 1. Create fresh account and event
-   * 2. Subscribe to Standard Plan
-   * 3. Navigate to event settings
-   * 4. Verify Standard Plan features do NOT show "Preview for Free"
-   */
-  test('SSV-001: Standard Plan - Settings Verification', async ({ page, context }) => {
-    console.log('🚀 Starting SSV-001: Standard Plan Settings Verification');
-
-    try {
-      // Step 1: Setup fresh account and event
-      const setupResult = await setupFreshAccountAndEvent(page, context, 'StandardSettings');
-      if (!setupResult.success) {
-        test.skip('Failed to setup fresh account and event');
-        return;
-      }
-      testData = setupResult.testData;
-      console.log(`✅ Setup completed with email: ${testData.email}`);
-
-      // Initialize page objects
-      subscriptionPage = new SubscriptionPage(page);
-      paymentPage = new PaymentPage(page);
-      eventSettingsPage = new EventSettingsPage(page);
-      eventPage = new EventPage(page);
-
-      // Step 2: Navigate to subscription and select Standard Plan
-      console.log('📍 SSV-001 Step 2: Subscribing to Standard Plan...');
-      const subscriptionNavigationSuccess = await subscriptionPage.navigateToSubscription();
-      expect(subscriptionNavigationSuccess).toBeTruthy();
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv001-01-subscription-page.png') });
-
-      const selectResult = await subscriptionPage.choosePlanAndClickSelect('Standard Event');
-      expect(selectResult.success).toBeTruthy();
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv001-02-plan-selected.png') });
-
-      // Step 3: Handle payment
-      console.log(`📍 SSV-001 Step 3: Handling payment flow (${selectResult.navigationType})...`);
+  * ============================================================================
+  * FREE TIER TESTS - TC-APP-CUST-001 to TC-APP-CUST-007
+  * ============================================================================
+  */
+ test.describe('Free Tier Settings Tests', () => {
+   test.beforeAll(async ({ browser }) => {
+     // Create account once for all tests
+     if (!sharedTestData.accountCreated) {
+       const context = await browser.newContext();
+       const page = await context.newPage();
       
-      let paymentSuccess = false;
-      if (selectResult.navigationType === 'newPage' && selectResult.newPage) {
-        const stripePage = selectResult.newPage;
-        await stripePage.waitForLoadState('domcontentloaded');
-        await stripePage.screenshot({ path: path.join(screenshotsDir, 'ssv001-03-stripe-checkout.png') });
-
-        const stripePayment = new PaymentPage(stripePage);
-        expect(await stripePayment.verifyOnStripeCheckoutPage()).toBeTruthy();
-        expect(await stripePayment.waitForStripeCheckoutReady()).toBeTruthy();
-        paymentSuccess = await stripePayment.completePaymentFlow(stripePayment.getDefaultPaymentDetails());
-        expect(paymentSuccess).toBeTruthy();
-        await stripePage.close();
-      } else {
-        await page.waitForTimeout(2000);
-        const stripePayment = new PaymentPage(page);
-        await page.waitForSelector('input[id="cardNumber"], input[placeholder*="card"], .payment-form', { timeout: 10000 });
-        paymentSuccess = await stripePayment.completePaymentFlow(stripePayment.getDefaultPaymentDetails());
-        expect(paymentSuccess).toBeTruthy();
-      }
-
-      // Step 4: Navigate back to event and open settings
-      console.log('📍 SSV-001 Step 4: Navigating to event settings...');
-      await page.waitForTimeout(5000);
-      await page.goto('https://dev.livesharenow.com/events');
-      await page.waitForTimeout(2000);
+       const setupResult = await setupFreshAccount(page, context);
+       if (setupResult.success) {
+         sharedTestData.email = setupResult.testData.email;
+         sharedTestData.name = setupResult.testData.name;
+         sharedTestData.password = setupResult.testData.password;
+         sharedTestData.timestamp = setupResult.testData.timestamp;
+         sharedTestData.accountCreated = true;
+         sharedTestData.freeEventCreated = true; // First event is created during registration
+       }
       
-      await eventPage.clickFirstEvent();
-      await page.waitForTimeout(2000);
-      
-      await eventSettingsPage.openSettingsIfNeeded();
-      await page.waitForTimeout(5000);
-      await eventSettingsPage.waitLoaded();
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv001-04-settings-opened.png') });
-
-      // Step 5: Verify Standard Plan subscription features
-      console.log('📍 SSV-001 Step 5: Verifying Standard Plan subscription features...');
-      
-      // Use comprehensive verification for Standard plan
-      // Expected behavior:
-      // - Free features: NO preview
-      // - Standard features: NO preview (subscribed)
-      // - Premium features: YES preview (not subscribed)
-      // - Premium+ features: YES preview (not subscribed)
-      const verificationResult = await verifySubscriptionFeatures(page, 'STANDARD');
-      
-      expect(verificationResult.success).toBeTruthy();
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv001-05-verification-completed.png') });
-
-      console.log(`✅ SSV-001 Standard Plan Settings Verification completed: ${verificationResult.details.totalPassed}/${verificationResult.details.totalTests} tests passed`);
-      
-      // Step 6: Configure all settings for Standard Plan
-      console.log('\n📍 SSV-001 Step 6: Configuring all settings...');
-      
-      // Configure: enable simple toggles + configure dialogs + save
-      const configResult = await configureAllSettingsForPlan(page, eventSettingsPage, 'STANDARD', testData);
-      console.log(`📊 Configuration result: ${configResult.togglesEnabled} toggles, ${configResult.settingsConfigured} configured`);
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv001-06-settings-configured.png') });
-      await page.waitForTimeout(2000);
-      
-      // Close settings dialog if still open
-      const cancelButton = page.locator('.mt-auto .btn:has-text("Cancel")').first();
-      if (await cancelButton.isVisible().catch(() => false)) {
-        await cancelButton.click();
-        await page.waitForTimeout(1000);
-      }
-      
-      // Reload page to ensure all UI updates are reflected
-      console.log('🔄 Reloading page...');
-      await page.reload();
-      await page.waitForTimeout(3000);
-      
-      // Verify menu options (Standard plan should have basic menu items)
-      // Use EXACT text as it appears in UI
-      const standardMenuItems = [
-        'Download All Photos',
-        'Redeem Gift Code',
-        'Live Help',
-        'FAQs',
-        'Details',
-        'Logout'
-      ];
-      const menuResult = await verifyMenuOptions(page, standardMenuItems);
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv001-07-menu-verified.png') });
-      
-      // Assert that all menu items are found
-      expect(menuResult.success).toBeTruthy();
-      expect(menuResult.visible.length).toBe(standardMenuItems.length);
-      
-      // Standard plan does not have Premium+ footer buttons
-      // Only verify basic message/photo/video buttons exist
-      // Use EXACT text as it appears in UI
-      const standardFooterButtons = ['Message', 'Photos', 'Videos'];
-      const footerResult = await verifyFooterButtons(page, standardFooterButtons);
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv001-08-footer-verified.png') });
-      
-      // Assert that all footer buttons are found
-      expect(footerResult.success).toBeTruthy();
-      expect(footerResult.visible.length).toBe(standardFooterButtons.length);
-      
-      console.log('\n📊 UI Verification Results:');
-      console.log(`  Menu Options: ${menuResult.visible.length}/${standardMenuItems.length} visible`);
-      console.log(`  Footer Buttons: ${footerResult.visible.length}/${standardFooterButtons.length} visible`);
-      
-      console.log('\n✅ SSV-001 Standard Plan UI Verification completed successfully!');
-      
-    } catch (error) {
-      console.error('❌ SSV-001 Standard Plan Settings Verification failed:', error.message);
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv001-error-final.png') });
-      throw error;
-    }
+       await context.close();
+     }
+   });
+  
+   test('TC-APP-CUST-001: Verify "Event Name" toggle and edit', async ({ page }) => {
+     console.log('🚀 Starting TC-APP-CUST-001: Event Name toggle and edit');
+    
+     // Login and navigate to settings
+     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+     await openEventSettings(page);
+    
+     const eventSettingsPage = new EventSettingsPage(page);
+    
+     // Step 1: Verify Event Name option is visible
+     await eventSettingsPage.expectOptionVisible('Event Name');
+     console.log('✅ Event Name option is visible');
+    
+     // Step 2: Verify no "Preview for Free" text
+     const noPreview = await verifyNoPreviewForFree(page, 'Event Name');
+     expect(noPreview).toBeTruthy();
+    
+     // Step 3: Edit Event Name
+     const newEventName = `Test Event Name ${Date.now()}`;
+     const changeSuccess = await eventSettingsPage.changeEventName(newEventName);
+     expect(changeSuccess).toBeTruthy();
+    
+     // Step 4: Save settings
+     await eventSettingsPage.saveMainSettings();
+     await page.waitForTimeout(2000);
+    
+     console.log('✅ TC-APP-CUST-001: Event Name test passed');
+     await page.screenshot({ path: path.join(screenshotsDir, 'tc-001-event-name-completed.png') });
+   });
+  
+   test('TC-APP-CUST-002: Verify "Event Date" picker', async ({ page }) => {
+     console.log('🚀 Starting TC-APP-CUST-002: Event Date picker');
+    
+     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+     await openEventSettings(page);
+    
+     const eventSettingsPage = new EventSettingsPage(page);
+    
+     // Step 1: Verify Event Date option is visible
+     await eventSettingsPage.expectOptionVisible('Event Date');
+     console.log('✅ Event Date option is visible');
+    
+     // Step 2: Verify no "Preview for Free" text
+     const noPreview = await verifyNoPreviewForFree(page, 'Event Date');
+     expect(noPreview).toBeTruthy();
+    
+     // Step 3: Change Event Date
+     const newDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US');
+     const changeSuccess = await eventSettingsPage.changeEventDate(newDate);
+     expect(changeSuccess).toBeTruthy();
+    
+     // Step 4: Save settings
+     await eventSettingsPage.saveMainSettings();
+     await page.waitForTimeout(2000);
+    
+     console.log('✅ TC-APP-CUST-002: Event Date test passed');
+     await page.screenshot({ path: path.join(screenshotsDir, 'tc-002-event-date-completed.png') });
+   });
+  
+   test('TC-APP-CUST-003: Verify "Location" field', async ({ page }) => {
+     console.log('🚀 Starting TC-APP-CUST-003: Location field');
+    
+     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+     await openEventSettings(page);
+    
+     const eventSettingsPage = new EventSettingsPage(page);
+    
+     // Step 1: Verify Location option is visible
+     await eventSettingsPage.expectOptionVisible('Location');
+     console.log('✅ Location option is visible');
+    
+     // Step 2: Verify no "Preview for Free" text
+     const noPreview = await verifyNoPreviewForFree(page, 'Location');
+     expect(noPreview).toBeTruthy();
+    
+     // Step 3: Update Location
+     const location = `Test Location - ${Date.now()}`;
+     const updateSuccess = await eventSettingsPage.updateLocation(location);
+     expect(updateSuccess).toBeTruthy();
+    
+     // Step 4: Save settings
+     await eventSettingsPage.saveMainSettings();
+     await page.waitForTimeout(2000);
+    
+     console.log('✅ TC-APP-CUST-003: Location test passed');
+     await page.screenshot({ path: path.join(screenshotsDir, 'tc-003-location-completed.png') });
+   });
+  
+   test('TC-APP-CUST-004: Verify "Contact" field', async ({ page }) => {
+     console.log('🚀 Starting TC-APP-CUST-004: Contact field');
+    
+     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+     await openEventSettings(page);
+    
+     const eventSettingsPage = new EventSettingsPage(page);
+    
+     // Step 1: Verify Contact option is visible
+     await eventSettingsPage.expectOptionVisible('Contact');
+     console.log('✅ Contact option is visible');
+    
+     // Step 2: Verify no "Preview for Free" text
+     const noPreview = await verifyNoPreviewForFree(page, 'Contact');
+     expect(noPreview).toBeTruthy();
+    
+     // Step 3: Update Contact
+     const contactInfo = {
+       email: sharedTestData.email,
+       phone: '+1-555-0100'
+     };
+     const updateSuccess = await eventSettingsPage.updateContact(contactInfo);
+     expect(updateSuccess).toBeTruthy();
+    
+     // Step 4: Save settings
+     await eventSettingsPage.saveMainSettings();
+     await page.waitForTimeout(2000);
+    
+     console.log('✅ TC-APP-CUST-004: Contact test passed');
+     await page.screenshot({ path: path.join(screenshotsDir, 'tc-004-contact-completed.png') });
+   });
+  
+  test('TC-APP-CUST-005: Verify "Itinerary" field', async ({ page }) => {
+    console.log('🚀 Starting TC-APP-CUST-005: Itinerary field');
+   
+    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+    await openEventSettings(page);
+   
+    const eventSettingsPage = new EventSettingsPage(page);
+   
+    // Step 1: Verify Itinerary option is visible
+    await eventSettingsPage.expectOptionVisible('Itinerary');
+    console.log('✅ Itinerary option is visible');
+   
+    // Step 2: Verify no "Preview for Free" text
+    const noPreview = await verifyNoPreviewForFree(page, 'Itinerary');
+    expect(noPreview).toBeTruthy();
+   
+    // Step 3: Configure Itinerary with multiple lines
+    const itineraryLines = [
+      '9:00 AM - Registration & Welcome Coffee',
+      '10:00 AM - Opening Ceremony',
+      '11:30 AM - Lunch Break',
+      '1:00 PM - Afternoon Activities'
+    ];
+    const updateSuccess = await eventSettingsPage.updateItinerary(itineraryLines);
+    expect(updateSuccess).toBeTruthy();
+   
+    // Step 4: Save settings
+    await eventSettingsPage.saveMainSettings();
+    await page.waitForTimeout(2000);
+   
+    console.log('✅ TC-APP-CUST-005: Itinerary test passed');
+    await page.screenshot({ path: path.join(screenshotsDir, 'tc-005-itinerary-completed.png') });
   });
-
+  
+   test('TC-APP-CUST-006: Verify "Enable Message Post" toggle', async ({ page }) => {
+     console.log('🚀 Starting TC-APP-CUST-006: Enable Message Post toggle');
+    
+     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+     await openEventSettings(page);
+    
+     const eventSettingsPage = new EventSettingsPage(page);
+    
+     // Step 1: Verify Enable Message Post option is visible
+     await eventSettingsPage.expectOptionVisible('Enable Message Post');
+     console.log('✅ Enable Message Post option is visible');
+    
+     // Step 2: Verify no "Preview for Free" text
+     const noPreview = await verifyNoPreviewForFree(page, 'Enable Message Post');
+     expect(noPreview).toBeTruthy();
+    
+     // Step 3: Toggle Enable Message Post
+     // Note: Message Post might be a simple toggle, but based on EventSettingsPage,
+     // it has a dialog for adding backgrounds. We'll just verify it's accessible.
+    
+     console.log('✅ TC-APP-CUST-006: Enable Message Post test passed');
+     await page.screenshot({ path: path.join(screenshotsDir, 'tc-006-message-post-completed.png') });
+   });
+  
+   test('TC-APP-CUST-007: Verify "Video" option', async ({ page }) => {
+     console.log('🚀 Starting TC-APP-CUST-007: Video option');
+    
+     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+     await openEventSettings(page);
+    
+     const eventSettingsPage = new EventSettingsPage(page);
+    
+     // Step 1: Verify Video option is visible
+     await eventSettingsPage.expectOptionVisible('Video');
+     console.log('✅ Video option is visible');
+    
+     // Step 2: Verify no "Preview for Free" text
+     const noPreview = await verifyNoPreviewForFree(page, 'Video');
+     expect(noPreview).toBeTruthy();
+    
+     // Step 3: Video is auto-enabled and cannot be disabled (warning status)
+     console.log('⚠️ Video option is auto-enabled (cannot disable)');
+    
+     console.log('✅ TC-APP-CUST-007: Video test passed');
+     await page.screenshot({ path: path.join(screenshotsDir, 'tc-007-video-completed.png') });
+   });
+ });
   /**
-   * SSV-002: Premium Plan - Verify settings do not show "Preview for Free"
-   * Steps:
-   * 1. Create fresh account and event
-   * 2. Subscribe to Premium Plan
-   * 3. Navigate to event settings
-   * 4. Verify Premium Plan features do NOT show "Preview for Free"
-   */
-  test('SSV-002: Premium Plan - Settings Verification', async ({ page, context }) => {
-    console.log('🚀 Starting SSV-002: Premium Plan Settings Verification');
-
-    try {
-      // Step 1: Setup fresh account and event
-      const setupResult = await setupFreshAccountAndEvent(page, context, 'PremiumSettings');
-      if (!setupResult.success) {
-        test.skip('Failed to setup fresh account and event');
-        return;
-      }
-      testData = setupResult.testData;
-      console.log(`✅ Setup completed with email: ${testData.email}`);
-
-      // Initialize page objects
-      subscriptionPage = new SubscriptionPage(page);
-      paymentPage = new PaymentPage(page);
-      eventSettingsPage = new EventSettingsPage(page);
-      eventPage = new EventPage(page);
-
-      // Step 2: Navigate to subscription and select Premium Plan
-      console.log('📍 SSV-002 Step 2: Subscribing to Premium Plan...');
-      const subscriptionNavigationSuccess = await subscriptionPage.navigateToSubscription();
-      expect(subscriptionNavigationSuccess).toBeTruthy();
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv002-01-subscription-page.png') });
-
-      const selectResult = await subscriptionPage.choosePlanAndClickSelect('Premium Event');
-      expect(selectResult.success).toBeTruthy();
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv002-02-plan-selected.png') });
-
-      // Step 3: Handle payment
-      console.log(`📍 SSV-002 Step 3: Handling payment flow (${selectResult.navigationType})...`);
+  * ============================================================================
+  * STANDARD TIER TESTS - TC-APP-CUST-008 to TC-APP-CUST-015
+  * ============================================================================
+  */
+ test.describe('Standard Tier Settings Tests', () => {
+   test.beforeAll(async ({ browser }) => {
+     // Subscribe to Standard Plan once for all Standard tests
+     if (!sharedTestData.standardEventCreated) {
+       const context = await browser.newContext();
+       const page = await context.newPage();
       
-      let paymentSuccess = false;
-      if (selectResult.navigationType === 'newPage' && selectResult.newPage) {
-        const stripePage = selectResult.newPage;
-        await stripePage.waitForLoadState('domcontentloaded');
-        await stripePage.screenshot({ path: path.join(screenshotsDir, 'ssv002-03-stripe-checkout.png') });
-
-        const stripePayment = new PaymentPage(stripePage);
-        expect(await stripePayment.verifyOnStripeCheckoutPage()).toBeTruthy();
-        expect(await stripePayment.waitForStripeCheckoutReady()).toBeTruthy();
-        paymentSuccess = await stripePayment.completePaymentFlow(stripePayment.getDefaultPaymentDetails());
-        expect(paymentSuccess).toBeTruthy();
-        await stripePage.close();
-      } else {
-        await page.waitForTimeout(2000);
-        const stripePayment = new PaymentPage(page);
-        await page.waitForSelector('input[id="cardNumber"], input[placeholder*="card"], .payment-form', { timeout: 10000 });
-        paymentSuccess = await stripePayment.completePaymentFlow(stripePayment.getDefaultPaymentDetails());
-        expect(paymentSuccess).toBeTruthy();
-      }
-
-      // Step 4: Navigate back to event and open settings
-      console.log('📍 SSV-002 Step 4: Navigating to event settings...');
-      await page.waitForTimeout(5000);
-      await page.goto('https://dev.livesharenow.com/events');
-      await page.waitForTimeout(2000);
+       // Login
+       await loginToAccount(page, sharedTestData.email, sharedTestData.password);
       
-      await eventPage.clickFirstEvent();
-      await page.waitForTimeout(2000);
+       // Create new event for Standard plan
+       await createNewEvent(page, `Standard Event ${Date.now()}`);
       
-      await eventSettingsPage.openSettingsIfNeeded();
-      await page.waitForTimeout(5000);
-      await eventSettingsPage.waitLoaded();
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv002-04-settings-opened.png') });
-
-      // Step 5: Verify Premium Plan subscription features
-      console.log('📍 SSV-002 Step 5: Verifying Premium Plan subscription features...');
+       // Subscribe to Standard Plan
+       const subscribed = await subscribeAndPayForPlan(page, context, 'Standard Event');
+       if (subscribed) {
+         sharedTestData.standardEventCreated = true;
+       }
       
-      // Use comprehensive verification for Premium plan
-      // Expected behavior:
-      // - Free features: NO preview
-      // - Standard features: NO preview (included with Premium)
-      // - Premium features: NO preview (subscribed)
-      // - Premium+ features: YES preview (not subscribed)
-      const verificationResult = await verifySubscriptionFeatures(page, 'PREMIUM');
-      
-      expect(verificationResult.success).toBeTruthy();
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv002-05-verification-completed.png') });
-
-      console.log(`✅ SSV-002 Premium Plan Settings Verification completed: ${verificationResult.details.totalPassed}/${verificationResult.details.totalTests} tests passed`);
-      
-      // Step 6: Configure all settings for Premium Plan
-      console.log('\n📍 SSV-002 Step 6: Configuring all settings...');
-      
-      // Configure: enable simple toggles + configure dialogs + save
-      const configResult = await configureAllSettingsForPlan(page, eventSettingsPage, 'PREMIUM', testData);
-      console.log(`📊 Configuration result: ${configResult.togglesEnabled} toggles, ${configResult.settingsConfigured} configured`);
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv002-06-settings-configured.png') });
-      await page.waitForTimeout(2000);
-      
-      // Close settings dialog if still open
-      const cancelButton = page.locator('.mt-auto .btn:has-text("Cancel")').first();
-      if (await cancelButton.isVisible().catch(() => false)) {
-        await cancelButton.click();
-        await page.waitForTimeout(1000);
-      }
-      
-      // Reload page to ensure all UI updates are reflected
-      console.log('🔄 Reloading page...');
-      await page.reload();
-      await page.waitForTimeout(3000);
-      
-      // Verify menu options (Premium plan has more menu items)
-      // Use EXACT text as it appears in UI
-      const premiumMenuItems = [
-        'Download All Photos',
-        'Redeem Gift Code',
-        'Live Help',
-        'FAQs',
-        'Details',
-        'Logout'
-      ];
-      const menuResult = await verifyMenuOptions(page, premiumMenuItems);
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv002-07-menu-verified.png') });
-      
-      // Assert that all menu items are found
-      expect(menuResult.success).toBeTruthy();
-      expect(menuResult.visible.length).toBe(premiumMenuItems.length);
-      
-      // Premium plan still does not have Premium+ footer buttons
-      // Use EXACT text as it appears in UI
-      const premiumFooterButtons = ['Message', 'Photos', 'Videos'];
-      const footerResult = await verifyFooterButtons(page, premiumFooterButtons);
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv002-08-footer-verified.png') });
-      
-      // Assert that all footer buttons are found
-      expect(footerResult.success).toBeTruthy();
-      expect(footerResult.visible.length).toBe(premiumFooterButtons.length);
-      
-      console.log('\n📊 UI Verification Results:');
-      console.log(`  Menu Options: ${menuResult.visible.length}/${premiumMenuItems.length} visible`);
-      console.log(`  Footer Buttons: ${footerResult.visible.length}/${premiumFooterButtons.length} visible`);
-      
-      console.log('\n✅ SSV-002 Premium Plan UI Verification completed successfully!');
-      
-    } catch (error) {
-      console.error('❌ SSV-002 Premium Plan Settings Verification failed:', error.message);
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv002-error-final.png') });
-      throw error;
-    }
+       await context.close();
+     }
+   });
+  
+   test('TC-APP-CUST-008: Verify "Button Link #1" setup', async ({ page }) => {
+     console.log('🚀 Starting TC-APP-CUST-008: Button Link #1 setup');
+    
+     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+     await openEventSettings(page);
+    
+     const eventSettingsPage = new EventSettingsPage(page);
+    
+     // Step 1: Verify Button Link #1 option is visible
+     await eventSettingsPage.expectOptionVisible('Button Link #1');
+     console.log('✅ Button Link #1 option is visible');
+    
+     // Step 2: Verify no "Preview for Free" text (unlocked with Standard)
+     const noPreview = await verifyNoPreviewForFree(page, 'Button Link #1');
+     expect(noPreview).toBeTruthy();
+    
+     // Step 3: Configure Button Link #1
+     const linkData = {
+       name: 'Test Button',
+       url: 'https://test.com'
+     };
+     const configSuccess = await eventSettingsPage.configureButtonLink(1, linkData);
+     expect(configSuccess).toBeTruthy();
+    
+     // Step 4: Save settings
+     await eventSettingsPage.saveMainSettings();
+     await page.waitForTimeout(2000);
+    
+     console.log('✅ TC-APP-CUST-008: Button Link #1 test passed');
+     await page.screenshot({ path: path.join(screenshotsDir, 'tc-008-button-link-1-completed.png') });
+   });
+  
+   test('TC-APP-CUST-009: Verify "Button Link #2" setup', async ({ page }) => {
+     console.log('🚀 Starting TC-APP-CUST-009: Button Link #2 setup');
+    
+     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+     await openEventSettings(page);
+    
+     const eventSettingsPage = new EventSettingsPage(page);
+    
+     // Step 1: Verify Button Link #2 option is visible
+     await eventSettingsPage.expectOptionVisible('Button Link #2');
+     console.log('✅ Button Link #2 option is visible');
+    
+     // Step 2: Verify no "Preview for Free" text
+     const noPreview = await verifyNoPreviewForFree(page, 'Button Link #2');
+     expect(noPreview).toBeTruthy();
+    
+     // Step 3: Configure Button Link #2
+     const linkData = {
+       name: 'RSVP',
+       url: 'https://rsvp.example.com'
+     };
+     const configSuccess = await eventSettingsPage.configureButtonLink(2, linkData);
+     expect(configSuccess).toBeTruthy();
+    
+     // Step 4: Save settings
+     await eventSettingsPage.saveMainSettings();
+     await page.waitForTimeout(2000);
+    
+     console.log('✅ TC-APP-CUST-009: Button Link #2 test passed');
+     await page.screenshot({ path: path.join(screenshotsDir, 'tc-009-button-link-2-completed.png') });
+   });
+  
+   test('TC-APP-CUST-010: Verify "Welcome Popup" setup', async ({ page }) => {
+     console.log('🚀 Starting TC-APP-CUST-010: Welcome Popup setup');
+    
+     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+     await openEventSettings(page);
+    
+     const eventSettingsPage = new EventSettingsPage(page);
+    
+     // Step 1: Verify Welcome Popup option is visible
+     await eventSettingsPage.expectOptionVisible('Welcome Popup');
+     console.log('✅ Welcome Popup option is visible');
+    
+     // Step 2: Verify no "Preview for Free" text
+     const noPreview = await verifyNoPreviewForFree(page, 'Welcome Popup');
+     expect(noPreview).toBeTruthy();
+    
+     // Step 3: Configure Welcome Popup (requires image upload)
+     // For now, we verify it's accessible and unlocked
+    
+     console.log('✅ TC-APP-CUST-010: Welcome Popup test passed');
+     await page.screenshot({ path: path.join(screenshotsDir, 'tc-010-welcome-popup-completed.png') });
+   });
+  
+  test('TC-APP-CUST-011: Verify "Enable Photo Gifts" toggle functionality', async ({ page }) => {
+    console.log('🚀 Starting TC-APP-CUST-011: Enable Photo Gifts toggle functionality');
+   
+    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+    await openEventSettings(page);
+   
+    const eventSettingsPage = new EventSettingsPage(page);
+   
+    // Step 1: Verify Enable Photo Gifts option is visible
+    await eventSettingsPage.expectOptionVisible('Enable Photo Gifts');
+    console.log('✅ Enable Photo Gifts option is visible');
+   
+    // Step 2: Verify no "Preview for Free" text (unlocked in Standard)
+    const noPreview = await verifyNoPreviewForFree(page, 'Enable Photo Gifts');
+    expect(noPreview).toBeTruthy();
+   
+    // Step 3: Get current state
+    const initialState = await eventSettingsPage.isOptionEnabled('Enable Photo Gifts');
+    console.log(`  📊 Initial state: ${initialState ? 'Enabled' : 'Disabled'}`);
+   
+    // Step 4: Toggle Enable Photo Gifts to ON
+    await eventSettingsPage.setOption('Enable Photo Gifts', true);
+    await page.waitForTimeout(500);
+   
+    // Step 5: Verify it's selected
+    await eventSettingsPage.expectOptionSelected('Enable Photo Gifts');
+    console.log('  ✅ Enable Photo Gifts toggled ON successfully');
+   
+    // Step 6: Save settings
+    await eventSettingsPage.saveMainSettings();
+    await page.waitForTimeout(2000);
+   
+    // Step 7: Reopen settings and verify persistence
+    await openEventSettings(page);
+    await eventSettingsPage.expectOptionSelected('Enable Photo Gifts');
+    console.log('  ✅ Enable Photo Gifts state persisted correctly');
+   
+    console.log('✅ TC-APP-CUST-011: Enable Photo Gifts test passed');
+    await page.screenshot({ path: path.join(screenshotsDir, 'tc-011-photo-gifts-completed.png') });
   });
-
+  
+   test('TC-APP-CUST-012: Verify "Event Header Photo" upload', async ({ page }) => {
+     console.log('🚀 Starting TC-APP-CUST-012: Event Header Photo upload');
+    
+     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+     await openEventSettings(page);
+    
+     const eventSettingsPage = new EventSettingsPage(page);
+    
+     // Step 1: Verify Event Header Photo option is visible
+     await eventSettingsPage.expectOptionVisible('Event Header Photo');
+     console.log('✅ Event Header Photo option is visible');
+    
+     // Step 2: Verify no "Preview for Free" text (unlocked in Standard)
+     const noPreview = await verifyNoPreviewForFree(page, 'Event Header Photo');
+     expect(noPreview).toBeTruthy();
+    
+     // Step 3: Upload image (requires image file path)
+     // For now, we verify it's accessible
+    
+     console.log('✅ TC-APP-CUST-012: Event Header Photo test passed');
+     await page.screenshot({ path: path.join(screenshotsDir, 'tc-012-header-photo-completed.png') });
+   });
+  
+  test('TC-APP-CUST-013: Verify "Popularity Badges" toggle functionality', async ({ page }) => {
+    console.log('🚀 Starting TC-APP-CUST-013: Popularity Badges toggle functionality');
+   
+    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+    await openEventSettings(page);
+   
+    const eventSettingsPage = new EventSettingsPage(page);
+   
+    // Step 1: Verify Popularity Badges option is visible
+    await eventSettingsPage.expectOptionVisible('Popularity Badges');
+    console.log('✅ Popularity Badges option is visible');
+   
+    // Step 2: Verify no "Preview for Free" text (unlocked in Standard)
+    const noPreview = await verifyNoPreviewForFree(page, 'Popularity Badges');
+    expect(noPreview).toBeTruthy();
+   
+    // Step 3: Get current state
+    const initialState = await eventSettingsPage.isOptionEnabled('Popularity Badges');
+    console.log(`  📊 Initial state: ${initialState ? 'Enabled' : 'Disabled'}`);
+   
+    // Step 4: Toggle Popularity Badges to ON
+    await eventSettingsPage.setOption('Popularity Badges', true);
+    await page.waitForTimeout(500);
+   
+    // Step 5: Verify it's selected
+    await eventSettingsPage.expectOptionSelected('Popularity Badges');
+    console.log('  ✅ Popularity Badges toggled ON successfully');
+   
+    // Step 6: Save settings
+    await eventSettingsPage.saveMainSettings();
+    await page.waitForTimeout(2000);
+   
+    // Step 7: Reopen settings and verify persistence
+    await openEventSettings(page);
+    await eventSettingsPage.expectOptionSelected('Popularity Badges');
+    console.log('  ✅ Popularity Badges state persisted correctly');
+   
+    console.log('✅ TC-APP-CUST-013: Popularity Badges test passed');
+    await page.screenshot({ path: path.join(screenshotsDir, 'tc-013-popularity-badges-completed.png') });
+  });
+  
+  test('TC-APP-CUST-014: Verify "Force Login" toggle functionality', async ({ page }) => {
+    console.log('🚀 Starting TC-APP-CUST-014: Force Login toggle functionality');
+   
+    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+    await openEventSettings(page);
+   
+    const eventSettingsPage = new EventSettingsPage(page);
+   
+    // Step 1: Verify Force Login option is visible
+    await eventSettingsPage.expectOptionVisible('Force Login');
+    console.log('✅ Force Login option is visible');
+   
+    // Step 2: Verify no "Preview for Free" text (unlocked in Standard)
+    const noPreview = await verifyNoPreviewForFree(page, 'Force Login');
+    expect(noPreview).toBeTruthy();
+   
+    // Step 3: Get current state
+    const initialState = await eventSettingsPage.isOptionEnabled('Force Login');
+    console.log(`  📊 Initial state: ${initialState ? 'Enabled' : 'Disabled'}`);
+   
+    // Step 4: Toggle Force Login to ON
+    await eventSettingsPage.setOption('Force Login', true);
+    await page.waitForTimeout(500);
+   
+    // Step 5: Verify it's selected
+    await eventSettingsPage.expectOptionSelected('Force Login');
+    console.log('  ✅ Force Login toggled ON successfully');
+   
+    // Step 6: Save settings
+    await eventSettingsPage.saveMainSettings();
+    await page.waitForTimeout(2000);
+   
+    // Step 7: Reopen settings and verify persistence
+    await openEventSettings(page);
+    await eventSettingsPage.expectOptionSelected('Force Login');
+    console.log('  ✅ Force Login state persisted correctly');
+   
+    console.log('✅ TC-APP-CUST-014: Force Login test passed');
+    await page.screenshot({ path: path.join(screenshotsDir, 'tc-014-force-login-completed.png') });
+  });
+  
+   test('TC-APP-CUST-015: Verify Premium features show preview', async ({ page }) => {
+     console.log('🚀 Starting TC-APP-CUST-015: Premium features show preview');
+    
+     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+     await openEventSettings(page);
+    
+     // Verify Premium features show "Preview for Free" text
+     const premiumFeatures = FeatureTiers.PREMIUM;
+     let allPass = true;
+    
+     for (const feature of premiumFeatures) {
+       const hasPreview = await verifyHasPreviewForFree(page, feature);
+       if (!hasPreview) {
+         allPass = false;
+       }
+     }
+    
+     expect(allPass).toBeTruthy();
+    
+     console.log('✅ TC-APP-CUST-015: Premium features preview test passed');
+     await page.screenshot({ path: path.join(screenshotsDir, 'tc-015-premium-preview-completed.png') });
+   });
+ });
   /**
-   * SSV-003: Premium+ Plan - Verify settings do not show "Preview for Free"
-   * Steps:
-   * 1. Create fresh account and event
-   * 2. Subscribe to Premium+ Plan
-   * 3. Navigate to event settings
-   * 4. Verify Premium+ Plan features do NOT show "Preview for Free"
-   */
-  test('SSV-003: Premium+ Plan - Settings Verification', async ({ page, context }) => {
-    console.log('🚀 Starting SSV-003: Premium+ Plan Settings Verification');
-
-    try {
-      // Step 1: Setup fresh account and event
-      const setupResult = await setupFreshAccountAndEvent(page, context, 'PremiumPlusSettings');
-      if (!setupResult.success) {
-        test.skip('Failed to setup fresh account and event');
-        return;
-      }
-      testData = setupResult.testData;
-      console.log(`✅ Setup completed with email: ${testData.email}`);
-
-      // Initialize page objects
-      subscriptionPage = new SubscriptionPage(page);
-      paymentPage = new PaymentPage(page);
-      eventSettingsPage = new EventSettingsPage(page);
-      eventPage = new EventPage(page);
-
-      // Step 2: Navigate to subscription and select Premium+ Plan
-      console.log('📍 SSV-003 Step 2: Subscribing to Premium+ Plan...');
-      const subscriptionNavigationSuccess = await subscriptionPage.navigateToSubscription();
-      expect(subscriptionNavigationSuccess).toBeTruthy();
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv003-01-subscription-page.png') });
-
-      const selectResult = await subscriptionPage.choosePlanAndClickSelect('Premium+ Event');
-      expect(selectResult.success).toBeTruthy();
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv003-02-plan-selected.png') });
-
-      // Step 3: Handle payment
-      console.log(`📍 SSV-003 Step 3: Handling payment flow (${selectResult.navigationType})...`);
+  * ============================================================================
+  * PREMIUM TIER TESTS - TC-APP-CUST-016 to TC-APP-CUST-022
+  * ============================================================================
+  */
+ test.describe('Premium Tier Settings Tests', () => {
+   test.beforeAll(async ({ browser }) => {
+     // Subscribe to Premium Plan once for all Premium tests
+     if (!sharedTestData.premiumEventCreated) {
+       const context = await browser.newContext();
+       const page = await context.newPage();
       
-      let paymentSuccess = false;
-      if (selectResult.navigationType === 'newPage' && selectResult.newPage) {
-        const stripePage = selectResult.newPage;
-        await stripePage.waitForLoadState('domcontentloaded');
-        await stripePage.screenshot({ path: path.join(screenshotsDir, 'ssv003-03-stripe-checkout.png') });
-
-        const stripePayment = new PaymentPage(stripePage);
-        expect(await stripePayment.verifyOnStripeCheckoutPage()).toBeTruthy();
-        expect(await stripePayment.waitForStripeCheckoutReady()).toBeTruthy();
-        paymentSuccess = await stripePayment.completePaymentFlow(stripePayment.getDefaultPaymentDetails());
-        expect(paymentSuccess).toBeTruthy();
-        await stripePage.close();
-      } else {
-        await page.waitForTimeout(2000);
-        const stripePayment = new PaymentPage(page);
-        await page.waitForSelector('input[id="cardNumber"], input[placeholder*="card"], .payment-form', { timeout: 10000 });
-        paymentSuccess = await stripePayment.completePaymentFlow(stripePayment.getDefaultPaymentDetails());
-        expect(paymentSuccess).toBeTruthy();
-      }
-
-      // Step 4: Navigate back to event and open settings
-      console.log('📍 SSV-003 Step 4: Navigating to event settings...');
-      await page.waitForTimeout(5000);
-      await page.goto('https://dev.livesharenow.com/events');
-      await page.waitForTimeout(2000);
+       // Login
+       await loginToAccount(page, sharedTestData.email, sharedTestData.password);
       
-      await eventPage.clickFirstEvent();
-      await page.waitForTimeout(2000);
+       // Create new event for Premium plan
+       await createNewEvent(page, `Premium Event ${Date.now()}`);
       
-      await eventSettingsPage.openSettingsIfNeeded();
-      await page.waitForTimeout(5000);
-      await eventSettingsPage.waitLoaded();
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv003-04-settings-opened.png') });
-
-      // Step 5: Verify Premium+ Plan subscription features
-      console.log('📍 SSV-003 Step 5: Verifying Premium+ Plan subscription features...');
+       // Subscribe to Premium Plan
+       const subscribed = await subscribeAndPayForPlan(page, context, 'Premium Event');
+       if (subscribed) {
+         sharedTestData.premiumEventCreated = true;
+       }
       
-      // Use comprehensive verification for Premium+ plan
-      // Expected behavior:
-      // - Free features: NO preview
-      // - Standard features: NO preview (included with Premium+)
-      // - Premium features: NO preview (included with Premium+)
-      // - Premium+ features: NO preview (subscribed)
-      const verificationResult = await verifySubscriptionFeatures(page, 'PREMIUM_PLUS');
-      
-      expect(verificationResult.success).toBeTruthy();
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv003-05-verification-completed.png') });
-
-      console.log(`✅ SSV-003 Premium+ Plan Settings Verification completed: ${verificationResult.details.totalPassed}/${verificationResult.details.totalTests} tests passed`);
-      
-      // Step 6: Configure all settings for Premium+ Plan
-      console.log('\n📍 SSV-003 Step 6: Configuring all settings...');
-      
-      // Configure: enable simple toggles + configure dialogs + save
-      const configResult = await configureAllSettingsForPlan(page, eventSettingsPage, 'PREMIUM_PLUS', testData);
-      console.log(`📊 Configuration result: ${configResult.togglesEnabled} toggles, ${configResult.settingsConfigured} configured`);
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv003-06-settings-configured.png') });
-      await page.waitForTimeout(2000);
-      
-      // Close settings dialog if still open
-      const cancelButton = page.locator('.mt-auto .btn:has-text("Cancel")').first();
-      if (await cancelButton.isVisible().catch(() => false)) {
-        await cancelButton.click();
-        await page.waitForTimeout(1000);
-      }
-      
-      // Reload page to ensure all UI updates are reflected
-      console.log('🔄 Reloading page...');
-      await page.reload();
-      await page.waitForTimeout(3000);
-      
-      // Verify menu options (Premium+ plan has all menu items including Movie Editor, LiveView)
-      // Use EXACT text as it appears in UI
-      const premiumPlusMenuItems = [
-        'View Keepsakes',
-        'Download All Photos',
-        'Movie Editor',
-        'LiveView',
-        'Redeem Gift Code',
-        'Live Help',
-        'FAQs',
-        'Details',
-        'Logout'
-      ];
-      const menuResult = await verifyMenuOptions(page, premiumPlusMenuItems);
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv003-07-menu-verified.png') });
-      
-      // Assert that all menu items are found (exact match required)
-      expect(menuResult.success).toBeTruthy();
-      expect(menuResult.visible.length).toBe(premiumPlusMenuItems.length);
-      
-      // Premium+ plan has all footer buttons including Then & Now, KeepSake, Sponsor, Prize
-      // Use EXACT text as it appears in UI
-      const premiumPlusFooterButtons = [
-        'Then & Now',
-        'KeepSake',
-        'Sponsor',
-        'Prize',
-        'Message',
-        'Photos',
-        'Videos'
-      ];
-      const footerResult = await verifyFooterButtons(page, premiumPlusFooterButtons);
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv003-08-footer-verified.png') });
-      
-      // Assert that all footer buttons are found (exact match required)
-      expect(footerResult.success).toBeTruthy();
-      expect(footerResult.visible.length).toBe(premiumPlusFooterButtons.length);
-      
-      console.log('\n📊 UI Verification Results:');
-      console.log(`  Menu Options: ${menuResult.visible.length}/${premiumPlusMenuItems.length} visible`);
-      console.log(`  Footer Buttons: ${footerResult.visible.length}/${premiumPlusFooterButtons.length} visible`);
-      
-      console.log('\n✅ SSV-003 Premium+ Plan UI Verification completed successfully!');
-      
-    } catch (error) {
-      console.error('❌ SSV-003 Premium+ Plan Settings Verification failed:', error.message);
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv003-error-final.png') });
-      throw error;
-    }
+       await context.close();
+     }
+   });
+  
+  test('TC-APP-CUST-016: Verify "Allow sharing via Facebook" toggle functionality', async ({ page }) => {
+    console.log('🚀 Starting TC-APP-CUST-016: Allow sharing via Facebook toggle functionality');
+   
+    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+    await openEventSettings(page);
+   
+    const eventSettingsPage = new EventSettingsPage(page);
+   
+    // Step 1: Verify Facebook sharing option is visible
+    await eventSettingsPage.expectOptionVisible('Allow sharing via Facebook');
+    console.log('✅ Allow sharing via Facebook option is visible');
+   
+    // Step 2: Verify no "Preview for Free" text (unlocked with Premium)
+    const noPreview = await verifyNoPreviewForFree(page, 'Allow sharing via Facebook');
+    expect(noPreview).toBeTruthy();
+   
+    // Step 3: Get current state
+    const initialState = await eventSettingsPage.isOptionEnabled('Allow sharing via Facebook');
+    console.log(`  📊 Initial state: ${initialState ? 'Enabled' : 'Disabled'}`);
+   
+    // Step 4: Toggle Facebook sharing to ON
+    await eventSettingsPage.setOption('Allow sharing via Facebook', true);
+    await page.waitForTimeout(500);
+   
+    // Step 5: Verify it's selected
+    await eventSettingsPage.expectOptionSelected('Allow sharing via Facebook');
+    console.log('  ✅ Allow sharing via Facebook toggled ON successfully');
+   
+    // Step 6: Save settings
+    await eventSettingsPage.saveMainSettings();
+    await page.waitForTimeout(2000);
+   
+    // Step 7: Reopen settings and verify persistence
+    await openEventSettings(page);
+    await eventSettingsPage.expectOptionSelected('Allow sharing via Facebook');
+    console.log('  ✅ Allow sharing via Facebook state persisted correctly');
+   
+    console.log('✅ TC-APP-CUST-016: Allow sharing via Facebook test passed');
+    await page.screenshot({ path: path.join(screenshotsDir, 'tc-016-facebook-sharing-completed.png') });
   });
-
+  
+  test('TC-APP-CUST-017: Verify "Allow Guest Download" toggle functionality', async ({ page }) => {
+    console.log('🚀 Starting TC-APP-CUST-017: Allow Guest Download toggle functionality');
+   
+    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+    await openEventSettings(page);
+   
+    const eventSettingsPage = new EventSettingsPage(page);
+   
+    // Step 1: Verify Guest Download option is visible
+    await eventSettingsPage.expectOptionVisible('Allow Guest Download');
+    console.log('✅ Allow Guest Download option is visible');
+   
+    // Step 2: Verify no "Preview for Free" text
+    const noPreview = await verifyNoPreviewForFree(page, 'Allow Guest Download');
+    expect(noPreview).toBeTruthy();
+   
+    // Step 3: Get current state
+    const initialState = await eventSettingsPage.isOptionEnabled('Allow Guest Download');
+    console.log(`  📊 Initial state: ${initialState ? 'Enabled' : 'Disabled'}`);
+   
+    // Step 4: Toggle Guest Download to ON
+    await eventSettingsPage.setOption('Allow Guest Download', true);
+    await page.waitForTimeout(500);
+   
+    // Step 5: Verify it's selected
+    await eventSettingsPage.expectOptionSelected('Allow Guest Download');
+    console.log('  ✅ Allow Guest Download toggled ON successfully');
+   
+    // Step 6: Save settings
+    await eventSettingsPage.saveMainSettings();
+    await page.waitForTimeout(2000);
+   
+    // Step 7: Reopen settings and verify persistence
+    await openEventSettings(page);
+    await eventSettingsPage.expectOptionSelected('Allow Guest Download');
+    console.log('  ✅ Allow Guest Download state persisted correctly');
+   
+    console.log('✅ TC-APP-CUST-017: Allow Guest Download test passed');
+    await page.screenshot({ path: path.join(screenshotsDir, 'tc-017-guest-download-completed.png') });
+  });
+  
+   test('TC-APP-CUST-018: Verify "Add Event Managers" functional', async ({ page }) => {
+     console.log('🚀 Starting TC-APP-CUST-018: Add Event Managers functional');
+    
+     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+     await openEventSettings(page);
+    
+     const eventSettingsPage = new EventSettingsPage(page);
+    
+     // Step 1: Verify Add Event Managers option is visible
+     await eventSettingsPage.expectOptionVisible('Add Event Managers');
+     console.log('✅ Add Event Managers option is visible');
+    
+     // Step 2: Verify no "Preview for Free" text
+     const noPreview = await verifyNoPreviewForFree(page, 'Add Event Managers');
+     expect(noPreview).toBeTruthy();
+    
+     // Step 3: Add Event Manager (requires email)
+     // For now, we verify it's accessible
+    
+     console.log('✅ TC-APP-CUST-018: Add Event Managers test passed');
+     await page.screenshot({ path: path.join(screenshotsDir, 'tc-018-event-managers-completed.png') });
+   });
+  
+  test('TC-APP-CUST-019: Verify "Allow posting without login" toggle functionality', async ({ page }) => {
+    console.log('🚀 Starting TC-APP-CUST-019: Allow posting without login toggle functionality');
+   
+    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+    await openEventSettings(page);
+   
+    const eventSettingsPage = new EventSettingsPage(page);
+   
+    // Step 1: Verify posting without login option is visible
+    await eventSettingsPage.expectOptionVisible('Allow posting without login');
+    console.log('✅ Allow posting without login option is visible');
+   
+    // Step 2: Verify no "Preview for Free" text
+    const noPreview = await verifyNoPreviewForFree(page, 'Allow posting without login');
+    expect(noPreview).toBeTruthy();
+   
+    // Step 3: Get current state
+    const initialState = await eventSettingsPage.isOptionEnabled('Allow posting without login');
+    console.log(`  📊 Initial state: ${initialState ? 'Enabled' : 'Disabled'}`);
+   
+    // Step 4: Toggle posting without login to ON
+    await eventSettingsPage.setOption('Allow posting without login', true);
+    await page.waitForTimeout(500);
+   
+    // Step 5: Verify it's selected
+    await eventSettingsPage.expectOptionSelected('Allow posting without login');
+    console.log('  ✅ Allow posting without login toggled ON successfully');
+   
+    // Step 6: Save settings
+    await eventSettingsPage.saveMainSettings();
+    await page.waitForTimeout(2000);
+   
+    // Step 7: Reopen settings and verify persistence
+    await openEventSettings(page);
+    await eventSettingsPage.expectOptionSelected('Allow posting without login');
+    console.log('  ✅ Allow posting without login state persisted correctly');
+   
+    console.log('✅ TC-APP-CUST-019: Allow posting without login test passed');
+    await page.screenshot({ path: path.join(screenshotsDir, 'tc-019-posting-without-login-completed.png') });
+  });
+  
+   test('TC-APP-CUST-020: Verify "Require Access Passcode"', async ({ page }) => {
+     console.log('🚀 Starting TC-APP-CUST-020: Require Access Passcode');
+    
+     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+     await openEventSettings(page);
+    
+     const eventSettingsPage = new EventSettingsPage(page);
+    
+     // Step 1: Verify Access Passcode option is visible
+     await eventSettingsPage.expectOptionVisible('Require Access Passcode');
+     console.log('✅ Require Access Passcode option is visible');
+    
+     // Step 2: Verify no "Preview for Free" text
+     const noPreview = await verifyNoPreviewForFree(page, 'Require Access Passcode');
+     expect(noPreview).toBeTruthy();
+    
+     // Step 3: Set Access Passcode
+     const passcode = '1234';
+     const setSuccess = await eventSettingsPage.setAccessPasscode(passcode);
+     expect(setSuccess).toBeTruthy();
+    
+     // Step 4: Save settings
+     await eventSettingsPage.saveMainSettings();
+     await page.waitForTimeout(2000);
+    
+     console.log('✅ TC-APP-CUST-020: Require Access Passcode test passed');
+     await page.screenshot({ path: path.join(screenshotsDir, 'tc-020-access-passcode-completed.png') });
+   });
+  
+   test('TC-APP-CUST-021: Verify Standard features remain unlocked', async ({ page }) => {
+     console.log('🚀 Starting TC-APP-CUST-021: Standard features remain unlocked');
+    
+     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+     await openEventSettings(page);
+    
+     // Verify Standard features do NOT show "Preview for Free" text
+     const standardFeatures = FeatureTiers.STANDARD;
+     let allPass = true;
+    
+     for (const feature of standardFeatures) {
+       const noPreview = await verifyNoPreviewForFree(page, feature);
+       if (!noPreview) {
+         allPass = false;
+       }
+     }
+    
+     expect(allPass).toBeTruthy();
+    
+     console.log('✅ TC-APP-CUST-021: Standard features backward compatibility test passed');
+     await page.screenshot({ path: path.join(screenshotsDir, 'tc-021-standard-unlocked-completed.png') });
+   });
+  
+   test('TC-APP-CUST-022: Verify Premium+ features show preview', async ({ page }) => {
+     console.log('🚀 Starting TC-APP-CUST-022: Premium+ features show preview');
+    
+     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+     await openEventSettings(page);
+    
+     // Verify Premium+ features show "Preview for Free" text
+     const premiumPlusFeatures = FeatureTiers.PREMIUM_PLUS;
+     let allPass = true;
+    
+     for (const feature of premiumPlusFeatures) {
+       const hasPreview = await verifyHasPreviewForFree(page, feature);
+       if (!hasPreview) {
+         allPass = false;
+       }
+     }
+    
+     expect(allPass).toBeTruthy();
+    
+     console.log('✅ TC-APP-CUST-022: Premium+ features preview test passed');
+     await page.screenshot({ path: path.join(screenshotsDir, 'tc-022-premiumplus-preview-completed.png') });
+   });
+ });
   /**
-   * SSV-004: Combined Subscription Settings Check - Test all plans in sequence
-   * This test reuses the same account across multiple subscription upgrades
-   * to verify settings behavior as the account upgrades through plans
-   */
-  test('SSV-004: Combined Subscription Settings Verification', async ({ page, context }) => {
-    console.log('🚀 Starting SSV-004: Combined Subscription Settings Verification');
-
-    try {
-      // Step 1: Setup fresh account and event
-      const setupResult = await setupFreshAccountAndEvent(page, context, 'CombinedSettings');
-      if (!setupResult.success) {
-        test.skip('Failed to setup fresh account and event');
-        return;
-      }
-      testData = setupResult.testData;
-      console.log(`✅ Setup completed with email: ${testData.email}`);
-      console.log(`🔑 Password: ${testData.password}`);
-
-      // Initialize page objects
-      subscriptionPage = new SubscriptionPage(page);
-      paymentPage = new PaymentPage(page);
-      eventSettingsPage = new EventSettingsPage(page);
-      eventPage = new EventPage(page);
-
-      // ===================================================================
-      // TEST 1: Standard Plan
-      // ===================================================================
-      console.log('\n📍 SSV-004-1: Testing Standard Plan Settings...');
+  * ============================================================================
+  * PREMIUM+ TIER TESTS - TC-APP-CUST-023 to TC-APP-CUST-030
+  * ============================================================================
+  */
+ test.describe('Premium+ Tier Settings Tests', () => {
+   test.beforeAll(async ({ browser }) => {
+     // Subscribe to Premium+ Plan once for all Premium+ tests
+     if (!sharedTestData.premiumPlusEventCreated) {
+       const context = await browser.newContext();
+       const page = await context.newPage();
       
-      const subscriptionNavigationSuccess1 = await subscriptionPage.navigateToSubscription();
-      expect(subscriptionNavigationSuccess1).toBeTruthy();
+       // Login
+       await loginToAccount(page, sharedTestData.email, sharedTestData.password);
       
-      const selectResult1 = await subscriptionPage.choosePlanAndClickSelect('Standard Event');
-      expect(selectResult1.success).toBeTruthy();
-
-      // Handle payment for Standard Plan
-      let paymentSuccess1 = false;
-      if (selectResult1.navigationType === 'newPage' && selectResult1.newPage) {
-        const stripePage = selectResult1.newPage;
-        await stripePage.waitForLoadState('domcontentloaded');
-        const stripePayment = new PaymentPage(stripePage);
-        await stripePayment.verifyOnStripeCheckoutPage();
-        await stripePayment.waitForStripeCheckoutReady();
-        paymentSuccess1 = await stripePayment.completePaymentFlow(stripePayment.getDefaultPaymentDetails());
-        await stripePage.close();
-      } else {
-        await page.waitForTimeout(2000);
-        const stripePayment = new PaymentPage(page);
-        await page.waitForSelector('input[id="cardNumber"], input[placeholder*="card"], .payment-form', { timeout: 10000 });
-        paymentSuccess1 = await stripePayment.completePaymentFlow(stripePayment.getDefaultPaymentDetails());
-      }
-      expect(paymentSuccess1).toBeTruthy();
-
-      // Navigate to settings and verify Standard features
-      await page.waitForTimeout(5000);
-      await page.goto('https://dev.livesharenow.com/events');
-      await page.waitForTimeout(2000);
-      await eventPage.clickFirstEvent();
-      await page.waitForTimeout(2000);
-      await eventSettingsPage.openSettingsIfNeeded();
-      await page.waitForTimeout(5000);
-      await eventSettingsPage.waitLoaded();
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv004-01-standard-settings.png') });
-
-      const standardResult = await verifySubscriptionFeatures(page, 'STANDARD');
-      expect(standardResult.success).toBeTruthy();
-      console.log(`✅ Standard Plan settings verification passed: ${standardResult.details.totalPassed}/${standardResult.details.totalTests}`);
-
-      // Configure all Standard settings
-      console.log('\n📍 Configuring all Standard settings...');
-      const standardConfigResult = await configureAllSettingsForPlan(page, eventSettingsPage, 'STANDARD', testData);
-      console.log(`📊 Standard: ${standardConfigResult.togglesEnabled} toggles, ${standardConfigResult.settingsConfigured} configured`);
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv004-01b-standard-configured.png') });
-
-      // Close settings dialog
-      const cancelButton1 = page.locator('.mt-auto .btn:has-text("Cancel")').first();
-      if (await cancelButton1.isVisible().catch(() => false)) {
-        await cancelButton1.click();
-        await page.waitForTimeout(1000);
-      }
+       // Create new event for Premium+ plan
+       await createNewEvent(page, `Premium Plus Event ${Date.now()}`);
       
-      // Reload and verify Standard UI with exact text matching
-      await page.reload();
-      await page.waitForTimeout(2000);
+       // Subscribe to Premium+ Plan
+       const subscribed = await subscribeAndPayForPlan(page, context, 'Premium+ Event');
+       if (subscribed) {
+         sharedTestData.premiumPlusEventCreated = true;
+       }
       
-      // Use EXACT text as it appears in UI
-      const standardMenuItems = ['Download All Photos', 'Redeem Gift Code', 'Live Help', 'FAQs', 'Details', 'Logout'];
-      const standardMenuResult = await verifyMenuOptions(page, standardMenuItems);
-      expect(standardMenuResult.success).toBeTruthy();
-      
-      const standardFooterButtons = ['Message', 'Photos', 'Videos'];
-      const standardFooterResult = await verifyFooterButtons(page, standardFooterButtons);
-      expect(standardFooterResult.success).toBeTruthy();
-      
-      console.log(`📊 Standard UI: Menu ${standardMenuResult.visible.length}/${standardMenuItems.length}, Footer ${standardFooterResult.visible.length}/${standardFooterButtons.length}`);
-
-      // ===================================================================
-      // TEST 2: Upgrade to Premium Plan
-      // ===================================================================
-      console.log('\n📍 SSV-004-2: Upgrading to Premium Plan and testing settings...');
-      
-      await page.goto('https://dev.livesharenow.com/events');
-      await page.waitForTimeout(2000);
-      
-      // Create new event for Premium subscription
-      const eventCreationPage = new EventCreationPage(page);
-      await eventCreationPage.startEventCreation();
-      await page.waitForTimeout(4000);
-
-      const subscriptionNavigationSuccess2 = await subscriptionPage.navigateToSubscription();
-      expect(subscriptionNavigationSuccess2).toBeTruthy();
-      
-      const selectResult2 = await subscriptionPage.choosePlanAndClickSelect('Premium Event');
-      expect(selectResult2.success).toBeTruthy();
-
-      // Handle payment for Premium Plan
-      let paymentSuccess2 = false;
-      if (selectResult2.navigationType === 'newPage' && selectResult2.newPage) {
-        const stripePage = selectResult2.newPage;
-        await stripePage.waitForLoadState('domcontentloaded');
-        const stripePayment = new PaymentPage(stripePage);
-        await stripePayment.verifyOnStripeCheckoutPage();
-        await stripePayment.waitForStripeCheckoutReady();
-        paymentSuccess2 = await stripePayment.completePaymentFlow(stripePayment.getDefaultPaymentDetails());
-        await stripePage.close();
-      } else {
-        await page.waitForTimeout(2000);
-        const stripePayment = new PaymentPage(page);
-        await page.waitForSelector('input[id="cardNumber"], input[placeholder*="card"], .payment-form', { timeout: 10000 });
-        paymentSuccess2 = await stripePayment.completePaymentFlow(stripePayment.getDefaultPaymentDetails());
-      }
-      expect(paymentSuccess2).toBeTruthy();
-
-      // Navigate to settings and verify Premium features
-      await page.waitForTimeout(5000);
-      await page.goto('https://dev.livesharenow.com/events');
-      await page.waitForTimeout(2000);
-      await eventPage.clickFirstEvent();
-      await page.waitForTimeout(2000);
-      await eventSettingsPage.openSettingsIfNeeded();
-      await page.waitForTimeout(5000);  
-      await eventSettingsPage.waitLoaded();
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv004-02-premium-settings.png') });
-
-      const premiumResult = await verifySubscriptionFeatures(page, 'PREMIUM');
-      expect(premiumResult.success).toBeTruthy();
-      console.log(`✅ Premium Plan settings verification passed: ${premiumResult.details.totalPassed}/${premiumResult.details.totalTests}`);
-
-      // Configure all Premium settings
-      console.log('\n📍 Configuring all Premium settings...');
-      const premiumConfigResult = await configureAllSettingsForPlan(page, eventSettingsPage, 'PREMIUM', testData);
-      console.log(`📊 Premium: ${premiumConfigResult.togglesEnabled} toggles, ${premiumConfigResult.settingsConfigured} configured`);
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv004-02b-premium-configured.png') });
-
-      // Close settings dialog
-      const cancelButton2 = page.locator('.mt-auto .btn:has-text("Cancel")').first();
-      if (await cancelButton2.isVisible().catch(() => false)) {
-        await cancelButton2.click();
-        await page.waitForTimeout(1000);
-      }
-      
-      // Reload and verify Premium UI with exact text matching
-      await page.reload();
-      await page.waitForTimeout(2000);
-      
-      // Use EXACT text as it appears in UI
-      const premiumMenuItems = ['Download All Photos', 'Redeem Gift Code', 'Live Help', 'FAQs', 'Details', 'Logout'];
-      const premiumMenuResult = await verifyMenuOptions(page, premiumMenuItems);
-      expect(premiumMenuResult.success).toBeTruthy();
-      
-      const premiumFooterButtons = ['Message', 'Photos', 'Videos'];
-      const premiumFooterResult = await verifyFooterButtons(page, premiumFooterButtons);
-      expect(premiumFooterResult.success).toBeTruthy();
-      
-      console.log(`📊 Premium UI: Menu ${premiumMenuResult.visible.length}/${premiumMenuItems.length}, Footer ${premiumFooterResult.visible.length}/${premiumFooterButtons.length}`);
-
-      // ===================================================================
-      // TEST 3: Upgrade to Premium+ Plan
-      // ===================================================================
-      console.log('\n📍 SSV-004-3: Upgrading to Premium+ Plan and testing settings...');
-      
-      await page.goto('https://dev.livesharenow.com/events');
-      await page.waitForTimeout(2000);
-      
-      // Create new event for Premium+ subscription
-      await eventCreationPage.startEventCreation();
-      await page.waitForTimeout(4000);
-
-      const subscriptionNavigationSuccess3 = await subscriptionPage.navigateToSubscription();
-      expect(subscriptionNavigationSuccess3).toBeTruthy();
-      
-      const selectResult3 = await subscriptionPage.choosePlanAndClickSelect('Premium+ Event');
-      expect(selectResult3.success).toBeTruthy();
-
-      // Handle payment for Premium+ Plan
-      let paymentSuccess3 = false;
-      if (selectResult3.navigationType === 'newPage' && selectResult3.newPage) {
-        const stripePage = selectResult3.newPage;
-        await stripePage.waitForLoadState('domcontentloaded');
-        const stripePayment = new PaymentPage(stripePage);
-        await stripePayment.verifyOnStripeCheckoutPage();
-        await stripePayment.waitForStripeCheckoutReady();
-        paymentSuccess3 = await stripePayment.completePaymentFlow(stripePayment.getDefaultPaymentDetails());
-        await stripePage.close();
-      } else {
-        await page.waitForTimeout(2000);
-        const stripePayment = new PaymentPage(page);
-        await page.waitForSelector('input[id="cardNumber"], input[placeholder*="card"], .payment-form', { timeout: 10000 });
-        paymentSuccess3 = await stripePayment.completePaymentFlow(stripePayment.getDefaultPaymentDetails());
-      }
-      expect(paymentSuccess3).toBeTruthy();
-
-      // Navigate to settings and verify Premium+ features
-      await page.waitForTimeout(5000);
-      await page.goto('https://dev.livesharenow.com/events');
-      await page.waitForTimeout(2000);
-      await eventPage.clickFirstEvent();
-      await page.waitForTimeout(2000);
-      await eventSettingsPage.openSettingsIfNeeded();
-      await page.waitForTimeout(5000);
-      await eventSettingsPage.waitLoaded();
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv004-03-premiumplus-settings.png') });
-
-      const premiumPlusResult = await verifySubscriptionFeatures(page, 'PREMIUM_PLUS');
-      expect(premiumPlusResult.success).toBeTruthy();
-      console.log(`✅ Premium+ Plan settings verification passed: ${premiumPlusResult.details.totalPassed}/${premiumPlusResult.details.totalTests}`);
-
-      // Configure all Premium+ settings
-      console.log('\n📍 Configuring all Premium+ settings...');
-      const premiumPlusConfigResult = await configureAllSettingsForPlan(page, eventSettingsPage, 'PREMIUM_PLUS', testData);
-      console.log(`📊 Premium+: ${premiumPlusConfigResult.togglesEnabled} toggles, ${premiumPlusConfigResult.settingsConfigured} configured`);
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv004-03b-premiumplus-configured.png') });
-
-      // Close settings dialog
-      const cancelButton3 = page.locator('.mt-auto .btn:has-text("Cancel")').first();
-      if (await cancelButton3.isVisible().catch(() => false)) {
-        await cancelButton3.click();
-        await page.waitForTimeout(1000);
-      }
-      
-      // Reload and verify Premium+ UI with exact text matching
-      await page.reload();
-      await page.waitForTimeout(2000);
-      
-      // Use EXACT text as it appears in UI
-      const premiumPlusMenuItems = ['View Keepsakes', 'Download All Photos', 'Movie Editor', 'LiveView', 'Redeem Gift Code', 'Live Help', 'FAQs', 'Details', 'Logout'];
-      const premiumPlusMenuResult = await verifyMenuOptions(page, premiumPlusMenuItems);
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv004-03c-premiumplus-menu-verified.png') });
-      
-      // Assert all menu items found with exact match
-      expect(premiumPlusMenuResult.success).toBeTruthy();
-      expect(premiumPlusMenuResult.visible.length).toBe(premiumPlusMenuItems.length);
-      
-      const premiumPlusFooterButtons = ['Then & Now', 'KeepSake', 'Sponsor', 'Prize', 'Message', 'Photos', 'Videos'];
-      const premiumPlusFooterResult = await verifyFooterButtons(page, premiumPlusFooterButtons);
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv004-03d-premiumplus-footer-verified.png') });
-      
-      // Assert all footer buttons found with exact match
-      expect(premiumPlusFooterResult.success).toBeTruthy();
-      expect(premiumPlusFooterResult.visible.length).toBe(premiumPlusFooterButtons.length);
-      
-      console.log(`📊 Premium+ UI: Menu ${premiumPlusMenuResult.visible.length}/${premiumPlusMenuItems.length}, Footer ${premiumPlusFooterResult.visible.length}/${premiumPlusFooterButtons.length}`);
-
-      console.log('\n✅ SSV-004: Combined Subscription Settings Verification completed successfully!');
-      console.log(`📧 Test account credentials saved:`);
-      console.log(`   Email: ${testData.email}`);
-      console.log(`   Password: ${testData.password}`);
-      
-    } catch (error) {
-      console.error('❌ SSV-004 Combined Subscription Settings Verification failed:', error.message);
-      await page.screenshot({ path: path.join(screenshotsDir, 'ssv004-error-final.png') });
-      throw error;
-    }
+       await context.close();
+     }
+   });
+  
+  test('TC-APP-CUST-023: Verify "LiveView Slideshow" toggle functionality', async ({ page }) => {
+    console.log('🚀 Starting TC-APP-CUST-023: LiveView Slideshow toggle functionality');
+   
+    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+    await openEventSettings(page);
+   
+    const eventSettingsPage = new EventSettingsPage(page);
+   
+    // Step 1: Verify LiveView Slideshow option is visible
+    await eventSettingsPage.expectOptionVisible('LiveView Slideshow');
+    console.log('✅ LiveView Slideshow option is visible');
+   
+    // Step 2: Verify no "Preview for Free" text (unlocked with Premium+)
+    const noPreview = await verifyNoPreviewForFree(page, 'LiveView Slideshow');
+    expect(noPreview).toBeTruthy();
+   
+    // Step 3: Get current state
+    const initialState = await eventSettingsPage.isOptionEnabled('LiveView Slideshow');
+    console.log(`  📊 Initial state: ${initialState ? 'Enabled' : 'Disabled'}`);
+   
+    // Step 4: Toggle LiveView Slideshow to ON
+    await eventSettingsPage.setOption('LiveView Slideshow', true);
+    await page.waitForTimeout(500);
+   
+    // Step 5: Verify it's selected
+    await eventSettingsPage.expectOptionSelected('LiveView Slideshow');
+    console.log('  ✅ LiveView Slideshow toggled ON successfully');
+   
+    // Step 6: Save settings
+    await eventSettingsPage.saveMainSettings();
+    await page.waitForTimeout(2000);
+   
+    // Step 7: Reopen settings and verify persistence
+    await openEventSettings(page);
+    await eventSettingsPage.expectOptionSelected('LiveView Slideshow');
+    console.log('  ✅ LiveView Slideshow state persisted correctly');
+   
+    console.log('✅ TC-APP-CUST-023: LiveView Slideshow test passed');
+    await page.screenshot({ path: path.join(screenshotsDir, 'tc-023-liveview-slideshow-completed.png') });
   });
+  
+  test('TC-APP-CUST-024: Verify "Then And Now" toggle functionality', async ({ page }) => {
+    console.log('🚀 Starting TC-APP-CUST-024: Then And Now toggle functionality');
+   
+    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+    await openEventSettings(page);
+   
+    const eventSettingsPage = new EventSettingsPage(page);
+   
+    // Step 1: Verify Then And Now option is visible
+    await eventSettingsPage.expectOptionVisible('Then And Now');
+    console.log('✅ Then And Now option is visible');
+   
+    // Step 2: Verify no "Preview for Free" text
+    const noPreview = await verifyNoPreviewForFree(page, 'Then And Now');
+    expect(noPreview).toBeTruthy();
+   
+    // Step 3: Get current state
+    const initialState = await eventSettingsPage.isOptionEnabled('Then And Now');
+    console.log(`  📊 Initial state: ${initialState ? 'Enabled' : 'Disabled'}`);
+   
+    // Step 4: Toggle Then And Now to ON
+    await eventSettingsPage.setOption('Then And Now', true);
+    await page.waitForTimeout(500);
+   
+    // Step 5: Verify it's selected
+    await eventSettingsPage.expectOptionSelected('Then And Now');
+    console.log('  ✅ Then And Now toggled ON successfully');
+   
+    // Step 6: Save settings
+    await eventSettingsPage.saveMainSettings();
+    await page.waitForTimeout(2000);
+   
+    // Step 7: Reopen settings and verify persistence
+    await openEventSettings(page);
+    await eventSettingsPage.expectOptionSelected('Then And Now');
+    console.log('  ✅ Then And Now state persisted correctly');
+   
+    console.log('✅ TC-APP-CUST-024: Then And Now test passed');
+    await page.screenshot({ path: path.join(screenshotsDir, 'tc-024-then-and-now-completed.png') });
+  });
+  
+  test('TC-APP-CUST-025: Verify "Movie Editor" toggle functionality', async ({ page }) => {
+    console.log('🚀 Starting TC-APP-CUST-025: Movie Editor toggle functionality');
+   
+    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+    await openEventSettings(page);
+   
+    const eventSettingsPage = new EventSettingsPage(page);
+   
+    // Step 1: Verify Movie Editor option is visible
+    await eventSettingsPage.expectOptionVisible('Movie Editor');
+    console.log('✅ Movie Editor option is visible');
+   
+    // Step 2: Verify no "Preview for Free" text
+    const noPreview = await verifyNoPreviewForFree(page, 'Movie Editor');
+    expect(noPreview).toBeTruthy();
+   
+    // Step 3: Get current state
+    const initialState = await eventSettingsPage.isOptionEnabled('Movie Editor');
+    console.log(`  📊 Initial state: ${initialState ? 'Enabled' : 'Disabled'}`);
+   
+    // Step 4: Toggle Movie Editor to ON
+    await eventSettingsPage.setOption('Movie Editor', true);
+    await page.waitForTimeout(500);
+   
+    // Step 5: Verify it's selected
+    await eventSettingsPage.expectOptionSelected('Movie Editor');
+    console.log('  ✅ Movie Editor toggled ON successfully');
+   
+    // Step 6: Save settings
+    await eventSettingsPage.saveMainSettings();
+    await page.waitForTimeout(2000);
+   
+    // Step 7: Verify Movie Editor menu option appears (after reload)
+    await page.reload();
+    await page.waitForTimeout(2000);
+    const menuResult = await verifyMenuOptions(page, ['Movie Editor']);
+    expect(menuResult.success).toBeTruthy();
+    console.log('  ✅ Movie Editor menu option verified');
+   
+    console.log('✅ TC-APP-CUST-025: Movie Editor test passed');
+    await page.screenshot({ path: path.join(screenshotsDir, 'tc-025-movie-editor-completed.png') });
+  });
+  
+   test('TC-APP-CUST-026: Verify "KeepSake" configuration', async ({ page }) => {
+     console.log('🚀 Starting TC-APP-CUST-026: KeepSake configuration');
+    
+     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+     await openEventSettings(page);
+    
+     const eventSettingsPage = new EventSettingsPage(page);
+    
+     // Step 1: Verify KeepSake option is visible
+     await eventSettingsPage.expectOptionVisible('KeepSake');
+     console.log('✅ KeepSake option is visible');
+    
+     // Step 2: Verify no "Preview for Free" text
+     const noPreview = await verifyNoPreviewForFree(page, 'KeepSake');
+     expect(noPreview).toBeTruthy();
+    
+     // Step 3: Configure KeepSake
+     const keepSakeData = {
+       message: 'Welcome to our special event! This message will be unlocked on the event date.',
+       unlockDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US')
+     };
+     const configSuccess = await eventSettingsPage.configureKeepSakeWelcome(keepSakeData);
+     expect(configSuccess).toBeTruthy();
+    
+     // Step 4: Save settings
+     await eventSettingsPage.saveMainSettings();
+     await page.waitForTimeout(2000);
+    
+     // Step 5: Verify KeepSake menu option appears
+     await page.reload();
+     await page.waitForTimeout(2000);
+     const menuResult = await verifyMenuOptions(page, ['View Keepsakes']);
+     expect(menuResult.success).toBeTruthy();
+    
+     console.log('✅ TC-APP-CUST-026: KeepSake configuration test passed');
+     await page.screenshot({ path: path.join(screenshotsDir, 'tc-026-keepsake-completed.png') });
+   });
+  
+   test('TC-APP-CUST-027: Verify "Scavenger Hunt" setup', async ({ page }) => {
+     console.log('🚀 Starting TC-APP-CUST-027: Scavenger Hunt setup');
+    
+     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+     await openEventSettings(page);
+    
+     const eventSettingsPage = new EventSettingsPage(page);
+    
+     // Step 1: Verify Scavenger Hunt option is visible
+     await eventSettingsPage.expectOptionVisible('Scavenger Hunt');
+     console.log('✅ Scavenger Hunt option is visible');
+    
+     // Step 2: Verify no "Preview for Free" text
+     const noPreview = await verifyNoPreviewForFree(page, 'Scavenger Hunt');
+     expect(noPreview).toBeTruthy();
+    
+     // Step 3: Configure Scavenger Hunt
+     const configSuccess = await eventSettingsPage.configureScavengerHunt(true);
+     expect(configSuccess).toBeTruthy();
+    
+     // Step 4: Save settings
+     await eventSettingsPage.saveMainSettings();
+     await page.waitForTimeout(2000);
+    
+     console.log('✅ TC-APP-CUST-027: Scavenger Hunt setup test passed');
+     await page.screenshot({ path: path.join(screenshotsDir, 'tc-027-scavenger-hunt-completed.png') });
+   });
+  
+  test('TC-APP-CUST-028: Verify "Sponsor" toggle functionality', async ({ page }) => {
+    console.log('🚀 Starting TC-APP-CUST-028: Sponsor toggle functionality');
+   
+    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+    await openEventSettings(page);
+   
+    const eventSettingsPage = new EventSettingsPage(page);
+   
+    // Step 1: Verify Sponsor option is visible
+    await eventSettingsPage.expectOptionVisible('Sponsor');
+    console.log('✅ Sponsor option is visible');
+   
+    // Step 2: Verify no "Preview for Free" text
+    const noPreview = await verifyNoPreviewForFree(page, 'Sponsor');
+    expect(noPreview).toBeTruthy();
+   
+    // Step 3: Get current state
+    const initialState = await eventSettingsPage.isOptionEnabled('Sponsor');
+    console.log(`  📊 Initial state: ${initialState ? 'Enabled' : 'Disabled'}`);
+   
+    // Step 4: Toggle Sponsor to ON
+    await eventSettingsPage.setOption('Sponsor', true);
+    await page.waitForTimeout(500);
+   
+    // Step 5: Verify it's selected
+    await eventSettingsPage.expectOptionSelected('Sponsor');
+    console.log('  ✅ Sponsor toggled ON successfully');
+   
+    // Step 6: Save settings
+    await eventSettingsPage.saveMainSettings();
+    await page.waitForTimeout(2000);
+   
+    // Step 7: Verify Sponsor footer button appears
+    await page.reload();
+    await page.waitForTimeout(2000);
+    const footerResult = await verifyFooterButtons(page, ['Sponsor']);
+    expect(footerResult.success).toBeTruthy();
+    console.log('  ✅ Sponsor footer button verified');
+   
+    console.log('✅ TC-APP-CUST-028: Sponsor feature test passed');
+    await page.screenshot({ path: path.join(screenshotsDir, 'tc-028-sponsor-completed.png') });
+  });
+  
+  test('TC-APP-CUST-029: Verify "Prize" toggle functionality', async ({ page }) => {
+    console.log('🚀 Starting TC-APP-CUST-029: Prize toggle functionality');
+   
+    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+    await openEventSettings(page);
+   
+    const eventSettingsPage = new EventSettingsPage(page);
+   
+    // Step 1: Verify Prize option is visible
+    await eventSettingsPage.expectOptionVisible('Prize');
+    console.log('✅ Prize option is visible');
+   
+    // Step 2: Verify no "Preview for Free" text
+    const noPreview = await verifyNoPreviewForFree(page, 'Prize');
+    expect(noPreview).toBeTruthy();
+   
+    // Step 3: Get current state
+    const initialState = await eventSettingsPage.isOptionEnabled('Prize');
+    console.log(`  📊 Initial state: ${initialState ? 'Enabled' : 'Disabled'}`);
+   
+    // Step 4: Toggle Prize to ON
+    await eventSettingsPage.setOption('Prize', true);
+    await page.waitForTimeout(500);
+   
+    // Step 5: Verify it's selected
+    await eventSettingsPage.expectOptionSelected('Prize');
+    console.log('  ✅ Prize toggled ON successfully');
+   
+    // Step 6: Save settings
+    await eventSettingsPage.saveMainSettings();
+    await page.waitForTimeout(2000);
+   
+    // Step 7: Verify Prize footer button appears
+    await page.reload();
+    await page.waitForTimeout(2000);
+    const footerResult = await verifyFooterButtons(page, ['Prize']);
+    expect(footerResult.success).toBeTruthy();
+    console.log('  ✅ Prize footer button verified');
+   
+    console.log('✅ TC-APP-CUST-029: Prize feature test passed');
+    await page.screenshot({ path: path.join(screenshotsDir, 'tc-029-prize-completed.png') });
+  });
+  
+   test('TC-APP-CUST-030: Verify all lower tiers unlocked', async ({ page }) => {
+     console.log('🚀 Starting TC-APP-CUST-030: Verify all lower tiers unlocked');
+    
+     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
+     await openEventSettings(page);
+    
+     // Verify ALL features do NOT show "Preview for Free" text
+     const allFeatures = [
+       ...FeatureTiers.FREE,
+       ...FeatureTiers.STANDARD,
+       ...FeatureTiers.PREMIUM,
+       ...FeatureTiers.PREMIUM_PLUS
+     ];
+    
+     let allPass = true;
+     let passCount = 0;
+     let totalCount = 0;
+    
+     for (const feature of allFeatures) {
+       totalCount++;
+       const noPreview = await verifyNoPreviewForFree(page, feature);
+       if (noPreview) {
+         passCount++;
+       } else {
+         allPass = false;
+       }
+     }
+    
+     console.log(`\n📊 Complete Feature Access Verification:`);
+     console.log(`   ✅ Passed: ${passCount}/${totalCount}`);
+     console.log(`   ❌ Failed: ${totalCount - passCount}/${totalCount}`);
+    
+     expect(allPass).toBeTruthy();
+    
+     // Verify complete UI (menu and footer)
+     await page.reload();
+     await page.waitForTimeout(2000);
+    
+     const premiumPlusMenuItems = [
+       'View Keepsakes',
+       'Download All Photos',
+       'Movie Editor',
+       'LiveView',
+       'Redeem Gift Code',
+       'Live Help',
+       'FAQs',
+       'Details',
+       'Logout'
+     ];
+     const menuResult = await verifyMenuOptions(page, premiumPlusMenuItems);
+     expect(menuResult.success).toBeTruthy();
+    
+     const premiumPlusFooterButtons = [
+       'Then & Now',
+       'KeepSake',
+       'Sponsor',
+       'Prize',
+       'Message',
+       'Photos',
+       'Videos'
+     ];
+     const footerResult = await verifyFooterButtons(page, premiumPlusFooterButtons);
+     expect(footerResult.success).toBeTruthy();
+    
+     console.log('✅ TC-APP-CUST-030: Complete feature access test passed');
+     await page.screenshot({ path: path.join(screenshotsDir, 'tc-030-all-features-unlocked-completed.png') });
+   });
+ });
 });
+

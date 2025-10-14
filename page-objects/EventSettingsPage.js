@@ -356,6 +356,54 @@ export class EventSettingsPage extends BasePage {
   }
 
   /**
+   * Update Itinerary via dialog
+   * @param {Array<string>} itineraryLines - Array of itinerary lines to add
+   */
+  async updateItinerary(itineraryLines = []) {
+    try {
+      console.log(`  🔧 Updating Itinerary with ${itineraryLines.length} line(s)`);
+      
+      await this.itineraryOption.click();
+      await this.page.waitForTimeout(1000);
+      
+      const itineraryDialog = this.page.locator('mat-dialog-container:has(h1[mat-dialog-title]:has-text("Itinerary"))');
+      await itineraryDialog.waitFor({ state: 'visible', timeout: 10000 });
+      
+      // Add each itinerary line
+      for (let i = 0; i < itineraryLines.length; i++) {
+        const line = itineraryLines[i];
+        console.log(`    Adding line ${i + 1}: "${line}"`);
+        
+        // Find the last input field (the active one)
+        const inputs = await itineraryDialog.locator('input[type="text"].input').all();
+        const lastInput = inputs[inputs.length - 1];
+        
+        await lastInput.waitFor({ state: 'visible', timeout: 5000 });
+        await lastInput.fill(line);
+        await this.page.waitForTimeout(300);
+        
+        // Click "Add new line" button if not the last item
+        if (i < itineraryLines.length - 1) {
+          const addLineButton = itineraryDialog.locator('button.btn:has(mat-icon:text("add")):has-text("Add new line")');
+          await addLineButton.click();
+          await this.page.waitForTimeout(500);
+        }
+      }
+      
+      // Click Save button in dialog
+      const dialogSaveButton = itineraryDialog.locator('.mat-dialog-actions .btn:has-text("Save")');
+      await dialogSaveButton.click();
+      await this.page.waitForTimeout(1500);
+      
+      console.log(`  ✅ Itinerary updated successfully`);
+      return true;
+    } catch (error) {
+      console.error(`  ❌ Failed to update Itinerary: ${error.message}`);
+      return false;
+    }
+  }
+
+  /**
    * Add Post Message Backgrounds via dialog
    */
   async addPostMessageBackgrounds(imagePaths) {
