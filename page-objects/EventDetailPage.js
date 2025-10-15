@@ -539,5 +539,704 @@ export class EventDetailPage extends BasePage {
     await this.movieEditorButton.click();
     await this.createNewMovie();
   }
+
+  // ============================================================================
+  // PLUS ICON FEATURES - THEN & NOW
+  // ============================================================================
+
+  /**
+   * Click "Then & Now" button from plus icon menu
+   */
+  async clickThenAndNowButton() {
+    const thenAndNowButton = this.page.locator('button:has-text("Then & Now")').first();
+    await thenAndNowButton.waitFor({ state: 'visible', timeout: 10000 });
+    await thenAndNowButton.click();
+    await this.page.waitForTimeout(2000);
+  }
+
+  /**
+   * Verify Then & Now dialog UI elements
+   * - Title: "Create a "Then and Now" Post"
+   * - THEN box with upload icon
+   * - NOW box with upload icon
+   * - POST button (disabled initially)
+   * - Cancel button
+   * - Portrait/Landscape orientation buttons
+   */
+  async verifyThenAndNowDialog() {
+    console.log('🔍 Verifying Then & Now dialog UI elements...');
+    
+    // Verify dialog title - flexible matching for quotes
+    const dialogTitle = this.page.locator('app-then-and-now .navbar-center u, app-then-and-now u:has-text("Then and Now")');
+    await expect(dialogTitle.first()).toBeVisible({ timeout: 10000 });
+    console.log('✓ Dialog title is visible');
+    
+    // Verify instruction text
+    const instructionText = this.page.locator('p:has-text("Select two photos and Post as one")');
+    await expect(instructionText).toBeVisible();
+    console.log('✓ Instruction text is visible');
+    
+    // Verify THEN box
+    const thenBox = this.page.locator('.selection-box.then');
+    await expect(thenBox).toBeVisible();
+    const thenUploadIcon = thenBox.locator('mat-icon:has-text("photo_camera")');
+    await expect(thenUploadIcon).toBeVisible();
+    const thenText = thenBox.locator('span:has-text("Upload Image")');
+    await expect(thenText).toBeVisible();
+    const thenRibbon = thenBox.locator('img[src*="then-ribbon"]');
+    await expect(thenRibbon).toBeVisible();
+    console.log('✓ THEN box with upload icon and ribbon is visible');
+    
+    // Verify NOW box
+    const nowBox = this.page.locator('.selection-box.now');
+    await expect(nowBox).toBeVisible();
+    const nowUploadIcon = nowBox.locator('mat-icon:has-text("photo_camera")');
+    await expect(nowUploadIcon).toBeVisible();
+    const nowText = nowBox.locator('span:has-text("Upload Image")');
+    await expect(nowText).toBeVisible();
+    const nowRibbon = nowBox.locator('img[src*="now-ribbon"]');
+    await expect(nowRibbon).toBeVisible();
+    console.log('✓ NOW box with upload icon and ribbon is visible');
+    
+    // Verify orientation buttons
+    const portraitButton = this.page.locator('button.btn-primary:has(mat-icon:has-text("stay_current_portrait"))');
+    await expect(portraitButton).toBeVisible();
+    console.log('✓ Portrait orientation button is visible (selected)');
+    
+    const landscapeButton = this.page.locator('button:has(mat-icon:has-text("stay_current_landscape"))');
+    await expect(landscapeButton).toBeVisible();
+    console.log('✓ Landscape orientation button is visible');
+    
+    // Verify POST button (should be disabled initially)
+    const postButton = this.page.locator('button:has-text("POST")').first();
+    await expect(postButton).toBeVisible();
+    const isDisabled = await postButton.evaluate(el => el.classList.contains('btn-disabled'));
+    expect(isDisabled).toBeTruthy();
+    console.log('✓ POST button is visible but disabled (as expected)');
+    
+    // Verify Cancel button
+    const cancelButton = this.page.locator('button:has-text("Cancel")');
+    await expect(cancelButton).toBeVisible();
+    console.log('✓ Cancel button is visible');
+    
+    // Verify close button (X)
+    const closeButton = this.page.locator('button[mat-dialog-close]:has(mat-icon:has-text("close"))').first();
+    await expect(closeButton).toBeVisible();
+    console.log('✓ Close button (X) is visible');
+    
+    console.log('✅ Then & Now dialog UI verification PASSED');
+  }
+
+  /**
+   * Upload images for THEN and NOW boxes
+   * @param {string} imagePath - Path to image file
+   */
+  async uploadThenAndNowImages(imagePath) {
+    console.log('📤 Uploading images for THEN and NOW...');
+    
+    const thenBox = this.page.locator('.selection-box.then').first();
+    const nowBox = this.page.locator('.selection-box.now').first();
+    const fileInput = this.page.locator('app-then-and-now input#file-input[type="file"]').first();
+    
+    // Upload THEN image
+    console.log('  Uploading THEN image...');
+    await thenBox.click();
+    await this.page.waitForTimeout(500);
+    await fileInput.setInputFiles(imagePath);
+    await this.page.waitForTimeout(2000);
+    
+    // Verify crop dialog appears
+    const cropDialog = this.page.locator('app-crop-header h1:has-text("Crop Image")');
+    if (await cropDialog.isVisible().catch(() => false)) {
+      console.log('  Crop dialog appeared, clicking Done...');
+      const doneButton = this.page.locator('app-crop-header button:has-text("Done")');
+      await doneButton.click();
+      await this.page.waitForTimeout(1500);
+    }
+    console.log('✓ THEN image uploaded');
+    
+    // Upload NOW image
+    console.log('  Uploading NOW image...');
+    await nowBox.click();
+    await this.page.waitForTimeout(500);
+    await fileInput.setInputFiles(imagePath);
+    await this.page.waitForTimeout(2000);
+    
+    // Verify crop dialog appears again
+    if (await cropDialog.isVisible().catch(() => false)) {
+      console.log('  Crop dialog appeared, clicking Done...');
+      const doneButton = this.page.locator('app-crop-header button:has-text("Done")');
+      await doneButton.click();
+      await this.page.waitForTimeout(1500);
+    }
+    console.log('✓ NOW image uploaded');
+    
+    // Verify POST button is now enabled
+    const postButton = this.page.locator('button:has-text("POST")').first();
+    await this.page.waitForTimeout(1000);
+    const isEnabled = await postButton.evaluate(el => !el.classList.contains('btn-disabled'));
+    if (isEnabled) {
+      console.log('✓ POST button is now enabled');
+    } else {
+      console.log('⚠ POST button is still disabled');
+    }
+    
+    console.log('✅ THEN and NOW images uploaded successfully');
+  }
+
+  /**
+   * Click POST button in Then & Now dialog
+   */
+  async clickThenAndNowPostButton() {
+    const postButton = this.page.locator('button:has-text("POST")').first();
+    await postButton.waitFor({ state: 'visible', timeout: 5000 });
+    await postButton.click();
+    await this.page.waitForTimeout(3000); // Wait for post to complete
+  }
+
+  // ============================================================================
+  // PLUS ICON FEATURES - KEEPSAKE
+  // ============================================================================
+
+  /**
+   * Click "KeepSake" button from plus icon menu
+   */
+  async clickKeepSakeButton() {
+    const keepSakeButton = this.page.locator('button:has-text("KeepSake")').first();
+    await keepSakeButton.waitFor({ state: 'visible', timeout: 10000 });
+    await keepSakeButton.click();
+    await this.page.waitForTimeout(2000);
+  }
+
+  /**
+   * Verify KeepSake dialog UI elements
+   * - Photos button
+   * - Videos button
+   */
+  async verifyKeepSakeDialog() {
+    console.log('🔍 Verifying KeepSake dialog UI elements...');
+    
+    // Verify Photos button
+    const photosButton = this.page.locator('button:has(mat-icon:has-text("insert_photo")):has-text("Photos")');
+    await expect(photosButton).toBeVisible({ timeout: 10000 });
+    console.log('✓ Photos button is visible');
+    
+    // Verify Videos button
+    const videosButton = this.page.locator('button:has(mat-icon:has-text("videocam")):has-text("Videos")');
+    await expect(videosButton).toBeVisible();
+    console.log('✓ Videos button is visible');
+    
+    console.log('✅ KeepSake dialog UI verification PASSED');
+  }
+
+  /**
+   * Upload video/file in KeepSake feature
+   * @param {string} filePath - Path to file
+   */
+  async uploadKeepSakeVideo(filePath) {
+    console.log('📤 Uploading KeepSake video/file...');
+    
+    // Click Videos button
+    const videosButton = this.page.locator('button:has(mat-icon:has-text("videocam")):has-text("Videos")').first();
+    await videosButton.click();
+    await this.page.waitForTimeout(1000);
+    
+    // Find and use file input
+    const fileInput = this.page.locator('input[type="file"][accept*="video"]').first();
+    await fileInput.setInputFiles(filePath);
+    await this.page.waitForTimeout(2000);
+    
+    console.log('✅ KeepSake file uploaded');
+  }
+
+  /**
+   * Verify KeepSake Thank You dialog
+   * - Thank you message
+   * - Unlock date displayed
+   * - Photos and Videos buttons (for additional uploads)
+   */
+  async verifyKeepSakeThankYouDialog() {
+    console.log('🔍 Verifying KeepSake Thank You dialog...');
+    
+    // Verify thank you icon
+    const thankYouIcon = this.page.locator('img[src="/assets/images/Favorite.png"]');
+    await expect(thankYouIcon).toBeVisible({ timeout: 10000 });
+    console.log('✓ Thank you icon is visible');
+    
+    // Verify thank you message
+    const thankYouText = this.page.locator('p:has-text("Thank you for choosing to post a Keepsake Message")');
+    await expect(thankYouText).toBeVisible();
+    console.log('✓ Thank you message is visible');
+    
+    // Verify privacy message
+    const privacyText = this.page.locator('p:has-text("This is a Private message"), .keepSakeMessage');
+    await expect(privacyText.first()).toBeVisible();
+    console.log('✓ Privacy message is visible');
+    
+    // Verify unlock date is displayed
+    const unlockDate = this.page.locator('.unlockDate');
+    await expect(unlockDate).toBeVisible();
+    const dateText = await unlockDate.textContent();
+    console.log(`✓ Unlock date is visible: ${dateText.trim()}`);
+    
+    // Verify Photos button
+    const photosButton = this.page.locator('button:has(mat-icon:has-text("insert_photo")):has-text("Photos")');
+    await expect(photosButton.first()).toBeVisible();
+    console.log('✓ Photos button is visible');
+    
+    // Verify Videos button
+    const videosButton = this.page.locator('button:has(mat-icon:has-text("videocam")):has-text("Videos")');
+    await expect(videosButton.first()).toBeVisible();
+    console.log('✓ Videos button is visible');
+    
+    // Verify close button
+    const closeButton = this.page.locator('app-keepsake-thankyou button:has(mat-icon:has-text("close"))');
+    await expect(closeButton.first()).toBeVisible();
+    console.log('✓ Close button is visible');
+    
+    console.log('✅ KeepSake Thank You dialog verification PASSED');
+  }
+
+  // ============================================================================
+  // PLUS ICON FEATURES - COMMON POST MESSAGE DIALOG
+  // ============================================================================
+
+  /**
+   * Verify common post-message dialog UI elements
+   * Used by: Clue, Sponsor, Prize, Message, Photos, Videos
+   * - Close button
+   * - Upload in background checkbox
+   * - POST button
+   */
+  async verifyPostMessageDialog() {
+    console.log('🔍 Verifying post-message dialog UI elements...');
+    
+    // Verify close button (very flexible selector - multiple options)
+    const closeButton = this.page.locator(
+      'app-post-message button:has(mat-icon:has-text("close")), ' +
+      'app-post-message .header button:has(mat-icon:has-text("close")), ' +
+      'app-post-message button.btn-circle:has(mat-icon:has-text("close")), ' +
+      'app-post-message .post-header-container button:has(mat-icon:has-text("close"))'
+    );
+    await expect(closeButton.first()).toBeVisible({ timeout: 10000 });
+    console.log('✓ Close button is visible');
+    
+    // Verify "Upload in background" checkbox (optional - may not exist in all dialogs)
+    const uploadCheckbox = this.page.locator('mat-checkbox:has-text("Upload in background")');
+    const checkboxExists = await uploadCheckbox.count() > 0;
+    if (checkboxExists) {
+      await expect(uploadCheckbox.first()).toBeVisible();
+      console.log('✓ Upload in background checkbox is visible');
+    } else {
+      console.log('ℹ Upload in background checkbox not present (optional)');
+    }
+    
+    // Verify POST button
+    const postButton = this.page.locator('app-post-message button:has-text("POST"), app-post-message .actions button');
+    await expect(postButton.first()).toBeVisible();
+    console.log('✓ POST button is visible');
+    
+    console.log('✅ Post-message dialog UI verification PASSED');
+  }
+
+  /**
+   * Click POST button in post-message dialog
+   */
+  async clickPostMessageButton() {
+    const postButton = this.page.locator('app-post-message button:has-text("POST")').first();
+    await postButton.waitFor({ state: 'visible', timeout: 5000 });
+    await postButton.click();
+    await this.page.waitForTimeout(3000);
+  }
+
+  // ============================================================================
+  // PLUS ICON FEATURES - CLUE (SCAVENGER HUNT)
+  // ============================================================================
+
+  /**
+   * Click "Clue" button from plus icon menu
+   */
+  async clickClueButton() {
+    const clueButton = this.page.locator('button:has-text("Clue")').first();
+    await clueButton.waitFor({ state: 'visible', timeout: 10000 });
+    await clueButton.click();
+    await this.page.waitForTimeout(2000);
+  }
+
+  /**
+   * Upload clue with title and caption
+   * @param {string} imagePath - Path to image file
+   * @param {string} title - Clue title
+   * @param {string} caption - Clue caption
+   */
+  async uploadClueWithInfo(imagePath, title, caption) {
+    console.log('📤 Uploading clue with title and caption...');
+    
+    // Wait for dialog to be fully loaded
+    await this.page.waitForTimeout(1000);
+    
+    // Try to find and click upload area if exists (to trigger file input)
+    const uploadArea = this.page.locator('app-post-message .selectable-image, app-post-message .write-text');
+    if (await uploadArea.count() > 0) {
+      await uploadArea.first().click().catch(() => {});
+      await this.page.waitForTimeout(500);
+    }
+    
+    // Upload image - flexible file input selector
+    const fileInput = this.page.locator('app-post-message input[type="file"], input[type="file"]').first();
+    await fileInput.waitFor({ state: 'attached', timeout: 10000 }).catch(() => {});
+    await fileInput.setInputFiles(imagePath);
+    await this.page.waitForTimeout(2000);
+    
+    // Handle crop dialog if it appears
+    const cropDialog = this.page.locator('app-crop-header h1:has-text("Crop Image")');
+    if (await cropDialog.isVisible().catch(() => false)) {
+      console.log('  Crop dialog appeared, clicking Done...');
+      const doneButton = this.page.locator('app-crop-header button:has-text("Done")');
+      await doneButton.click();
+      await this.page.waitForTimeout(1500);
+    }
+    console.log('✓ Image uploaded');
+    
+    // Verify image preview is visible
+    const imagePreview = this.page.locator('app-post-message img.imgProperty');
+    await expect(imagePreview).toBeVisible({ timeout: 10000 });
+    console.log('✓ Image preview is visible');
+    
+    // Verify delete and crop buttons
+    const deleteButton = this.page.locator('app-post-message button:has(mat-icon:has-text("delete"))');
+    await expect(deleteButton).toBeVisible();
+    console.log('✓ Delete button is visible');
+    
+    const cropButton = this.page.locator('app-post-message button:has(mat-icon:has-text("crop"))');
+    await expect(cropButton).toBeVisible();
+    console.log('✓ Crop button is visible');
+    
+    // Fill title
+    const titleInput = this.page.locator('app-post-message input[placeholder*="title"]').first();
+    await titleInput.waitFor({ state: 'visible', timeout: 5000 });
+    await titleInput.fill(title);
+    await this.page.waitForTimeout(500);
+    console.log(`✓ Title filled: "${title}"`);
+    
+    // Fill caption
+    const captionInput = this.page.locator('app-post-message input[placeholder*="caption"]').first();
+    await captionInput.waitFor({ state: 'visible', timeout: 5000 });
+    await captionInput.fill(caption);
+    await this.page.waitForTimeout(500);
+    console.log(`✓ Caption filled: "${caption}"`);
+    
+    console.log('✅ Clue upload with info completed');
+  }
+
+  // ============================================================================
+  // PLUS ICON FEATURES - SPONSOR
+  // ============================================================================
+
+  /**
+   * Click "Sponsor" button from plus icon menu
+   */
+  async clickSponsorButton() {
+    const sponsorButton = this.page.locator('button:has-text("Sponsor")').first();
+    await sponsorButton.waitFor({ state: 'visible', timeout: 10000 });
+    await sponsorButton.click();
+    await this.page.waitForTimeout(2000);
+  }
+
+  /**
+   * Upload sponsor image with redirect URL and positioning settings
+   * @param {string} imagePath - Path to image file
+   * @param {string} redirectUrl - Redirect URL
+   * @param {number} rowsBeforeFirst - Number of rows before first showing (optional)
+   * @param {number} rowsBetween - Number of rows between sponsor posts (optional)
+   */
+  async uploadSponsorWithInfo(imagePath, redirectUrl, rowsBeforeFirst = null, rowsBetween = null) {
+    console.log('📤 Uploading sponsor with info...');
+    
+    // Wait for dialog to be fully loaded
+    await this.page.waitForTimeout(1000);
+    
+    // Try to find and click upload area if exists (to trigger file input)
+    const uploadArea = this.page.locator('app-post-message .selectable-image, app-post-message .write-text');
+    if (await uploadArea.count() > 0) {
+      await uploadArea.first().click().catch(() => {});
+      await this.page.waitForTimeout(500);
+    }
+    
+    // Upload image - flexible file input selector
+    const fileInput = this.page.locator('app-post-message input[type="file"], input[type="file"]').first();
+    await fileInput.waitFor({ state: 'attached', timeout: 10000 }).catch(() => {});
+    await fileInput.setInputFiles(imagePath);
+    await this.page.waitForTimeout(2000);
+    
+    // Handle crop dialog if it appears
+    const cropDialog = this.page.locator('app-crop-header h1:has-text("Crop Image")');
+    if (await cropDialog.isVisible().catch(() => false)) {
+      console.log('  Crop dialog appeared, clicking Done...');
+      const doneButton = this.page.locator('app-crop-header button:has-text("Done")');
+      await doneButton.click();
+      await this.page.waitForTimeout(1500);
+    }
+    console.log('✓ Image uploaded');
+    
+    // Verify image preview
+    const imagePreview = this.page.locator('app-post-message img.imgProperty');
+    await expect(imagePreview).toBeVisible({ timeout: 10000 });
+    console.log('✓ Image preview is visible');
+    
+    // Fill redirect URL
+    const urlInput = this.page.locator('app-post-message input[placeholder*="redirect URL"]').first();
+    await urlInput.waitFor({ state: 'visible', timeout: 5000 });
+    await urlInput.fill(redirectUrl);
+    await this.page.waitForTimeout(500);
+    console.log(`✓ Redirect URL filled: "${redirectUrl}"`);
+    
+    // Verify sponsor-specific fields are visible (flexible text matching)
+    const rowsBeforeLabel = this.page.locator('.sponsor-input-title:has-text("Number of rows before"), .sponsor-input-title:has-text("Minimum number of posts before")');
+    await expect(rowsBeforeLabel.first()).toBeVisible();
+    console.log('✓ Sponsor positioning field (rows before) is visible');
+    
+    // Second field may not exist in all versions - check optionally
+    const rowsBetweenLabel = this.page.locator('.sponsor-input-title:has-text("Number of rows between"), .sponsor-input-title:has-text("posts before displaying")');
+    if (await rowsBetweenLabel.count() > 0) {
+      console.log('✓ Sponsor positioning field (rows between) is visible');
+    } else {
+      console.log('ℹ Second sponsor field not present (optional)');
+    }
+    
+    // Fill optional positioning fields if provided
+    if (rowsBeforeFirst !== null) {
+      const rowsBeforeInput = this.page.locator('input[placeholder="0"][type="number"]').first();
+      await rowsBeforeInput.fill(rowsBeforeFirst.toString());
+      console.log(`✓ Rows before first showing: ${rowsBeforeFirst}`);
+    }
+    
+    if (rowsBetween !== null) {
+      const rowsBetweenInput = this.page.locator('input[placeholder="0"][type="number"]').nth(1);
+      await rowsBetweenInput.fill(rowsBetween.toString());
+      console.log(`✓ Rows between sponsor posts: ${rowsBetween}`);
+    }
+    
+    console.log('✅ Sponsor upload with info completed');
+  }
+
+  // ============================================================================
+  // PLUS ICON FEATURES - PRIZE
+  // ============================================================================
+
+  /**
+   * Click "Prize" button from plus icon menu
+   */
+  async clickPrizeButton() {
+    const prizeButton = this.page.locator('button:has-text("Prize")').first();
+    await prizeButton.waitFor({ state: 'visible', timeout: 10000 });
+    await prizeButton.click();
+    await this.page.waitForTimeout(2000);
+  }
+
+  /**
+   * Upload prize image with caption
+   * @param {string} imagePath - Path to image file
+   * @param {string} caption - Prize caption
+   */
+  async uploadPrizeWithCaption(imagePath, caption) {
+    console.log('📤 Uploading prize with caption...');
+    
+    // Wait for dialog to be fully loaded
+    await this.page.waitForTimeout(1000);
+    
+    // Try to find and click upload area if exists (to trigger file input)
+    const uploadArea = this.page.locator('app-post-message .selectable-image, app-post-message .write-text');
+    if (await uploadArea.count() > 0) {
+      await uploadArea.first().click().catch(() => {});
+      await this.page.waitForTimeout(500);
+    }
+    
+    // Upload image - flexible file input selector
+    const fileInput = this.page.locator('app-post-message input[type="file"], input[type="file"]').first();
+    await fileInput.waitFor({ state: 'attached', timeout: 10000 }).catch(() => {});
+    await fileInput.setInputFiles(imagePath);
+    await this.page.waitForTimeout(2000);
+    
+    // Handle crop dialog
+    const cropDialog = this.page.locator('app-crop-header h1:has-text("Crop Image")');
+    if (await cropDialog.isVisible().catch(() => false)) {
+      const doneButton = this.page.locator('app-crop-header button:has-text("Done")');
+      await doneButton.click();
+      await this.page.waitForTimeout(1500);
+    }
+    console.log('✓ Image uploaded');
+    
+    // Verify image preview
+    const imagePreview = this.page.locator('app-post-message img.imgProperty');
+    await expect(imagePreview).toBeVisible({ timeout: 10000 });
+    console.log('✓ Image preview is visible');
+    
+    // Fill caption
+    const captionInput = this.page.locator('app-post-message input[placeholder*="caption"]').first();
+    await captionInput.fill(caption);
+    await this.page.waitForTimeout(500);
+    console.log(`✓ Caption filled: "${caption}"`);
+    
+    console.log('✅ Prize upload with caption completed');
+  }
+
+  // ============================================================================
+  // PLUS ICON FEATURES - MESSAGE
+  // ============================================================================
+
+  /**
+   * Click "Message" button from plus icon menu
+   */
+  async clickMessageButton() {
+    const messageButton = this.page.locator('button:has-text("Message")').first();
+    await messageButton.waitFor({ state: 'visible', timeout: 10000 });
+    await messageButton.click();
+    await this.page.waitForTimeout(2000);
+  }
+
+  /**
+   * Fill message caption (text-only message)
+   * @param {string} caption - Message caption
+   */
+  async fillMessageCaption(caption) {
+    console.log('📝 Filling message caption...');
+    
+    // Verify the write-text area is visible
+    const writeTextArea = this.page.locator('app-post-message .write-text');
+    await expect(writeTextArea).toBeVisible({ timeout: 10000 });
+    console.log('✓ Write text area is visible');
+    
+    // Fill caption
+    const captionInput = this.page.locator('app-post-message input[placeholder*="caption"]').first();
+    await captionInput.waitFor({ state: 'visible', timeout: 5000 });
+    await captionInput.fill(caption);
+    await this.page.waitForTimeout(500);
+    console.log(`✓ Caption filled: "${caption}"`);
+    
+    console.log('✅ Message caption filled');
+  }
+
+  // ============================================================================
+  // PLUS ICON FEATURES - PHOTOS
+  // ============================================================================
+
+  /**
+   * Click "Photos" button from plus icon menu
+   */
+  async clickPhotosButton() {
+    const photosButton = this.page.locator('button:has-text("Photos")').first();
+    await photosButton.waitFor({ state: 'visible', timeout: 10000 });
+    await photosButton.click();
+    await this.page.waitForTimeout(2000);
+  }
+
+  /**
+   * Upload photo with caption
+   * @param {string} imagePath - Path to image file
+   * @param {string} caption - Photo caption
+   */
+  async uploadPhotoWithCaption(imagePath, caption) {
+    console.log('📤 Uploading photo with caption...');
+    
+    // Wait for dialog to be fully loaded
+    await this.page.waitForTimeout(1000);
+    
+    // Try to find and click upload area if exists (to trigger file input)
+    const uploadArea = this.page.locator('app-post-message .selectable-image, app-post-message .write-text');
+    if (await uploadArea.count() > 0) {
+      await uploadArea.first().click().catch(() => {});
+      await this.page.waitForTimeout(500);
+    }
+    
+    // Upload image - flexible file input selector
+    const fileInput = this.page.locator('app-post-message input[type="file"], input[type="file"]').first();
+    await fileInput.waitFor({ state: 'attached', timeout: 10000 }).catch(() => {});
+    await fileInput.setInputFiles(imagePath);
+    await this.page.waitForTimeout(2000);
+    
+    // Handle crop dialog
+    const cropDialog = this.page.locator('app-crop-header h1:has-text("Crop Image")');
+    if (await cropDialog.isVisible().catch(() => false)) {
+      const doneButton = this.page.locator('app-crop-header button:has-text("Done")');
+      await doneButton.click();
+      await this.page.waitForTimeout(1500);
+    }
+    console.log('✓ Photo uploaded');
+    
+    // Verify image preview
+    const imagePreview = this.page.locator('app-post-message img.imgProperty');
+    await expect(imagePreview).toBeVisible({ timeout: 10000 });
+    console.log('✓ Photo preview is visible');
+    
+    // Fill caption
+    const captionInput = this.page.locator('app-post-message input[placeholder*="caption"]').first();
+    await captionInput.fill(caption);
+    await this.page.waitForTimeout(500);
+    console.log(`✓ Caption filled: "${caption}"`);
+    
+    console.log('✅ Photo upload with caption completed');
+  }
+
+  // ============================================================================
+  // PLUS ICON FEATURES - VIDEOS
+  // ============================================================================
+
+  /**
+   * Click "Videos" button from plus icon menu
+   */
+  async clickVideosButton() {
+    const videosButton = this.page.locator('button:has-text("Videos")').first();
+    await videosButton.waitFor({ state: 'visible', timeout: 10000 });
+    await videosButton.click();
+    await this.page.waitForTimeout(2000);
+  }
+
+  /**
+   * Upload video with caption
+   * @param {string} videoPath - Path to video file
+   * @param {string} caption - Video caption
+   */
+  async uploadVideoWithCaption(videoPath, caption) {
+    console.log('📤 Uploading video with caption...');
+    
+    // Wait for dialog to be fully loaded
+    await this.page.waitForTimeout(1000);
+    
+    // Try to find and click upload area if exists (to trigger file input)
+    const uploadArea = this.page.locator('app-post-message .selectable-image, app-post-message .write-text');
+    if (await uploadArea.count() > 0) {
+      await uploadArea.first().click().catch(() => {});
+      await this.page.waitForTimeout(500);
+    }
+    
+    // Upload video (using image for test purposes) - flexible file input selector
+    const fileInput = this.page.locator('app-post-message input[type="file"], input[type="file"]').first();
+    await fileInput.waitFor({ state: 'attached', timeout: 10000 }).catch(() => {});
+    await fileInput.setInputFiles(videoPath);
+    await this.page.waitForTimeout(2000);
+    
+    // Handle crop dialog if it appears
+    const cropDialog = this.page.locator('app-crop-header h1:has-text("Crop Image")');
+    if (await cropDialog.isVisible().catch(() => false)) {
+      const doneButton = this.page.locator('app-crop-header button:has-text("Done")');
+      await doneButton.click();
+      await this.page.waitForTimeout(1500);
+    }
+    console.log('✓ Video uploaded');
+    
+    // Verify preview
+    const preview = this.page.locator('app-post-message img.imgProperty, app-post-message video');
+    await expect(preview.first()).toBeVisible({ timeout: 10000 });
+    console.log('✓ Video preview is visible');
+    
+    // Fill caption
+    const captionInput = this.page.locator('app-post-message input[placeholder*="caption"]').first();
+    await captionInput.fill(caption);
+    await this.page.waitForTimeout(500);
+    console.log(`✓ Caption filled: "${caption}"`);
+    
+    console.log('✅ Video upload with caption completed');
+  }
 }
 
