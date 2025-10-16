@@ -428,22 +428,20 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
    * TC-APP-VIEW-004: SPONSOR FUNCTIONALITY
    * ============================================================================
    * 
-   * Test Steps:
+   * Test Steps (Following TC-001 Success Pattern):
    * 1. Click plus icon
    * 2. Verify "Sponsor" button is visible
    * 3. Click "Sponsor" button
-   * 4. Verify post-message dialog UI
-   * 5. Upload image
-   * 6. Fill redirect URL
-   * 7. Verify sponsor-specific fields (rows before/between)
-   * 8. Fill positioning values
-   * 9. Click POST button
+   * 4. Upload image FIRST (like TC-001)
+   * 5. Verify UI elements AFTER upload
+   * 6. Fill redirect URL and positioning
+   * 7. Click POST button
    * 
    * Expected Results:
-   * - Sponsor dialog displays correctly
-   * - Image uploads and preview shows
-   * - Redirect URL field works
-   * - Sponsor-specific positioning fields are visible
+   * - Sponsor dialog opens
+   * - Image uploads successfully
+   * - UI elements visible after upload
+   * - Redirect URL and positioning fields work
    * - Post is created successfully
    */
   test('TC-APP-VIEW-004: Verify "Sponsor" button functionality', async ({ page }) => {
@@ -466,30 +464,30 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
       // STEP 3: Click "Sponsor" button
       logStep('Step 3: Clicking "Sponsor" button');
       await eventDetailPage.clickSponsorButton();
+      await page.waitForTimeout(1000);
       await captureScreenshot(page, 'tc004', 'step3-sponsor-dialog');
       logStep('"Sponsor" dialog opened', 'success');
 
-      // STEP 4: Verify post-message dialog UI
-      logStep('Step 4: Verifying post-message dialog UI');
-      await eventDetailPage.verifyPostMessageDialog();
-      await captureScreenshot(page, 'tc004', 'step4-dialog-ui');
-      logStep('Dialog UI verified', 'success');
-
-      // STEP 5-6: Upload image and fill redirect URL with positioning
-      logStep('Step 5-6: Uploading image and filling sponsor info');
+      // STEP 4: Upload image FIRST (TC-001/TC-002 success pattern)
+      logStep('Step 4: Uploading image and filling sponsor info');
       await eventDetailPage.uploadSponsorWithInfo(
         TEST_IMAGE_PATH,
         TEST_DATA.SPONSOR.URL,
         TEST_DATA.SPONSOR.ROWS_BEFORE,
         TEST_DATA.SPONSOR.ROWS_BETWEEN
       );
-      await captureScreenshot(page, 'tc004', 'step5-6-info-filled');
-      logStep('Image uploaded, URL and positioning filled', 'success');
+      await captureScreenshot(page, 'tc004', 'step4-upload-complete');
+      logStep('Image uploaded and info filled successfully', 'success');
 
-      // STEP 7: Click POST button
-      logStep('Step 7: Clicking POST button');
+      // STEP 5: Verify UI elements AFTER upload (optional verification)
+      logStep('Step 5: Verifying post-message dialog UI elements');
+      await eventDetailPage.verifyPostMessageDialog();
+      logStep('Dialog UI verified after upload', 'success');
+
+      // STEP 6: Click POST button
+      logStep('Step 6: Clicking POST button');
       await eventDetailPage.clickPostMessageButton();
-      await captureScreenshot(page, 'tc004', 'step7-post-clicked');
+      await captureScreenshot(page, 'tc004', 'step6-post-clicked');
       logStep('POST button clicked', 'success');
 
       printTestFooter('TC-APP-VIEW-004', true);
@@ -507,18 +505,18 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
    * TC-APP-VIEW-005: PRIZE FUNCTIONALITY
    * ============================================================================
    * 
-   * Test Steps:
+   * Test Steps (Following TC-001 Success Pattern):
    * 1. Click plus icon
    * 2. Verify "Prize" button is visible
    * 3. Click "Prize" button
-   * 4. Verify post-message dialog UI
-   * 5. Upload image
-   * 6. Fill caption
-   * 7. Click POST button
+   * 4. Upload image FIRST (like TC-001)
+   * 5. Verify UI elements AFTER upload
+   * 6. Click POST button
    * 
    * Expected Results:
-   * - Prize dialog displays correctly
-   * - Image uploads and preview shows
+   * - Prize dialog opens
+   * - Image uploads successfully
+   * - UI elements visible after upload
    * - Caption field works
    * - Post is created successfully
    */
@@ -542,23 +540,23 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
       // STEP 3: Click "Prize" button
       logStep('Step 3: Clicking "Prize" button');
       await eventDetailPage.clickPrizeButton();
+      await page.waitForTimeout(1000);
       await captureScreenshot(page, 'tc005', 'step3-prize-dialog');
       logStep('"Prize" dialog opened', 'success');
 
-      // STEP 4: Verify post-message dialog UI
-      logStep('Step 4: Verifying post-message dialog UI');
-      await eventDetailPage.verifyPostMessageDialog();
-      await captureScreenshot(page, 'tc005', 'step4-dialog-ui');
-      logStep('Dialog UI verified', 'success');
-
-      // STEP 5: Upload image and fill caption
-      logStep('Step 5: Uploading image and filling caption');
+      // STEP 4: Upload image FIRST (TC-001/TC-002 success pattern)
+      logStep('Step 4: Uploading image and filling caption');
       await eventDetailPage.uploadPrizeWithCaption(
         TEST_IMAGE_PATH,
         TEST_DATA.PRIZE.CAPTION
       );
-      await captureScreenshot(page, 'tc005', 'step5-info-filled');
-      logStep('Image uploaded and caption filled', 'success');
+      await captureScreenshot(page, 'tc005', 'step4-upload-complete');
+      logStep('Image uploaded and caption filled successfully', 'success');
+
+      // STEP 5: Verify UI elements AFTER upload (optional verification)
+      logStep('Step 5: Verifying post-message dialog UI elements');
+      await eventDetailPage.verifyPostMessageDialog();
+      logStep('Dialog UI verified after upload', 'success');
 
       // STEP 6: Click POST button
       logStep('Step 6: Clicking POST button');
@@ -652,18 +650,18 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
    * TC-APP-VIEW-007: PHOTOS FUNCTIONALITY
    * ============================================================================
    * 
-   * Test Steps:
+   * Test Steps (Following TC-001 Success Pattern):
    * 1. Click plus icon
    * 2. Verify "Photos" button is visible
    * 3. Click "Photos" button
-   * 4. Verify post-message dialog UI
-   * 5. Upload photo
-   * 6. Fill caption
-   * 7. Click POST button
+   * 4. Upload photo FIRST (like TC-001)
+   * 5. Verify UI elements AFTER upload
+   * 6. Click POST button
    * 
    * Expected Results:
-   * - Photos dialog displays correctly
-   * - Photo uploads and preview shows
+   * - Photos dialog opens
+   * - Photo uploads successfully
+   * - UI elements visible after upload
    * - Caption field works
    * - Post is created successfully
    */
@@ -687,23 +685,23 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
       // STEP 3: Click "Photos" button
       logStep('Step 3: Clicking "Photos" button');
       await eventDetailPage.clickPhotosButton();
+      await page.waitForTimeout(1000);
       await captureScreenshot(page, 'tc007', 'step3-photos-dialog');
       logStep('"Photos" dialog opened', 'success');
 
-      // STEP 4: Verify post-message dialog UI
-      logStep('Step 4: Verifying post-message dialog UI');
-      await eventDetailPage.verifyPostMessageDialog();
-      await captureScreenshot(page, 'tc007', 'step4-dialog-ui');
-      logStep('Dialog UI verified', 'success');
-
-      // STEP 5: Upload photo and fill caption
-      logStep('Step 5: Uploading photo and filling caption');
+      // STEP 4: Upload photo FIRST (TC-001/TC-002 success pattern)
+      logStep('Step 4: Uploading photo and filling caption');
       await eventDetailPage.uploadPhotoWithCaption(
         TEST_IMAGE_PATH,
         TEST_DATA.PHOTOS.CAPTION
       );
-      await captureScreenshot(page, 'tc007', 'step5-photo-uploaded');
-      logStep('Photo uploaded and caption filled', 'success');
+      await captureScreenshot(page, 'tc007', 'step4-upload-complete');
+      logStep('Photo uploaded and caption filled successfully', 'success');
+
+      // STEP 5: Verify UI elements AFTER upload (optional verification)
+      logStep('Step 5: Verifying post-message dialog UI elements');
+      await eventDetailPage.verifyPostMessageDialog();
+      logStep('Dialog UI verified after upload', 'success');
 
       // STEP 6: Click POST button
       logStep('Step 6: Clicking POST button');
@@ -726,18 +724,18 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
    * TC-APP-VIEW-008: VIDEOS FUNCTIONALITY
    * ============================================================================
    * 
-   * Test Steps:
+   * Test Steps (Following TC-001 Success Pattern):
    * 1. Click plus icon
    * 2. Verify "Videos" button is visible
    * 3. Click "Videos" button
-   * 4. Verify post-message dialog UI
-   * 5. Upload video
-   * 6. Fill caption
-   * 7. Click POST button
+   * 4. Upload video FIRST (like TC-001)
+   * 5. Verify UI elements AFTER upload
+   * 6. Click POST button
    * 
    * Expected Results:
-   * - Videos dialog displays correctly
-   * - Video uploads and preview shows
+   * - Videos dialog opens
+   * - Video uploads successfully
+   * - UI elements visible after upload
    * - Caption field works
    * - Post is created successfully
    */
@@ -761,23 +759,23 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
       // STEP 3: Click "Videos" button
       logStep('Step 3: Clicking "Videos" button');
       await eventDetailPage.clickVideosButton();
+      await page.waitForTimeout(1000);
       await captureScreenshot(page, 'tc008', 'step3-videos-dialog');
       logStep('"Videos" dialog opened', 'success');
 
-      // STEP 4: Verify post-message dialog UI
-      logStep('Step 4: Verifying post-message dialog UI');
-      await eventDetailPage.verifyPostMessageDialog();
-      await captureScreenshot(page, 'tc008', 'step4-dialog-ui');
-      logStep('Dialog UI verified', 'success');
-
-      // STEP 5: Upload video and fill caption
-      logStep('Step 5: Uploading video and filling caption');
+      // STEP 4: Upload video FIRST (TC-001/TC-002 success pattern)
+      logStep('Step 4: Uploading video and filling caption');
       await eventDetailPage.uploadVideoWithCaption(
         TEST_IMAGE_PATH,
         TEST_DATA.VIDEOS.CAPTION
       );
-      await captureScreenshot(page, 'tc008', 'step5-video-uploaded');
-      logStep('Video uploaded and caption filled', 'success');
+      await captureScreenshot(page, 'tc008', 'step4-upload-complete');
+      logStep('Video uploaded and caption filled successfully', 'success');
+
+      // STEP 5: Verify UI elements AFTER upload (optional verification)
+      logStep('Step 5: Verifying post-message dialog UI elements');
+      await eventDetailPage.verifyPostMessageDialog();
+      logStep('Dialog UI verified after upload', 'success');
 
       // STEP 6: Click POST button
       logStep('Step 6: Clicking POST button');
