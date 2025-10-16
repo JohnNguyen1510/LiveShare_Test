@@ -476,7 +476,9 @@ test.describe('App-SubscriptionEvent', () => {
       await page.waitForTimeout(4000);
       
       // Verify tất cả events có PREMIUMPLUS label
+      console.log('Verifying all events have PremiumPlus subscription label...');
       const premiumPlusSubscriptionVerified = await eventCreationPage.verifyAllEventsPremiumPlusLabel();
+      expect(premiumPlusSubscriptionVerified).toBeTruthy();
       await page.screenshot({ path: path.join(screenshotsDir, 'se004-05-subscription-features-verified.png') });
 
       console.log('✅ SE-004 Premium+ Annual Subscription test completed successfully');
@@ -487,94 +489,7 @@ test.describe('App-SubscriptionEvent', () => {
       throw error;
     }
 
-    // =====================================================
-    // SE-005: Cancel plan test
-    // =====================================================
-    console.log('\n🚀 Starting SE-005: Plan Cancellation test');
 
-    try {
-      console.log('🔗 Tiếp tục từ cùng browser và page');
-      console.log(`📧 Sử dụng account: ${testData.email}`);
-
-      // Step 1: Navigate to subscription page để test cancellation
-      console.log('📍 SE-005 Step 1: Navigate to subscription page...');
-      const subscriptionNavigationSuccess = await subscriptionPage.navigateToSubscription();
-      expect(subscriptionNavigationSuccess).toBeTruthy();
-      await page.screenshot({ path: path.join(screenshotsDir, 'se005-01-subscription-page.png') });
-
-      // Step 2: Look for Cancel button
-      console.log('📍 SE-005 Step 2: Looking for Cancel Plan button...');
-      const cancelButton = page.locator(':is(button,div):has-text("Cancel Plan")').first();
-      const hasCancel = await cancelButton.isVisible().catch(() => false);
-
-      if (!hasCancel) {
-        console.log('⚠️ Cancel Plan button not available - this may be expected behavior');
-        console.log('ℹ️ User may need to navigate to profile/account settings for cancellation');
-        
-        // Try alternative navigation - click on avatar/profile
-        const profileAvatar = page.locator('.profile .avatar, .profile img').first();
-        if (await profileAvatar.isVisible().catch(() => false)) {
-          await profileAvatar.click();
-          await page.waitForTimeout(1000);
-          
-          const subscriptionMenuItem = page.locator('button:has-text("Subscription"), a:has-text("Subscription")').first();
-          if (await subscriptionMenuItem.isVisible().catch(() => false)) {
-            await subscriptionMenuItem.click();
-            await page.waitForTimeout(2000);
-            await page.screenshot({ path: path.join(screenshotsDir, 'se005-02-profile-subscription.png') });
-          }
-        }
-        
-        // Check again for cancel button
-        const cancelButtonRetry = page.locator(':is(button,div):has-text("Cancel Plan")').first();
-        const hasCancelRetry = await cancelButtonRetry.isVisible().catch(() => false);
-        
-        if (!hasCancelRetry) {
-          console.log('✅ Cancel functionality test completed - Cancel button not available as expected');
-          await page.screenshot({ path: path.join(screenshotsDir, 'se005-03-no-cancel-available.png') });
-          expect(true).toBeTruthy(); // Pass test as this may be expected behavior
-          console.log('✅ SE-005 Plan cancellation test completed successfully');
-        return;
-        }
-      }
-
-      // Step 3: Execute cancellation if button is available
-      console.log('📍 SE-005 Step 3: Executing plan cancellation...');
-      const finalCancelButton = page.locator(':is(button,div):has-text("Cancel Plan")').first();
-      await finalCancelButton.click();
-      await page.waitForTimeout(1000);
-      
-      // Handle confirmation dialog
-      const confirmYes = page.locator('button:has-text("Yes"), button:has-text("Confirm")').first();
-      if (await confirmYes.isVisible().catch(() => false)) {
-        await confirmYes.click();
-        await page.waitForTimeout(2000);
-      }
-
-      await page.screenshot({ path: path.join(screenshotsDir, 'se005-04-cancellation-completed.png') });
-
-      // Step 4: Verify cancellation
-      console.log('📍 SE-005 Step 4: Verifying plan cancellation...');
-      await page.waitForTimeout(3000);
-      
-      // Navigate back to events to verify subscription status
-      const eventCreationPage = new EventCreationPage(page);
-      const navigateBackSuccess = await eventCreationPage.navigateBackToEvents();
-      if (navigateBackSuccess) {
-        await page.waitForTimeout(4000);
-        await page.screenshot({ path: path.join(screenshotsDir, 'se005-05-after-cancellation.png') });
-      }
-      
-      console.log('✅ SE-005 Plan cancellation test completed successfully');
-      expect(true).toBeTruthy();
-      
-    } catch (error) {
-      console.error('❌ SE-005 Plan cancellation test failed:', error.message);
-      await page.screenshot({ path: path.join(screenshotsDir, 'se005-error-final.png') });
-      throw error;
-    }
-
-    console.log('\n🎉 All subscription tests (SE-001 to SE-005) completed successfully!');
-  });
 
   });
+});

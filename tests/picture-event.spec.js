@@ -37,24 +37,134 @@ test.describe('Picture In Event Detail', () => {
   });
 
   test.beforeAll(async ({ browser }) => {
-    // Use pre-setup data from localStorage saved by npm run setup:full
-    const context = await browser.newContext();
-    const setupPage = await context.newPage();
-    await setupPage.goto('https://dev.livesharenow.com/events');
-    await setupPage.waitForLoadState('domcontentloaded');
-    await setupPage.waitForTimeout(1000);
+    console.log('🎬 Starting Picture Event Test Setup - Creating event and uploading images...');
     
-    // Read event name that was created in setup:full
-    const data = await setupPage.evaluate(() => {
-      try {
-        const raw = localStorage.getItem('TEST_EVENT_DATA');
-        return raw ? JSON.parse(raw) : null;
-      } catch {
-        return null;
-      }
+    // Load authentication
+    const authFile = path.join(process.cwd(), 'auth', 'user-auth.json');
+    let storageState;
+    if (fs.existsSync(authFile)) {
+      storageState = JSON.parse(fs.readFileSync(authFile, 'utf-8'));
+    }
+
+    // Create context with auth
+    const context = await browser.newContext({ 
+      storageState: storageState || undefined,
+      viewport: { width: 1280, height: 720 }
     });
-    createdEventName = data?.name || `Test Event Fallback`;
-    await context.close();
+    const setupPage = await context.newPage();
+
+    try {
+      // Navigate to events page
+      await setupPage.goto('https://dev.livesharenow.com/events');
+      await setupPage.waitForLoadState('domcontentloaded');
+      await setupPage.waitForTimeout(2000);
+
+      // Create event using page objects
+      const setupEventList = new EventListPage(setupPage);
+      const setupEventCreation = new EventCreationPage(setupPage);
+      const setupEventDetail = new EventDetailPage(setupPage);
+
+      // Generate unique event name
+      const timestamp = Date.now();
+      createdEventName = `Picture Test Event ${timestamp}`;
+      
+      console.log(`📝 Creating event: ${createdEventName}`);
+      
+      // Create the event
+      const eventData = {
+        typeId: '63aac88c5a3b994dcb8602fd',
+        name: createdEventName,
+        location: 'Test Location',
+        description: 'Event for picture tests'
+      };
+
+      const eventCreated = await setupEventCreation.createEvent(eventData);
+      
+      if (!eventCreated) {
+        throw new Error('Failed to create event in beforeAll');
+      }
+
+      console.log('✅ Event created successfully');
+      
+      // Navigate back to events list and open the newly created event
+      await setupEventList.goToEventsPage();
+      await setupPage.waitForTimeout(2000);
+      await setupEventList.clickEventByName(createdEventName);
+      await setupEventDetail.waitForEventDetailToLoad();
+
+      console.log('📸 Uploading test images to event...');
+      
+      // Upload multiple images to the event
+      const imagesDir = path.join(process.cwd(), 'test-assets', 'upload-images');
+      const imagesToUpload = [
+        path.join(imagesDir, 'test-image-1.png'),
+        path.join(imagesDir, 'test-image-2.png'),
+        path.join(imagesDir, 'test-image-3.png')
+      ];
+
+      // Filter only existing files
+      const existingImages = imagesToUpload.filter(img => {
+        const exists = fs.existsSync(img);
+        if (!exists) {
+          console.log(`⚠️ Image not found: ${img}`);
+        }
+        return exists;
+      });
+
+      if (existingImages.length > 0) {
+        // Click add button to reveal features
+        await setupEventDetail.clickAddButtonToRevealFeatures();
+        await setupPage.waitForTimeout(500);
+        
+        // Click Photos button
+        await setupPage.getByRole('button', { name: 'Photos' }).click();
+        await setupPage.waitForTimeout(500);
+        
+        // Upload files
+        await setupPage.locator('input#file-input[type="file"]').setInputFiles(existingImages);
+        await setupPage.waitForTimeout(1000);
+
+        // Handle multi-select confirmation dialog if it appears
+        const yesBtn = setupPage.getByRole('button', { name: 'Yes' });
+        const yesVisible = await yesBtn.isVisible().catch(() => false);
+        if (yesVisible) {
+          await yesBtn.click();
+          await setupPage.waitForTimeout(500);
+        }
+
+        // Click POST button if available
+        const postBtn = setupPage.getByRole('button', { name: 'POST' });
+        const postVisible = await postBtn.isVisible().catch(() => false);
+        if (postVisible) {
+          await postBtn.click();
+          await setupPage.waitForTimeout(3000);
+        }
+
+        console.log(`✅ Uploaded ${existingImages.length} images successfully`);
+      } else {
+        console.log('⚠️ No test images found to upload');
+      }
+
+      // Save event data to localStorage for reference
+      await setupPage.evaluate((eventName) => {
+        localStorage.setItem('PICTURE_TEST_EVENT_DATA', JSON.stringify({
+          name: eventName,
+          createdAt: new Date().toISOString()
+        }));
+      }, createdEventName);
+
+      console.log('✅ Picture Event Test Setup completed successfully');
+      console.log(`🎯 Event "${createdEventName}" is ready for testing`);
+
+    } catch (error) {
+      console.error('❌ Error in beforeAll setup:', error);
+      await setupPage.screenshot({ 
+        path: path.join(process.cwd(), 'screenshots', `setup-error-${Date.now()}.png`) 
+      });
+      throw error;
+    } finally {
+      await context.close();
+    }
   });
 
   async function openEventByName(page, name) {

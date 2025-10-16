@@ -21,7 +21,7 @@ test.describe('App-Register', () => {
   }); 
 
 
-  test('TC-APP-RA-001', async () => {
+  test('TC-APP-RA-001', async ({ page }) => {
     // Check if environment variables are set
     if (!process.env.MAILOSAUR_API_KEY || !process.env.MAILOSAUR_SERVER_ID) {
       test.skip('Mailosaur environment variables not set');
