@@ -63,16 +63,67 @@ export class EventCreationPage extends BasePage {
     };
   }
 
+  /**
+   * Verify all events have PremiumPlus subscription label
+   * @returns {Promise<boolean>} Success status
+   */
   async verifyAllEventsPremiumPlusLabel(){
     try {
+      console.log('Verifying all events have PremiumPlus label...');
+      
       const eventCount = await this.eventCards.count();
-      for (let i=0 ; i< eventCount; i++){
-        eventLabel = await this.eventCards.nth(i).locator('label:has-text("Premium")');
-        expect(eventLabel).toBeVisible();
+      console.log(`Found ${eventCount} events to verify`);
+      
+      if (eventCount === 0) {
+        console.log('⚠️ No events found to verify');
+        return false;
       }
+      
+      let allHavePremiumPlus = true;
+      
+      for (let i = 0; i < eventCount; i++) {
+        const eventCard = this.eventCards.nth(i);
+        
+        // Locator for subscription label button
+        const subscriptionLabel = eventCard.locator('button.btn.btn-xs.btn-info, button.btn-xs.btn-info');
+        
+        // Check if label exists
+        const labelExists = await subscriptionLabel.count() > 0;
+        
+        if (!labelExists) {
+          console.log(`❌ Event ${i + 1}: No subscription label found`);
+          allHavePremiumPlus = false;
+          continue;
+        }
+        
+        // Get label text
+        const labelText = await subscriptionLabel.textContent();
+        const trimmedText = labelText?.trim() || '';
+        
+        console.log(`Event ${i + 1}: Label = "${trimmedText}"`);
+        
+        // Verify it's PremiumPlus
+        if (trimmedText.includes('PremiumPlus') || trimmedText.includes('Premium+')) {
+          console.log(`✅ Event ${i + 1}: Has PremiumPlus label`);
+        } else {
+          console.log(`❌ Event ${i + 1}: Label is "${trimmedText}", not PremiumPlus`);
+          allHavePremiumPlus = false;
+        }
+      }
+      
+      if (allHavePremiumPlus) {
+        console.log(`✅ All ${eventCount} events have PremiumPlus subscription`);
+        await this.takeScreenshot('all-events-premiumplus-verified');
+        return true;
+      } else {
+        console.log('❌ Not all events have PremiumPlus subscription');
+        await this.takeScreenshot('error-premiumplus-verification-failed');
+        return false;
+      }
+      
     } catch (error) {
-      console.error('Error verifying Premium subscription access:', error.message);
-      await this.takeScreenshot('error-verify-premium');
+      console.error('Error verifying PremiumPlus subscription access:', error.message);
+      await this.takeScreenshot('error-verify-premiumplus');
       return false;
     }
   }

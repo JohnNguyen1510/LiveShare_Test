@@ -584,15 +584,19 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
    * 2. Verify "Message" button is visible
    * 3. Click "Message" button
    * 4. Verify post-message dialog UI
-   * 5. Verify write-text area is visible
-   * 6. Fill caption (text-only message)
-   * 7. Click POST button
+   * 5. Fill caption (text-only message)
+   * 6. Set up API listener and click POST button
+   * 7. Verify API response is successful (200/201 status)
+   * 8. Verify post-message dialog closes
+   * 9. Verify message appears in event feed
    * 
    * Expected Results:
    * - Message dialog displays correctly
    * - Write-text area is visible
    * - Caption field works for text-only message
-   * - Post is created successfully
+   * - POST API request returns 200/201 (not 400 Bad Request)
+   * - Dialog closes after successful post
+   * - Message appears in the event feed with correct caption
    */
   test('TC-APP-VIEW-006: Verify "Message" button functionality', async ({ page }) => {
     printTestHeader('TC-APP-VIEW-006', 'Message Functionality');
@@ -629,11 +633,49 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
       await captureScreenshot(page, 'tc006', 'step5-caption-filled');
       logStep('Caption filled', 'success');
 
-      // STEP 6: Click POST button
-      logStep('Step 6: Clicking POST button');
+      // STEP 6: Set up API response listener and click POST button
+      logStep('Step 6: Setting up API listener and clicking POST button');
+      
+      // Listen for the POST request to verify successful response
+      const responsePromise = page.waitForResponse(
+        response => response.url().includes('/api/posts/') && response.request().method() === 'POST',
+        { timeout: 15000 }
+      );
+      
       await eventDetailPage.clickPostMessageButton();
       await captureScreenshot(page, 'tc006', 'step6-post-clicked');
-      logStep('POST button clicked', 'success');
+      
+      // STEP 7: Verify API response
+      logStep('Step 7: Verifying API response');
+      const response = await responsePromise;
+      const status = response.status();
+      
+      console.log(`📡 POST request to: ${response.url()}`);
+      console.log(`📊 Response status: ${status}`);
+      
+      expect(status, `POST request should return 200 or 201, but got ${status}`).toBeLessThan(300);
+      expect(status, `POST request should return 200 or 201, but got ${status}`).toBeGreaterThanOrEqual(200);
+      logStep(`API response verified: ${status}`, 'success');
+      
+      // STEP 8: Verify dialog closes (indicating success)
+      logStep('Step 8: Verifying post-message dialog closes');
+      const postMessageDialog = page.locator('app-post-message');
+      await expect(postMessageDialog).toBeHidden({ timeout: 10000 });
+      await captureScreenshot(page, 'tc006', 'step8-dialog-closed');
+      logStep('Dialog closed successfully', 'success');
+      
+      // STEP 9: Verify message appears in feed
+      logStep('Step 9: Verifying message appears in event feed');
+      await page.waitForTimeout(2000); // Wait for feed to update
+      
+      // Look for the message in the feed
+      const messageInFeed = page.locator('.message-section, .post-container, .image-wrapper').filter({
+        hasText: TEST_DATA.MESSAGE.CAPTION
+      }).first();
+      
+      await expect(messageInFeed).toBeVisible({ timeout: 10000 });
+      await captureScreenshot(page, 'tc006', 'step9-message-in-feed');
+      logStep('Message verified in feed', 'success');
 
       printTestFooter('TC-APP-VIEW-006', true);
 

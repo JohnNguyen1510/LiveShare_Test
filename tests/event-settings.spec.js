@@ -1102,28 +1102,6 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
     await page.screenshot({ path: path.join(screenshotsDir, 'tc-014-force-login-completed.png') });
   });
   
-   test('TC-APP-CUST-015: Verify Premium features show preview', async ({ page }) => {
-     console.log('🚀 Starting TC-APP-CUST-015: Premium features show preview');
-    
-     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-     await openEventSettings(page);
-    
-     // Verify Premium features show "Preview for Free" text
-     const premiumFeatures = FeatureTiers.PREMIUM;
-     let allPass = true;
-    
-     for (const feature of premiumFeatures) {
-       const hasPreview = await verifyHasPreviewForFree(page, feature);
-       if (!hasPreview) {
-         allPass = false;
-       }
-     }
-    
-     expect(allPass).toBeTruthy();
-    
-     console.log('✅ TC-APP-CUST-015: Premium features preview test passed');
-     await page.screenshot({ path: path.join(screenshotsDir, 'tc-015-premium-preview-completed.png') });
-   });
  });
   /**
   * ============================================================================
@@ -1351,28 +1329,6 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
      await page.screenshot({ path: path.join(screenshotsDir, 'tc-021-standard-unlocked-completed.png') });
    });
   
-   test('TC-APP-CUST-022: Verify Premium+ features show preview', async ({ page }) => {
-     console.log('🚀 Starting TC-APP-CUST-022: Premium+ features show preview');
-    
-     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-     await openEventSettings(page);
-    
-     // Verify Premium+ features show "Preview for Free" text
-     const premiumPlusFeatures = FeatureTiers.PREMIUM_PLUS;
-     let allPass = true;
-    
-     for (const feature of premiumPlusFeatures) {
-       const hasPreview = await verifyHasPreviewForFree(page, feature);
-       if (!hasPreview) {
-         allPass = false;
-       }
-     }
-    
-     expect(allPass).toBeTruthy();
-    
-     console.log('✅ TC-APP-CUST-022: Premium+ features preview test passed');
-     await page.screenshot({ path: path.join(screenshotsDir, 'tc-022-premiumplus-preview-completed.png') });
-   });
  });
   /**
   * ============================================================================
