@@ -77,7 +77,7 @@ export class EventPage extends BasePage {
         const elements = await this.page.locator(selector).all();
         if (elements.length > 0) {
           console.log(`Found ${elements.length} events with selector ${selector}`);
-          await this.page.locator(selector).first().click();
+          await this.page.locator(selector).nth(1).click();
           await this.page.waitForTimeout(2000); // Wait for navigation
           return true;
         }
