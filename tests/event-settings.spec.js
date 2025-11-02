@@ -28,264 +28,356 @@ if (!fs.existsSync(screenshotsDir)) {
 * ============================================================================
 */
 
-
-// Shared test data across all test suites
-const sharedTestData = {
- accountCreated: false,
- email: '',
- password: 't123',
- name: '',
- timestamp: Date.now(),
- // Event IDs for each plan
- freeEventCreated: false,
- standardEventCreated: false,
- premiumEventCreated: false,
- premiumPlusEventCreated: false
-};
-
-
 /**
-* Setup function for creating fresh account (called once)
+* Setup function for creating fresh account and event for each tier test
 * @param {import('@playwright/test').Page} page - Playwright page instance
 * @param {import('@playwright/test').BrowserContext} context - Browser context
+* @param {string} tierName - Name of the tier (Free, Standard, Premium, Premium+)
 * @returns {Promise<{success: boolean, testData: Object}>} Setup result with test data
 */
-async function setupFreshAccount(page, context) {
- console.log('🚀 Starting fresh account setup for all tests');
+async function setupFreshAccountAndEvent(page, context, tierName) {
+  console.log(`🚀 Starting fresh account and event setup for: ${tierName} Tier`);
+  
   try {
-   // Skip test if Mailosaur is not configured
-   if (!process.env.MAILOSAUR_API_KEY || !process.env.MAILOSAUR_SERVER_ID) {
-     console.warn('⚠️ Mailosaur environment variables not set, skipping setup');
-     return { success: false, testData: null };
-   }
+    // Skip test if Mailosaur is not configured
+    if (!process.env.MAILOSAUR_API_KEY || !process.env.MAILOSAUR_SERVER_ID) {
+      console.warn('⚠️ Mailosaur environment variables not set, skipping setup');
+      return { success: false, testData: null };
+    }
 
-
-   // Initialize page objects
-   const registerPage = new RegisterPage(page);
-  
-   // Setup Mailosaur for email verification
-   const mailosaurClient = new Mailosaur(process.env.MAILOSAUR_API_KEY);
-   const serverId = process.env.MAILOSAUR_SERVER_ID;
-   const timestamp = Date.now();
-   const testEmail = `auto_settings_all_tiers_${timestamp}@${serverId}.mailosaur.net`;
-  
-   const testData = {
-     email: testEmail,
-     name: `Auto Settings Tester`,
-     password: 't123',
-     timestamp: timestamp
-   };
-
-
-   console.log(`📧 Using test email: ${testEmail}`);
-
-
-   // Step 1: Navigate to application
-   console.log('📍 Step 1: Navigating to application...');
-   await page.goto('https://dev.livesharenow.com/');
-   await page.waitForLoadState('domcontentloaded');
-   await page.waitForTimeout(1000);
-   await page.screenshot({ path: path.join(screenshotsDir, 'shared-01-app-loaded.png') });
-
-
-   // Step 2: Complete registration flow
-   console.log('📍 Step 2: Starting registration process...');
-   await registerPage.clickCreateAccount();
-   await page.screenshot({ path: path.join(screenshotsDir, 'shared-02-create-account-clicked.png') });
-
-
-   // Choose email signup
-   console.log('📍 Step 3: Choosing email signup...');
-   const emailSignupSuccess = await registerPage.clickEmailSignup();
-   if (!emailSignupSuccess) {
-     throw new Error('Failed to click email signup');
-   }
-   await page.screenshot({ path: path.join(screenshotsDir, 'shared-03-email-signup-selected.png') });
-
-
-   // Handle terms and conditions
-   console.log('📍 Step 4: Handling terms and conditions...');
-   await registerPage.handleTermsAndConditions();
-   await page.screenshot({ path: path.join(screenshotsDir, 'shared-04-terms-accepted.png') });
-
-
-   // Fill registration form
-   console.log('📍 Step 5: Filling registration form...');
-   await registerPage.fillRegistrationForm(testData.name, testData.email, testData.password);
-   await page.screenshot({ path: path.join(screenshotsDir, 'shared-05-registration-form-filled.png') });
-
-
-   // Create account
-   console.log('📍 Step 6: Creating account...');
-   const createAccountButton = page.locator('button:has-text("Create Account")').first();
-   await expect(createAccountButton).toBeVisible();
-   await createAccountButton.click();
-   await page.waitForTimeout(2000);
-   await page.screenshot({ path: path.join(screenshotsDir, 'shared-06-account-creation-submitted.png') });
-
-
-   // Handle OTP verification
-   console.log('📍 Step 7: Handling OTP verification...');
-   console.log('⏳ Waiting for verification email...');
-   const signUpEmail = await mailosaurClient.messages.get(serverId, {
-     sentTo: testEmail
-   });
-   const verifyEmail = signUpEmail.html.codes[0].value;
-   console.log(`📧 Received OTP code: ${verifyEmail}`);
-  
-   // Wait for OTP input fields and fill them
-   const otpInputs = page.locator('.otp-box');
-   await otpInputs.first().waitFor({ state: 'visible', timeout: 10000 });
-  
-   const otpCode = verifyEmail.toString();
-   for (let i = 0; i < otpCode.length && i < 6; i++) {
-     const input = otpInputs.nth(i);
-     await input.waitFor({ state: 'visible', timeout: 5000 });
-     await input.fill(otpCode[i]);
-     await page.waitForTimeout(200);
-   }
-  
-   await page.screenshot({ path: path.join(screenshotsDir, 'shared-07-otp-filled.png') });
-
-
-   // Complete registration
-   const continueToEventButton = page.locator('button:has-text("Continue to the Event")').first();
-   await expect(continueToEventButton).toBeVisible();
-   await continueToEventButton.click();
-   await page.waitForTimeout(3000);
-   await page.screenshot({ path: path.join(screenshotsDir, 'shared-08-registration-completed.png') });
-
-
-   console.log(`✅ Fresh account setup completed successfully`);
-   return { success: true, testData };
-  
- } catch (error) {
-   console.error(`❌ Setup failed:`, error.message);
-   await page.screenshot({ path: path.join(screenshotsDir, 'shared-error-setup.png') });
-   return { success: false, testData: null };
- }
-}
-
-
-/**
-* Login to existing account
-*/
-async function loginToAccount(page, email, password) {
- console.log(`🔐 Logging in as: ${email}`);
- try {
-   const loginPage = new LoginPage(page);
-   await page.goto('https://dev.livesharenow.com/');
-   await page.waitForTimeout(2000);
-  
-   // Check if already logged in
-   const isLoggedIn = await loginPage.checkIfAlreadyLoggedIn();
-   if (isLoggedIn) {
-     console.log('✅ Already logged in');
-     return true;
-   }
-  
-   // Perform login
-   const success = await loginPage.completeEmailLogin(email, password);
-   if (success) {
-     console.log('✅ Login successful');
-     await page.waitForTimeout(2000);
-     return true;
-   }
-  
-   console.error('❌ Login failed');
-   return false;
- } catch (error) {
-   console.error(`❌ Login error: ${error.message}`);
-   return false;
- }
-}
-
-
-/**
-* Create a new event for testing
-*/
-async function createNewEvent(page, eventName) {
- console.log(`📍 Creating new event: ${eventName}`);
- try {
-   const eventCreationPage = new EventCreationPage(page);
-   await page.goto('https://dev.livesharenow.com/events');
-   await page.waitForTimeout(2000);
-  
-   const eventCreationStarted = await eventCreationPage.startEventCreation();
-   if (!eventCreationStarted) {
-     throw new Error('Failed to start event creation');
-   }
-  
-   await page.waitForTimeout(4000);
-   console.log(`✅ Event created successfully`);
-   return true;
- } catch (error) {
-   console.error(`❌ Event creation failed: ${error.message}`);
-   return false;
- }
-}
-
-
-/**
-* Subscribe to a plan and handle payment
-*/
-async function subscribeAndPayForPlan(page, context, planName) {
- console.log(`💳 Subscribing to ${planName} plan...`);
-  try {
-   const subscriptionPage = new SubscriptionPage(page);
-   const paymentPage = new PaymentPage(page);
-  
-   // Navigate to subscription
-   const subscriptionNavigationSuccess = await subscriptionPage.navigateToSubscription();
-   if (!subscriptionNavigationSuccess) {
-     throw new Error('Failed to navigate to subscription');
-   }
-  
-   await page.waitForTimeout(2000);
-   await page.screenshot({ path: path.join(screenshotsDir, `${planName.toLowerCase()}-subscription-page.png`) });
-  
-   // Select plan
-   const selectResult = await subscriptionPage.choosePlanAndClickSelect(planName);
-   if (!selectResult.success) {
-     throw new Error(`Failed to select ${planName} plan`);
-   }
-  
-   await page.screenshot({ path: path.join(screenshotsDir, `${planName.toLowerCase()}-plan-selected.png`) });
-  
-   // Handle payment
-   let paymentSuccess = false;
-   if (selectResult.navigationType === 'newPage' && selectResult.newPage) {
-     const stripePage = selectResult.newPage;
-     await stripePage.waitForLoadState('domcontentloaded');
-     await stripePage.screenshot({ path: path.join(screenshotsDir, `${planName.toLowerCase()}-stripe-checkout.png`) });
+    // Initialize page objects
+    const registerPage = new RegisterPage(page);
+    const eventCreationPage = new EventCreationPage(page);
     
-     const stripePayment = new PaymentPage(stripePage);
-     await stripePayment.verifyOnStripeCheckoutPage();
-     await stripePayment.waitForStripeCheckoutReady();
-     paymentSuccess = await stripePayment.completePaymentFlow(stripePayment.getDefaultPaymentDetails());
-     await stripePage.close();
-   } else {
-     await page.waitForTimeout(2000);
-     const stripePayment = new PaymentPage(page);
-     await page.waitForSelector('input[id="cardNumber"], input[placeholder*="card"], .payment-form', { timeout: 10000 });
-     paymentSuccess = await stripePayment.completePaymentFlow(stripePayment.getDefaultPaymentDetails());
-   }
-  
-   if (!paymentSuccess) {
-     throw new Error('Payment failed');
-   }
-  
-   await page.waitForTimeout(5000);
-   console.log(`✅ Successfully subscribed to ${planName} plan`);
-   return true;
-  
- } catch (error) {
-   console.error(`❌ Subscription failed: ${error.message}`);
-   await page.screenshot({ path: path.join(screenshotsDir, `${planName.toLowerCase()}-subscription-error.png`) });
-   return false;
- }
+    // Setup Mailosaur for email verification
+    const mailosaurClient = new Mailosaur(process.env.MAILOSAUR_API_KEY);
+    const serverId = process.env.MAILOSAUR_SERVER_ID;
+    const timestamp = Date.now();
+    const testEmail = `auto_settings_${tierName.toLowerCase().replace(/\+/g, 'plus')}_${timestamp}@${serverId}.mailosaur.net`;
+    
+    const testData = {
+      email: testEmail,
+      name: `Auto Settings ${tierName} Tester`,
+      password: 't123',
+      eventName: `Settings Test ${tierName} ${timestamp}`,
+      timestamp: timestamp,
+      tier: tierName
+    };
+
+    console.log(`📧 Using test email: ${testEmail}`);
+
+    // Step 1: Navigate to application
+    console.log('📍 Step 1: Navigating to application...');
+    await page.goto('https://dev.livesharenow.com/');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-01-app-loaded.png`) });
+
+    // Step 2: Complete registration flow
+    console.log('📍 Step 2: Starting registration process...');
+    await registerPage.clickCreateAccount();
+    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-02-create-account-clicked.png`) });
+
+    // Choose email signup
+    console.log('📍 Step 3: Choosing email signup...');
+    const emailSignupSuccess = await registerPage.clickEmailSignup();
+    if (!emailSignupSuccess) {
+      throw new Error('Failed to click email signup');
+    }
+    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-03-email-signup-selected.png`) });
+
+    // Handle terms and conditions
+    console.log('📍 Step 4: Handling terms and conditions...');
+    await registerPage.handleTermsAndConditions();
+    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-04-terms-accepted.png`) });
+
+    // Fill registration form
+    console.log('📍 Step 5: Filling registration form...');
+    await registerPage.fillRegistrationForm(testData.name, testData.email, testData.password);
+    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-05-registration-form-filled.png`) });
+
+    // Create account
+    console.log('📍 Step 6: Creating account...');
+    const createAccountButton = page.locator('button:has-text("Create Account")').first();
+    await expect(createAccountButton).toBeVisible();
+    await createAccountButton.click();
+    await page.waitForTimeout(2000);
+    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-06-account-creation-submitted.png`) });
+
+    // Handle OTP verification
+    console.log('📍 Step 7: Handling OTP verification...');
+    console.log('⏳ Waiting for verification email...');
+    const signUpEmail = await mailosaurClient.messages.get(serverId, {
+      sentTo: testEmail
+    });
+    const verifyEmail = signUpEmail.html.codes[0].value;
+    console.log(`📧 Received OTP code: ${verifyEmail}`);
+    
+    // Wait for OTP input fields and fill them
+    const otpInputs = page.locator('.otp-box');
+    await otpInputs.first().waitFor({ state: 'visible', timeout: 10000 });
+    
+    const otpCode = verifyEmail.toString();
+    for (let i = 0; i < otpCode.length && i < 6; i++) {
+      const input = otpInputs.nth(i);
+      await input.waitFor({ state: 'visible', timeout: 5000 });
+      await input.fill(otpCode[i]);
+      await page.waitForTimeout(200);
+    }
+    
+    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-07-otp-filled.png`) });
+
+    // Complete registration
+    const continueToEventButton = page.locator('button:has-text("Continue to the Event")').first();
+    await expect(continueToEventButton).toBeVisible();
+    await continueToEventButton.click();
+    await page.waitForTimeout(3000);
+    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-08-registration-completed.png`) });
+
+    // Step 8: Event is automatically created during registration
+    console.log('📍 Step 8: Event automatically created...');
+    await page.waitForTimeout(2000);
+    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-09-event-created.png`) });
+
+    console.log(`✅ Fresh account and event setup completed successfully for: ${tierName} Tier`);
+    return { success: true, testData };
+    
+  } catch (error) {
+    console.error(`❌ Setup failed for ${tierName} Tier:`, error.message);
+    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-error-setup.png`) });
+    return { success: false, testData: null };
+  }
 }
 
+
+/**
+* Subscribe to a plan and handle payment (after account and event are created)
+* @param {import('@playwright/test').Page} page - Playwright page instance
+* @param {import('@playwright/test').BrowserContext} context - Browser context
+* @param {string} planName - Plan name (Standard Event, Premium Event, Premium+ Event)
+* @param {string} tierName - Tier name for screenshot naming
+* @returns {Promise<boolean>} Success status
+*/
+async function subscribeAndPayForPlan(page, planName, tierName) {
+  console.log(`💳 Subscribing to ${planName} for ${tierName} Tier...`);
+  
+  try {
+    const subscriptionPage = new SubscriptionPage(page);
+    const paymentPage = new PaymentPage(page);
+    
+
+    // Navigate to subscription
+    console.log('📍 Step 1: Navigating to subscription...');
+    const subscriptionNavigationSuccess = await subscriptionPage.navigateToSubscription();
+    if (!subscriptionNavigationSuccess) {
+      throw new Error('Failed to navigate to subscription');
+    }
+    
+    await page.waitForTimeout(2000);
+    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-10-subscription-page.png`) });
+    
+    // Select plan
+    console.log(`📍 Step 2: Selecting ${planName}...`);
+    const selectResult = await subscriptionPage.choosePlanAndClickSelect(planName);
+    if (!selectResult.success) {
+      throw new Error(`Failed to select ${planName}`);
+    }
+    
+    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-11-plan-selected.png`) });
+    
+    // Handle payment based on navigation type
+    console.log(`📍 Step 3: Handling payment flow (${selectResult.navigationType})...`);
+    
+    let paymentSuccess = false;
+    
+    if (selectResult.navigationType === 'newPage' && selectResult.newPage) {
+      // New page/window opened
+      console.log('✅ Processing payment in new window...');
+      const stripePage = selectResult.newPage;
+      await stripePage.waitForLoadState('domcontentloaded');
+      await stripePage.waitForTimeout(2000);
+      await stripePage.screenshot({ path: path.join(screenshotsDir, `${tierName}-12-stripe-checkout.png`) });
+      
+      const stripePayment = new PaymentPage(stripePage);
+      await stripePayment.verifyOnStripeCheckoutPage();
+      await stripePayment.waitForStripeCheckoutReady();
+      
+      const paymentDetails = stripePayment.getDefaultPaymentDetails();
+      paymentSuccess = await stripePayment.completePaymentFlow(paymentDetails);
+      await stripePage.screenshot({ path: path.join(screenshotsDir, `${tierName}-13-payment-completed.png`) });
+      
+      await stripePage.close();
+      console.log('✅ Payment completed in new window and closed');
+      
+    } else if (selectResult.navigationType === 'redirect') {
+      // Page redirected to payment
+      console.log('✅ Processing payment after redirect...');
+      await page.waitForLoadState('domcontentloaded');
+      await page.waitForTimeout(2000);
+      await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-12-payment-redirect.png`) });
+      
+      const stripePayment = new PaymentPage(page);
+      await stripePayment.verifyOnStripeCheckoutPage();
+      await stripePayment.waitForStripeCheckoutReady();
+      
+      const paymentDetails = stripePayment.getDefaultPaymentDetails();
+      paymentSuccess = await stripePayment.completePaymentFlow(paymentDetails);
+      await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-13-payment-completed.png`) });
+      
+      console.log('✅ Payment completed after redirect');
+      
+    } else {
+      // Same page payment (modal/dialog)
+      console.log('✅ Processing payment on same page...');
+      await page.waitForTimeout(2000);
+      await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-12-same-page-payment.png`) });
+      
+      const stripePayment = new PaymentPage(page);
+      
+      // Wait for payment form to appear
+      await page.waitForSelector('input[id="cardNumber"], input[placeholder*="card"], .payment-form', { timeout: 10000 });
+      
+      const paymentDetails = stripePayment.getDefaultPaymentDetails();
+      paymentSuccess = await stripePayment.completePaymentFlow(paymentDetails);
+      await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-13-payment-completed.png`) });
+      
+      console.log('✅ Payment completed on same page');
+    }
+    
+    if (!paymentSuccess) {
+      throw new Error('Payment failed');
+    }
+    
+    // Step 4: Verify subscription success
+    console.log('📍 Step 4: Verifying subscription success...');
+    await page.waitForTimeout(5000);
+    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-14-subscription-confirmed.png`) });
+    
+    console.log(`✅ Successfully subscribed to ${planName} for ${tierName} Tier`);
+    return true;
+    
+  } catch (error) {
+    console.error(`❌ Subscription failed for ${tierName} Tier:`, error.message);
+    try {
+      await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-subscription-error.png`) });
+    } catch (screenshotError) {
+      console.log('⚠️ Could not take error screenshot (page may be closed)');
+    }
+    return false;
+  }
+}
+
+
+/**
+* Login helper function for reuse in tests
+* @param {import('@playwright/test').Page} page - Playwright page instance  
+* @param {Object} testData - Test data containing email and password
+*/
+async function loginAndNavigate(page, testData) {
+  const loginPage = new LoginPage(page);
+  await page.goto('https://dev.livesharenow.com/');
+  await loginPage.completeEmailLogin(testData.email, testData.password);
+  await page.waitForTimeout(2000);
+}
+
+/**
+* Create a new event for the test
+* @param {import('@playwright/test').Page} page - Playwright page instance
+* @returns {Promise<boolean>} Success status
+*/
+async function createNewEventForTest(page) {
+  console.log('📍 Creating new event for test...');
+  try {
+    const eventCreationPage = new EventCreationPage(page);
+    await page.goto('https://dev.livesharenow.com/events');
+    await page.waitForTimeout(2000);
+    
+    const eventCreationStarted = await eventCreationPage.startEventCreation();
+    if (!eventCreationStarted) {
+      throw new Error('Failed to start event creation');
+    }
+    
+    await page.waitForTimeout(4000);
+    console.log('✅ Event created successfully');
+    return true;
+  } catch (error) {
+    console.error(`❌ Event creation failed: ${error.message}`);
+    return false;
+  }
+}
+
+/**
+* Get authentication token from page after login
+* @param {import('@playwright/test').Page} page - Playwright page instance
+* @returns {Promise<string|null>} Access token
+*/
+async function getAuthToken(page) {
+  try {
+    const token = await page.evaluate(() => {
+      return window.localStorage.getItem('ACCESSTOKEN') || null;
+    });
+    if (token) {
+      console.log('✅ Retrieved ACCESSTOKEN from localStorage');
+    }
+    return token;
+  } catch (error) {
+    console.error('❌ Failed to get token:', error.message);
+    return null;
+  }
+}
+
+/**
+* Inject authentication token into page localStorage
+* @param {import('@playwright/test').Page} page - Playwright page instance
+* @param {string} token - Access token to inject
+*/
+async function injectAuthToken(page, token) {
+  try {
+    await page.goto('https://dev.livesharenow.com/');
+    await page.waitForLoadState('domcontentloaded');
+    
+    await page.evaluate((tokenValue) => {
+      window.localStorage.setItem('ACCESSTOKEN', tokenValue);
+    }, token);
+    
+    console.log('✅ Token injected into localStorage');
+    await page.waitForTimeout(1000);
+  } catch (error) {
+    console.error('❌ Failed to inject token:', error.message);
+    throw error;
+  }
+}
+
+/**
+* Quick setup for test using saved token: Inject token, Create Event, Open Settings
+* @param {import('@playwright/test').Page} page - Playwright page instance
+* @param {Object} testData - Test data containing token
+* @returns {Promise<boolean>} Success status
+*/
+async function setupTestWithToken(page, testData) {
+  try {
+    // Step 1: Inject token (no need to login - FASTER!)
+    await injectAuthToken(page, testData.token);
+    
+    // Step 2: Create new event for this test
+    const eventCreated = await createNewEventForTest(page);
+    if (!eventCreated) {
+      throw new Error('Failed to create event');
+    }
+    
+    // Step 3: Open event settings
+    const settingsOpened = await openEventSettings(page);
+    if (!settingsOpened) {
+      throw new Error('Failed to open settings');
+    }
+    
+    console.log('✅ Test setup completed with token');
+    return true;
+  } catch (error) {
+    console.error(`❌ Test setup with token failed: ${error.message}`);
+    return false;
+  }
+}
 
 /**
 * Navigate to event and open settings
@@ -620,34 +712,50 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
   * ============================================================================
   */
  test.describe('Free Tier Settings Tests', () => {
+   let testData = null;
+   
    test.beforeAll(async ({ browser }) => {
-     // Create account once for all tests
-     if (!sharedTestData.accountCreated) {
-       const context = await browser.newContext();
-       const page = await context.newPage();
-      
-       const setupResult = await setupFreshAccount(page, context);
-       if (setupResult.success) {
-         sharedTestData.email = setupResult.testData.email;
-         sharedTestData.name = setupResult.testData.name;
-         sharedTestData.password = setupResult.testData.password;
-         sharedTestData.timestamp = setupResult.testData.timestamp;
-         sharedTestData.accountCreated = true;
-         sharedTestData.freeEventCreated = true; // First event is created during registration
-       }
-      
+     test.setTimeout(120000); // 2 minutes for account creation
+     
+     // Create fresh account and event for Free tier tests
+     const context = await browser.newContext();
+     const page = await context.newPage();
+     
+     const setupResult = await setupFreshAccountAndEvent(page, context, 'Free');
+     if (!setupResult.success) {
+       console.error('❌ Free Tier setup failed');
        await context.close();
+       return;
      }
+     
+     testData = setupResult.testData;
+     console.log(`✅ Free Tier account created with email: ${testData.email}`);
+     
+     // Get token immediately after registration (user is already logged in)
+     await page.waitForTimeout(3000); // Wait for page to stabilize after registration
+     const token = await getAuthToken(page);
+     if (token) {
+       testData.token = token;
+       console.log(`✅ Free Tier token saved for reuse across test cases`);
+     } else {
+       console.error('❌ Failed to get token for Free Tier');
+     }
+     
+     await context.close();
    });
   
-   test('TC-APP-CUST-001: Verify "Event Name" toggle and edit', async ({ page }) => {
-     console.log('🚀 Starting TC-APP-CUST-001: Event Name toggle and edit');
+  test('TC-APP-CUST-001: Verify "Event Name" toggle and edit', async ({ page }) => {
+    console.log('🚀 Starting TC-APP-CUST-001: Event Name toggle and edit');
     
-     // Login and navigate to settings
-     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-     await openEventSettings(page);
-    
-     const eventSettingsPage = new EventSettingsPage(page);
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
+   
+    // Setup: Inject Token, Create New Event, Open Settings
+    await setupTestWithToken(page, testData);
+   
+    const eventSettingsPage = new EventSettingsPage(page);
     
      // Step 1: Verify Event Name option is visible
      await eventSettingsPage.expectOptionVisible('Event Name');
@@ -670,11 +778,15 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
      await page.screenshot({ path: path.join(screenshotsDir, 'tc-001-event-name-completed.png') });
    });
   
-   test('TC-APP-CUST-002: Verify "Event Date" picker', async ({ page }) => {
-     console.log('🚀 Starting TC-APP-CUST-002: Event Date picker');
+  test('TC-APP-CUST-002: Verify "Event Date" picker', async ({ page }) => {
+    console.log('🚀 Starting TC-APP-CUST-002: Event Date picker');
     
-     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-     await openEventSettings(page);
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
+   
+await setupTestWithToken(page, testData);
     
      const eventSettingsPage = new EventSettingsPage(page);
     
@@ -699,13 +811,17 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
      await page.screenshot({ path: path.join(screenshotsDir, 'tc-002-event-date-completed.png') });
    });
   
-   test('TC-APP-CUST-003: Verify "Location" field', async ({ page }) => {
-     console.log('🚀 Starting TC-APP-CUST-003: Location field');
+  test('TC-APP-CUST-003: Verify "Location" field', async ({ page }) => {
+    console.log('🚀 Starting TC-APP-CUST-003: Location field');
     
-     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-     await openEventSettings(page);
-    
-     const eventSettingsPage = new EventSettingsPage(page);
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
+   
+await setupTestWithToken(page, testData);
+   
+    const eventSettingsPage = new EventSettingsPage(page);
     
      // Step 1: Verify Location option is visible
      await eventSettingsPage.expectOptionVisible('Location');
@@ -728,13 +844,17 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
      await page.screenshot({ path: path.join(screenshotsDir, 'tc-003-location-completed.png') });
    });
   
-   test('TC-APP-CUST-004: Verify "Contact" field', async ({ page }) => {
-     console.log('🚀 Starting TC-APP-CUST-004: Contact field');
+  test('TC-APP-CUST-004: Verify "Contact" field', async ({ page }) => {
+    console.log('🚀 Starting TC-APP-CUST-004: Contact field');
     
-     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-     await openEventSettings(page);
-    
-     const eventSettingsPage = new EventSettingsPage(page);
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
+   
+await setupTestWithToken(page, testData);
+   
+    const eventSettingsPage = new EventSettingsPage(page);
     
      // Step 1: Verify Contact option is visible
      await eventSettingsPage.expectOptionVisible('Contact');
@@ -760,13 +880,17 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
      await page.screenshot({ path: path.join(screenshotsDir, 'tc-004-contact-completed.png') });
    });
   
-  test('TC-APP-CUST-005: Verify "Itinerary" field', async ({ page }) => {
-    console.log('🚀 Starting TC-APP-CUST-005: Itinerary field');
+ test('TC-APP-CUST-005: Verify "Itinerary" field', async ({ page }) => {
+   console.log('🚀 Starting TC-APP-CUST-005: Itinerary field');
+    
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
    
-    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-    await openEventSettings(page);
-   
-    const eventSettingsPage = new EventSettingsPage(page);
+await setupTestWithToken(page, testData);
+  
+   const eventSettingsPage = new EventSettingsPage(page);
    
     // Step 1: Verify Itinerary option is visible
     await eventSettingsPage.expectOptionVisible('Itinerary');
@@ -794,13 +918,17 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
     await page.screenshot({ path: path.join(screenshotsDir, 'tc-005-itinerary-completed.png') });
   });
   
-   test('TC-APP-CUST-006: Verify "Enable Message Post" toggle', async ({ page }) => {
-     console.log('🚀 Starting TC-APP-CUST-006: Enable Message Post toggle');
+  test('TC-APP-CUST-006: Verify "Enable Message Post" toggle', async ({ page }) => {
+    console.log('🚀 Starting TC-APP-CUST-006: Enable Message Post toggle');
     
-     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-     await openEventSettings(page);
-    
-     const eventSettingsPage = new EventSettingsPage(page);
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
+   
+await setupTestWithToken(page, testData);
+   
+    const eventSettingsPage = new EventSettingsPage(page);
     
      // Step 1: Verify Enable Message Post option is visible
      await eventSettingsPage.expectOptionVisible('Enable Message Post');
@@ -818,13 +946,17 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
      await page.screenshot({ path: path.join(screenshotsDir, 'tc-006-message-post-completed.png') });
    });
   
-   test('TC-APP-CUST-007: Verify "Video" option', async ({ page }) => {
-     console.log('🚀 Starting TC-APP-CUST-007: Video option');
+  test('TC-APP-CUST-007: Verify "Video" option', async ({ page }) => {
+    console.log('🚀 Starting TC-APP-CUST-007: Video option');
     
-     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-     await openEventSettings(page);
-    
-     const eventSettingsPage = new EventSettingsPage(page);
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
+   
+await setupTestWithToken(page, testData);
+   
+    const eventSettingsPage = new EventSettingsPage(page);
     
      // Step 1: Verify Video option is visible
      await eventSettingsPage.expectOptionVisible('Video');
@@ -847,43 +979,74 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
   * ============================================================================
   */
  test.describe('Standard Tier Settings Tests', () => {
+   let testData = null;
+   
    test.beforeAll(async ({ browser }) => {
-     // Subscribe to Standard Plan once for all Standard tests
-     if (!sharedTestData.standardEventCreated) {
-       const context = await browser.newContext();
-       const page = await context.newPage();
-      
-       // Login
-       await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-      
-       // Create new event for Standard plan
-       await createNewEvent(page, `Standard Event ${Date.now()}`);
-      
-       // Subscribe to Standard Plan
-       const subscribed = await subscribeAndPayForPlan(page, context, 'Standard Event');
-       if (subscribed) {
-         sharedTestData.standardEventCreated = true;
-       }
-      
+     test.setTimeout(180000); // 3 minutes for account creation + subscription + payment
+     
+     // Create fresh account and event for Standard tier tests
+     const context = await browser.newContext();
+     const page = await context.newPage();
+     
+     // Step 1: Setup fresh account and event
+     const setupResult = await setupFreshAccountAndEvent(page, context, 'Standard');
+     if (!setupResult.success) {
+       console.error('❌ Standard Tier setup failed');
        await context.close();
+       return;
      }
+     
+     testData = setupResult.testData;
+     console.log(`✅ Standard Tier account created with email: ${testData.email}`);
+     
+     console.log('✅ Standard Tier subscription completed successfully');
+     
+     // Step 3: Get token (user should be logged in after payment flow)
+     await page.goto('https://dev.livesharenow.com/events');
+     await page.waitForTimeout(3000); // Wait for page to stabilize
+     
+     const token = await getAuthToken(page);
+     if (token) {
+       testData.token = token;
+       console.log(`✅ Standard Tier token saved for reuse across test cases`);
+     } else {
+       console.error('❌ Failed to get token for Standard Tier');
+     }
+     
+     await context.close();
    });
   
-   test('TC-APP-CUST-008: Verify "Button Link #1" setup', async ({ page }) => {
-     console.log('🚀 Starting TC-APP-CUST-008: Button Link #1 setup');
+  test('TC-APP-CUST-008: Verify "Button Link #1" setup', async ({ page }) => {
+    console.log('🚀 Starting TC-APP-CUST-008: Button Link #1 setup');
     
-     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-     await openEventSettings(page);
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
+   
+    await setupTestWithToken(page, testData);
+    // Step 1: Navigate to events page and select the event
+    await page.goto('https://dev.livesharenow.com/events');
+    await page.locator('mat-tab-body[role="tabpanel"] .event-card-event ').first().click();
     
-     const eventSettingsPage = new EventSettingsPage(page);
-    
-     // Step 1: Verify Button Link #1 option is visible
-     await eventSettingsPage.expectOptionVisible('Button Link #1');
-     console.log('✅ Button Link #1 option is visible');
-    
-     // Step 2: Verify no "Preview for Free" text (unlocked with Standard)
-     const noPreview = await verifyNoPreviewForFree(page, 'Button Link #1');
-     expect(noPreview).toBeTruthy();
+    // Step 2: Subscribe to Standard Plan and handle payment
+    const subscribed = await subscribeAndPayForPlan(page, 'Standard Event', 'Standard');
+    if (!subscribed) {
+      console.error('❌ Standard Tier subscription failed');
+      await context.close();
+      return;
+    }
+    const eventSettingsPage = new EventSettingsPage(page);
+    const settingsOpened = await openEventSettings(page);
+
+   
+    // Step 1: Verify Button Link #1 option is visible
+    await eventSettingsPage.expectOptionVisible('Button Link #1');
+    console.log('✅ Button Link #1 option is visible');
+   
+    // Step 2: Verify no "Preview for Free" text (unlocked with Standard)
+    const noPreview = await verifyNoPreviewForFree(page, 'Button Link #1');
+    expect(noPreview).toBeTruthy();
     
      // Step 3: Configure Button Link #1
      const linkData = {
@@ -901,14 +1064,28 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
      await page.screenshot({ path: path.join(screenshotsDir, 'tc-008-button-link-1-completed.png') });
    });
   
-   test('TC-APP-CUST-009: Verify "Button Link #2" setup', async ({ page }) => {
-     console.log('🚀 Starting TC-APP-CUST-009: Button Link #2 setup');
+  test('TC-APP-CUST-009: Verify "Button Link #2" setup', async ({ page }) => {
+    console.log('🚀 Starting TC-APP-CUST-009: Button Link #2 setup');
     
-     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-     await openEventSettings(page);
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
+   
+    await setupTestWithToken(page, testData);
+    await page.goto('https://dev.livesharenow.com/events');
+    await page.locator('mat-tab-body[role="tabpanel"] .event-card-event ').first().click();
     
-     const eventSettingsPage = new EventSettingsPage(page);
-    
+    // Step 2: Subscribe to Standard Plan and handle payment
+    const subscribed = await subscribeAndPayForPlan(page, 'Standard Event', 'Standard');
+    if (!subscribed) {
+      console.error('❌ Standard Tier subscription failed');
+      await context.close();
+      return;
+    }
+    const eventSettingsPage = new EventSettingsPage(page);
+    const settingsOpened = await openEventSettings(page);
+
      // Step 1: Verify Button Link #2 option is visible
      await eventSettingsPage.expectOptionVisible('Button Link #2');
      console.log('✅ Button Link #2 option is visible');
@@ -936,10 +1113,24 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
    test('TC-APP-CUST-010: Verify "Welcome Popup" setup', async ({ page }) => {
      console.log('🚀 Starting TC-APP-CUST-010: Welcome Popup setup');
     
-     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-     await openEventSettings(page);
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
     
-     const eventSettingsPage = new EventSettingsPage(page);
+     await setupTestWithToken(page, testData);
+    await page.goto('https://dev.livesharenow.com/events');
+    await page.locator('mat-tab-body[role="tabpanel"] .event-card-event ').first().click();
+    
+    // Step 2: Subscribe to Standard Plan and handle payment
+    const subscribed = await subscribeAndPayForPlan(page, 'Standard Event', 'Standard');
+    if (!subscribed) {
+      console.error('❌ Standard Tier subscription failed');
+      await context.close();
+      return;
+    }
+    const eventSettingsPage = new EventSettingsPage(page);
+    const settingsOpened = await openEventSettings(page);
     
      // Step 1: Verify Welcome Popup option is visible
      await eventSettingsPage.expectOptionVisible('Welcome Popup');
@@ -958,11 +1149,25 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
   
   test('TC-APP-CUST-011: Verify "Enable Photo Gifts" toggle functionality', async ({ page }) => {
     console.log('🚀 Starting TC-APP-CUST-011: Enable Photo Gifts toggle functionality');
+    
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
    
-    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-    await openEventSettings(page);
-   
+    await setupTestWithToken(page, testData);
+    await page.goto('https://dev.livesharenow.com/events');
+    await page.locator('mat-tab-body[role="tabpanel"] .event-card-event ').first().click();
+    
+    // Step 2: Subscribe to Standard Plan and handle payment
+    const subscribed = await subscribeAndPayForPlan(page, 'Standard Event', 'Standard');
+    if (!subscribed) {
+      console.error('❌ Standard Tier subscription failed');
+      await context.close();
+      return;
+    }
     const eventSettingsPage = new EventSettingsPage(page);
+    const settingsOpened = await openEventSettings(page);
    
     // Step 1: Verify Enable Photo Gifts option is visible
     await eventSettingsPage.expectOptionVisible('Enable Photo Gifts');
@@ -1000,10 +1205,24 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
    test('TC-APP-CUST-012: Verify "Event Header Photo" upload', async ({ page }) => {
      console.log('🚀 Starting TC-APP-CUST-012: Event Header Photo upload');
     
-     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-     await openEventSettings(page);
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
     
+     await setupTestWithToken(page, testData);
+     await page.goto('https://dev.livesharenow.com/events');
+     await page.locator('mat-tab-body[role="tabpanel"] .event-card-event ').first().click();
+     
+     // Step 2: Subscribe to Standard Plan and handle payment
+     const subscribed = await subscribeAndPayForPlan(page, 'Standard Event', 'Standard');
+     if (!subscribed) {
+       console.error('❌ Standard Tier subscription failed');
+       await context.close();
+       return;
+     }
      const eventSettingsPage = new EventSettingsPage(page);
+     const settingsOpened = await openEventSettings(page);
     
      // Step 1: Verify Event Header Photo option is visible
      await eventSettingsPage.expectOptionVisible('Event Header Photo');
@@ -1022,11 +1241,25 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
   
   test('TC-APP-CUST-013: Verify "Popularity Badges" toggle functionality', async ({ page }) => {
     console.log('🚀 Starting TC-APP-CUST-013: Popularity Badges toggle functionality');
+    
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
    
-    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-    await openEventSettings(page);
-   
+    await setupTestWithToken(page, testData);
+    await page.goto('https://dev.livesharenow.com/events');
+    await page.locator('mat-tab-body[role="tabpanel"] .event-card-event ').first().click();
+    
+    // Step 2: Subscribe to Standard Plan and handle payment
+    const subscribed = await subscribeAndPayForPlan(page, 'Standard Event', 'Standard');
+    if (!subscribed) {
+      console.error('❌ Standard Tier subscription failed');
+      await context.close();
+      return;
+    }
     const eventSettingsPage = new EventSettingsPage(page);
+    const settingsOpened = await openEventSettings(page);
    
     // Step 1: Verify Popularity Badges option is visible
     await eventSettingsPage.expectOptionVisible('Popularity Badges');
@@ -1063,11 +1296,25 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
   
   test('TC-APP-CUST-014: Verify "Force Login" toggle functionality', async ({ page }) => {
     console.log('🚀 Starting TC-APP-CUST-014: Force Login toggle functionality');
+    
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
    
-    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-    await openEventSettings(page);
-   
+    await setupTestWithToken(page, testData);
+    await page.goto('https://dev.livesharenow.com/events');
+    await page.locator('mat-tab-body[role="tabpanel"] .event-card-event ').first().click();
+    
+    // Step 2: Subscribe to Standard Plan and handle payment
+    const subscribed = await subscribeAndPayForPlan(page, 'Standard Event', 'Standard');
+    if (!subscribed) {
+      console.error('❌ Standard Tier subscription failed');
+      await context.close();
+      return;
+    }
     const eventSettingsPage = new EventSettingsPage(page);
+    const settingsOpened = await openEventSettings(page);
    
     // Step 1: Verify Force Login option is visible
     await eventSettingsPage.expectOptionVisible('Force Login');
@@ -1109,35 +1356,64 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
   * ============================================================================
   */
  test.describe('Premium Tier Settings Tests', () => {
+   let testData = null;
+   
    test.beforeAll(async ({ browser }) => {
-     // Subscribe to Premium Plan once for all Premium tests
-     if (!sharedTestData.premiumEventCreated) {
-       const context = await browser.newContext();
-       const page = await context.newPage();
-      
-       // Login
-       await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-      
-       // Create new event for Premium plan
-       await createNewEvent(page, `Premium Event ${Date.now()}`);
-      
-       // Subscribe to Premium Plan
-       const subscribed = await subscribeAndPayForPlan(page, context, 'Premium Event');
-       if (subscribed) {
-         sharedTestData.premiumEventCreated = true;
-       }
-      
+     test.setTimeout(180000); // 3 minutes for account creation + subscription + payment
+     
+     // Create fresh account and event for Premium tier tests
+     const context = await browser.newContext();
+     const page = await context.newPage();
+     
+     // Step 1: Setup fresh account and event
+     const setupResult = await setupFreshAccountAndEvent(page, context, 'Premium');
+     if (!setupResult.success) {
+       console.error('❌ Premium Tier setup failed');
        await context.close();
+       return;
      }
+     
+     testData = setupResult.testData;
+     console.log(`✅ Premium Tier account created with email: ${testData.email}`);
+     
+     console.log('✅ Premium Tier subscription completed successfully');
+     
+     // Step 3: Get token (user should be logged in after payment flow)
+     await page.goto('https://dev.livesharenow.com/events');
+     await page.waitForTimeout(3000); // Wait for page to stabilize
+     
+     const token = await getAuthToken(page);
+     if (token) {
+       testData.token = token;
+       console.log(`✅ Premium Tier token saved for reuse across test cases`);
+     } else {
+       console.error('❌ Failed to get token for Premium Tier');
+     }
+     
+     await context.close();
    });
   
   test('TC-APP-CUST-016: Verify "Allow sharing via Facebook" toggle functionality', async ({ page }) => {
     console.log('🚀 Starting TC-APP-CUST-016: Allow sharing via Facebook toggle functionality');
+    
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
    
-    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-    await openEventSettings(page);
-   
+    await setupTestWithToken(page, testData);
+    await page.goto('https://dev.livesharenow.com/events');
+    await page.locator('mat-tab-body[role="tabpanel"] .event-card-event ').first().click();
+    
+    // Step 2: Subscribe to Standard Plan and handle payment
+    const subscribed = await subscribeAndPayForPlan(page, 'Premium Event', 'Premium');
+    if (!subscribed) {
+      console.error('❌ Premium+ Tier subscription failed');
+      await context.close();
+      return;
+    }
     const eventSettingsPage = new EventSettingsPage(page);
+    const settingsOpened = await openEventSettings(page);
    
     // Step 1: Verify Facebook sharing option is visible
     await eventSettingsPage.expectOptionVisible('Allow sharing via Facebook');
@@ -1174,11 +1450,25 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
   
   test('TC-APP-CUST-017: Verify "Allow Guest Download" toggle functionality', async ({ page }) => {
     console.log('🚀 Starting TC-APP-CUST-017: Allow Guest Download toggle functionality');
+    
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
    
-    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-    await openEventSettings(page);
-   
+    await setupTestWithToken(page, testData);
+    await page.goto('https://dev.livesharenow.com/events');
+    await page.locator('mat-tab-body[role="tabpanel"] .event-card-event ').first().click();
+    
+    // Step 2: Subscribe to Standard Plan and handle payment
+    const subscribed = await subscribeAndPayForPlan(page, 'Premium Event', 'Premium');
+    if (!subscribed) {
+      console.error('❌ Premium+ Tier subscription failed');
+      await context.close();
+      return;
+    }
     const eventSettingsPage = new EventSettingsPage(page);
+    const settingsOpened = await openEventSettings(page);
    
     // Step 1: Verify Guest Download option is visible
     await eventSettingsPage.expectOptionVisible('Allow Guest Download');
@@ -1216,10 +1506,24 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
    test('TC-APP-CUST-018: Verify "Add Event Managers" functional', async ({ page }) => {
      console.log('🚀 Starting TC-APP-CUST-018: Add Event Managers functional');
     
-     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-     await openEventSettings(page);
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
     
+     await setupTestWithToken(page, testData);
+     await page.goto('https://dev.livesharenow.com/events');
+     await page.locator('mat-tab-body[role="tabpanel"] .event-card-event ').first().click();
+     
+     // Step 2: Subscribe to Standard Plan and handle payment
+     const subscribed = await subscribeAndPayForPlan(page, 'Premium Event', 'Premium');
+    if (!subscribed) {
+      console.error('❌ Premium+ Tier subscription failed');
+      await context.close();
+      return;
+    }
      const eventSettingsPage = new EventSettingsPage(page);
+     const settingsOpened = await openEventSettings(page);
     
      // Step 1: Verify Add Event Managers option is visible
      await eventSettingsPage.expectOptionVisible('Add Event Managers');
@@ -1238,11 +1542,25 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
   
   test('TC-APP-CUST-019: Verify "Allow posting without login" toggle functionality', async ({ page }) => {
     console.log('🚀 Starting TC-APP-CUST-019: Allow posting without login toggle functionality');
+    
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
    
-    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-    await openEventSettings(page);
-   
+    await setupTestWithToken(page, testData);
+    await page.goto('https://dev.livesharenow.com/events');
+    await page.locator('mat-tab-body[role="tabpanel"] .event-card-event ').first().click();
+    
+    // Step 2: Subscribe to Standard Plan and handle payment
+    const subscribed = await subscribeAndPayForPlan(page, 'Premium Event', 'Premium');
+    if (!subscribed) {
+      console.error('❌ Premium+ Tier subscription failed');
+      await context.close();
+      return;
+    }
     const eventSettingsPage = new EventSettingsPage(page);
+    const settingsOpened = await openEventSettings(page);
    
     // Step 1: Verify posting without login option is visible
     await eventSettingsPage.expectOptionVisible('Allow posting without login');
@@ -1280,10 +1598,24 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
    test('TC-APP-CUST-020: Verify "Require Access Passcode"', async ({ page }) => {
      console.log('🚀 Starting TC-APP-CUST-020: Require Access Passcode');
     
-     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-     await openEventSettings(page);
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
     
+     await setupTestWithToken(page, testData);
+     await page.goto('https://dev.livesharenow.com/events');
+     await page.locator('mat-tab-body[role="tabpanel"] .event-card-event ').first().click();
+     
+     // Step 2: Subscribe to Standard Plan and handle payment
+     const subscribed = await subscribeAndPayForPlan(page, 'Premium Event', 'Premium');
+    if (!subscribed) {
+      console.error('❌ Premium+ Tier subscription failed');
+      await context.close();
+      return;
+    }
      const eventSettingsPage = new EventSettingsPage(page);
+     const settingsOpened = await openEventSettings(page);
     
      // Step 1: Verify Access Passcode option is visible
      await eventSettingsPage.expectOptionVisible('Require Access Passcode');
@@ -1309,9 +1641,24 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
    test('TC-APP-CUST-021: Verify Standard features remain unlocked', async ({ page }) => {
      console.log('🚀 Starting TC-APP-CUST-021: Standard features remain unlocked');
     
-     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-     await openEventSettings(page);
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
     
+     await setupTestWithToken(page, testData);
+     await page.goto('https://dev.livesharenow.com/events');
+     await page.locator('mat-tab-body[role="tabpanel"] .event-card-event ').first().click();
+     
+     // Step 2: Subscribe to Standard Plan and handle payment
+     const subscribed = await subscribeAndPayForPlan(page, 'Premium Event', 'Premium');
+    if (!subscribed) {
+      console.error('❌ Premium+ Tier subscription failed');
+      await context.close();
+      return;
+    }
+     const eventSettingsPage = new EventSettingsPage(page);
+     const settingsOpened = await openEventSettings(page);
      // Verify Standard features do NOT show "Preview for Free" text
      const standardFeatures = FeatureTiers.STANDARD;
      let allPass = true;
@@ -1336,35 +1683,63 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
   * ============================================================================
   */
  test.describe('Premium+ Tier Settings Tests', () => {
+   let testData = null;
+   
    test.beforeAll(async ({ browser }) => {
-     // Subscribe to Premium+ Plan once for all Premium+ tests
-     if (!sharedTestData.premiumPlusEventCreated) {
-       const context = await browser.newContext();
-       const page = await context.newPage();
-      
-       // Login
-       await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-      
-       // Create new event for Premium+ plan
-       await createNewEvent(page, `Premium Plus Event ${Date.now()}`);
-      
-       // Subscribe to Premium+ Plan
-       const subscribed = await subscribeAndPayForPlan(page, context, 'Premium+ Event');
-       if (subscribed) {
-         sharedTestData.premiumPlusEventCreated = true;
-       }
-      
+     test.setTimeout(180000); // 3 minutes for account creation + subscription + payment
+     
+     // Create fresh account and event for Premium+ tier tests
+     const context = await browser.newContext();
+     const page = await context.newPage();
+     
+     // Step 1: Setup fresh account and event
+     const setupResult = await setupFreshAccountAndEvent(page, context, 'Premium+');
+     if (!setupResult.success) {
+       console.error('❌ Premium+ Tier setup failed');
        await context.close();
+       return;
      }
+     
+     testData = setupResult.testData;
+     console.log(`✅ Premium+ Tier account created with email: ${testData.email}`);
+     console.log('✅ Premium+ Tier subscription completed successfully');
+     
+     // Step 3: Get token (user should be logged in after payment flow)
+     await page.goto('https://dev.livesharenow.com/events');
+     await page.waitForTimeout(3000); // Wait for page to stabilize
+     
+     const token = await getAuthToken(page);
+     if (token) {
+       testData.token = token;
+       console.log(`✅ Premium+ Tier token saved for reuse across test cases`);
+     } else {
+       console.error('❌ Failed to get token for Premium+ Tier');
+     }
+     
+     await context.close();
    });
   
   test('TC-APP-CUST-023: Verify "LiveView Slideshow" toggle functionality', async ({ page }) => {
     console.log('🚀 Starting TC-APP-CUST-023: LiveView Slideshow toggle functionality');
+    
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
    
-    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-    await openEventSettings(page);
-   
+    await setupTestWithToken(page, testData);
+    await page.goto('https://dev.livesharenow.com/events');
+    await page.locator('mat-tab-body[role="tabpanel"] .event-card-event ').first().click();
+    
+    // Step 2: Subscribe to Standard Plan and handle payment
+    const subscribed = await subscribeAndPayForPlan(page, 'Premium+ Event', 'PremiumPlus');
+    if (!subscribed) {
+      console.error('❌ Premium+ Tier subscription failed');
+      await context.close();
+      return;
+    }
     const eventSettingsPage = new EventSettingsPage(page);
+    const settingsOpened = await openEventSettings(page);
    
     // Step 1: Verify LiveView Slideshow option is visible
     await eventSettingsPage.expectOptionVisible('LiveView Slideshow');
@@ -1401,11 +1776,25 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
   
   test('TC-APP-CUST-024: Verify "Then And Now" toggle functionality', async ({ page }) => {
     console.log('🚀 Starting TC-APP-CUST-024: Then And Now toggle functionality');
+    
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
    
-    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-    await openEventSettings(page);
-   
+    await setupTestWithToken(page, testData);
+    await page.goto('https://dev.livesharenow.com/events');
+    await page.locator('mat-tab-body[role="tabpanel"] .event-card-event ').first().click();
+    
+    // Step 2: Subscribe to Standard Plan and handle payment
+    const subscribed = await subscribeAndPayForPlan(page, 'Premium+ Event', 'PremiumPlus');
+    if (!subscribed) {
+      console.error('❌ Premium+ Tier subscription failed');
+      await context.close();
+      return;
+    }
     const eventSettingsPage = new EventSettingsPage(page);
+    const settingsOpened = await openEventSettings(page);
    
     // Step 1: Verify Then And Now option is visible
     await eventSettingsPage.expectOptionVisible('Then And Now');
@@ -1442,11 +1831,25 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
   
   test('TC-APP-CUST-025: Verify "Movie Editor" toggle functionality', async ({ page }) => {
     console.log('🚀 Starting TC-APP-CUST-025: Movie Editor toggle functionality');
+    
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
    
-    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-    await openEventSettings(page);
-   
+    await setupTestWithToken(page, testData);
+    await page.goto('https://dev.livesharenow.com/events');
+    await page.locator('mat-tab-body[role="tabpanel"] .event-card-event ').first().click();
+    
+    // Step 2: Subscribe to Standard Plan and handle payment
+    const subscribed = await subscribeAndPayForPlan(page, 'Premium+ Event', 'PremiumPlus');
+    if (!subscribed) {
+      console.error('❌ Premium+ Tier subscription failed');
+      await context.close();
+      return;
+    }
     const eventSettingsPage = new EventSettingsPage(page);
+    const settingsOpened = await openEventSettings(page);
    
     // Step 1: Verify Movie Editor option is visible
     await eventSettingsPage.expectOptionVisible('Movie Editor');
@@ -1486,10 +1889,24 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
    test('TC-APP-CUST-026: Verify "KeepSake" configuration', async ({ page }) => {
      console.log('🚀 Starting TC-APP-CUST-026: KeepSake configuration');
     
-     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-     await openEventSettings(page);
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
     
+     await setupTestWithToken(page, testData);
+     await page.goto('https://dev.livesharenow.com/events');
+     await page.locator('mat-tab-body[role="tabpanel"] .event-card-event ').first().click();
+     
+     // Step 2: Subscribe to Standard Plan and handle payment
+     const subscribed = await subscribeAndPayForPlan(page, 'Premium+ Event', 'PremiumPlus');
+    if (!subscribed) {
+      console.error('❌ Premium+ Tier subscription failed');
+      await context.close();
+      return;
+    }
      const eventSettingsPage = new EventSettingsPage(page);
+     const settingsOpened = await openEventSettings(page);
     
      // Step 1: Verify KeepSake option is visible
      await eventSettingsPage.expectOptionVisible('KeepSake');
@@ -1524,10 +1941,24 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
    test('TC-APP-CUST-027: Verify "Scavenger Hunt" setup', async ({ page }) => {
      console.log('🚀 Starting TC-APP-CUST-027: Scavenger Hunt setup');
     
-     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-     await openEventSettings(page);
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
     
+     await setupTestWithToken(page, testData);
+     await page.goto('https://dev.livesharenow.com/events');
+     await page.locator('mat-tab-body[role="tabpanel"] .event-card-event ').first().click();
+     
+     // Step 2: Subscribe to Standard Plan and handle payment
+     const subscribed = await subscribeAndPayForPlan(page, 'Premium+ Event', 'PremiumPlus');
+    if (!subscribed) {
+      console.error('❌ Premium+ Tier subscription failed');
+      await context.close();
+      return;
+    }
      const eventSettingsPage = new EventSettingsPage(page);
+     const settingsOpened = await openEventSettings(page);
     
      // Step 1: Verify Scavenger Hunt option is visible
      await eventSettingsPage.expectOptionVisible('Scavenger Hunt');
@@ -1551,12 +1982,25 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
   
   test('TC-APP-CUST-028: Verify "Sponsor" toggle functionality', async ({ page }) => {
     console.log('🚀 Starting TC-APP-CUST-028: Sponsor toggle functionality');
+    
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
    
-    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-    await openEventSettings(page);
-   
+    await setupTestWithToken(page, testData);
+    await page.goto('https://dev.livesharenow.com/events');
+    await page.locator('mat-tab-body[role="tabpanel"] .event-card-event ').first().click();
+    
+    // Step 2: Subscribe to Standard Plan and handle payment
+    const subscribed = await subscribeAndPayForPlan(page, 'Premium+ Event', 'PremiumPlus');
+    if (!subscribed) {
+      console.error('❌ Premium+ Tier subscription failed');
+      await context.close();
+      return;
+    }
     const eventSettingsPage = new EventSettingsPage(page);
-   
+    const settingsOpened = await openEventSettings(page);
     // Step 1: Verify Sponsor option is visible
     await eventSettingsPage.expectOptionVisible('Sponsor');
     console.log('✅ Sponsor option is visible');
@@ -1594,11 +2038,25 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
   
   test('TC-APP-CUST-029: Verify "Prize" toggle functionality', async ({ page }) => {
     console.log('🚀 Starting TC-APP-CUST-029: Prize toggle functionality');
+    
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
    
-    await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-    await openEventSettings(page);
-   
+    await setupTestWithToken(page, testData);
+    await page.goto('https://dev.livesharenow.com/events');
+    await page.locator('mat-tab-body[role="tabpanel"] .event-card-event ').first().click();
+    
+    // Step 2: Subscribe to Standard Plan and handle payment
+    const subscribed = await subscribeAndPayForPlan(page, 'Premium+ Event', 'PremiumPlus');
+    if (!subscribed) {
+      console.error('❌ Premium+ Tier subscription failed');
+      await context.close();
+      return;
+    }
     const eventSettingsPage = new EventSettingsPage(page);
+    const settingsOpened = await openEventSettings(page);
    
     // Step 1: Verify Prize option is visible
     await eventSettingsPage.expectOptionVisible('Prize');
@@ -1638,9 +2096,24 @@ test.describe('Event Settings - Comprehensive Testing Suite', () => {
    test('TC-APP-CUST-030: Verify all lower tiers unlocked', async ({ page }) => {
      console.log('🚀 Starting TC-APP-CUST-030: Verify all lower tiers unlocked');
     
-     await loginToAccount(page, sharedTestData.email, sharedTestData.password);
-     await openEventSettings(page);
+    if (!testData || !testData.token) {
+      test.skip('Setup failed - no test data or token available');
+      return;
+    }
     
+     await setupTestWithToken(page, testData);
+     await page.goto('https://dev.livesharenow.com/events');
+     await page.locator('mat-tab-body[role="tabpanel"] .event-card-event ').first().click();
+     
+     // Step 2: Subscribe to Standard Plan and handle payment
+     const subscribed = await subscribeAndPayForPlan(page, 'Premium+ Event', 'PremiumPlus');
+    if (!subscribed) {
+      console.error('❌ Premium+ Tier subscription failed');
+      await context.close();
+      return;
+    }
+     const eventSettingsPage = new EventSettingsPage(page);
+     const settingsOpened = await openEventSettings(page);
      // Verify ALL features do NOT show "Preview for Free" text
      const allFeatures = [
        ...FeatureTiers.FREE,

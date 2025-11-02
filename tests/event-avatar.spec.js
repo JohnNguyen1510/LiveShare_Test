@@ -127,45 +127,11 @@ test.describe('Event Avatar Icon', () => {
     }
 
     const optionNames = ['My Account', 'Delete Account', 'Subscription', 'Branding', 'Logout'];
-    let anyVisible = false;
+    const menuOptions = page.locator('div[role="menu"]');
 
-    // Try role=button
-    for (const name of optionNames) {
-      const option = page.getByRole('button', { name });
-      const visible = await option.isVisible({ timeout: 1500 }).catch(() => false);
-      if (visible) {
-        anyVisible = true;
-        await page.screenshot({ path: path.join(screenshotsDir, `${name.toLowerCase().replace(/\s+/g, '-')}-option.png`) });
-      }
+    for(const name of optionNames) {
+      expect(menuOptions.locator(`button:has-text("${name}")`)).toBeVisible();
     }
-
-    // Try role=menuitem
-    if (!anyVisible) {
-      for (const name of optionNames) {
-        const option = page.getByRole('menuitem', { name });
-        const visible = await option.isVisible({ timeout: 1500 }).catch(() => false);
-        if (visible) {
-          anyVisible = true;
-          await page.screenshot({ path: path.join(screenshotsDir, `${name.toLowerCase().replace(/\s+/g, '-')}-menuitem.png`) });
-        }
-      }
-    }
-
-    // Fallback: text based
-    if (!anyVisible) {
-      for (const name of optionNames) {
-        const option = page.locator(`button:has-text("${name}"), a:has-text("${name}")`).first();
-        const visible = await option.isVisible({ timeout: 1500 }).catch(() => false);
-        if (visible) {
-          anyVisible = true;
-          await page.screenshot({ path: path.join(screenshotsDir, `${name.toLowerCase().replace(/\s+/g, '-')}-text.png`) });
-        }
-      }
-    }
-
-    return anyVisible;
+    return true;
   }
 });
-
-
-
