@@ -56,10 +56,10 @@ export default defineConfig({
   projects: [
     {
       name: 'authenticated-tests',
-      testMatch: '**/!(register.spec.js)', // Tất cả test trừ register.spec.js
+      testMatch: '**/!(register.spec.js)',
       use: { 
         ...devices['Desktop Chrome'],
-        storageState: 'auth/user-auth.json', // Có authentication cho các test khác
+        storageState: 'auth/user-auth.json', 
         launchOptions: {
           args: [
             '--disable-dev-shm-usage',
@@ -71,16 +71,15 @@ export default defineConfig({
     },
     {
       name: 'guest-tests',
-      testMatch: '**/register.spec.js', // Chỉ register.spec.js
+      testMatch: '**/register.spec.js',
       use: { 
         ...devices['Desktop Chrome'],
-        // Không có storageState - clean state cho guest tests
         launchOptions: {
           args: [
             '--disable-dev-shm-usage',
             '--no-sandbox',
             '--disable-setuid-sandbox',
-            '--incognito' // Thêm incognito mode để đảm bảo clean state
+            '--incognito' 
           ]
         }
       },

@@ -77,7 +77,6 @@ async function saveEmailAuth() {
     console.log('Email authentication successful, waiting 5 seconds before saving state...');
     await page.waitForTimeout(5000);
     
-    // Save the authentication state aligned with playwright.config.js - similar to DMS
     await context.storageState({ path: authFile });
     console.log(`✅ EMAIL Authentication completed and state saved to: ${authFile}`);
     

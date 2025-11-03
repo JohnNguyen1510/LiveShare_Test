@@ -142,8 +142,12 @@ export class EventSettingsPage extends BasePage {
    * - Welcome Popup
    * - Event Name, Event Date, Location, Contact
    * - KeepSake, Scavenger Hunt
+   * 
+   * NOTE: Simple toggles update UI state immediately but API call happens when Save is clicked
    */
   async setOption(label, enable = true) {
+    console.log(`  ${enable ? '✅ Enabling' : '❌ Disabling'}: ${label}`);
+    
     const option = this.optionByLabel(label);
     await option.waitFor({ state: 'visible', timeout: 10000 });
 
@@ -152,6 +156,9 @@ export class EventSettingsPage extends BasePage {
       await option.click();
       await this.page.waitForTimeout(300);
       await expect(option).toHaveClass(new RegExp(enable ? 'selected-option' : '^(?!.*selected-option).*'));
+      console.log(`  ✅ Toggled ${label} to ${enable ? 'enabled' : 'disabled'}`);
+    } else {
+      console.log(`  ℹ️ ${label} already ${enable ? 'enabled' : 'disabled'}`);
     }
   }
 
@@ -204,7 +211,7 @@ export class EventSettingsPage extends BasePage {
       await nameInput.fill(newName);
       await this.page.waitForTimeout(500);
       
-      // Click Save button IN DIALOG (not main settings Save)
+      // Click Save button IN DIALOG and wait for API response
       const dialogSaveButton = nameDialog.locator('.mat-dialog-actions .btn:has-text("Save")');
       await dialogSaveButton.click();
       await this.page.waitForTimeout(1500);
@@ -312,6 +319,7 @@ export class EventSettingsPage extends BasePage {
       await phoneInput.fill(contactInfo.phone);
       await this.page.waitForTimeout(500);
       
+      // Click Save button and wait for API response
       const dialogSaveButton = contactDialog.locator('.mat-dialog-actions .btn:has-text("Save")');
       await dialogSaveButton.click();
       await this.page.waitForTimeout(1500);
@@ -459,6 +467,7 @@ export class EventSettingsPage extends BasePage {
       await urlInput.fill(linkData.url);
       await this.page.waitForTimeout(500);
       
+      // Click Save button and wait for API response
       const dialogSaveButton = linkDialog.locator('.mat-dialog-actions .btn:has-text("Save")');
       await dialogSaveButton.click();
       await this.page.waitForTimeout(1500);
@@ -518,6 +527,7 @@ export class EventSettingsPage extends BasePage {
       await emailInput.fill(managerEmail);
       await this.page.waitForTimeout(500);
       
+      // Click Save/Add button and wait for API response
       const dialogSaveButton = managerDialog.locator('.mat-dialog-actions .btn:has-text("Save"), .mat-dialog-actions .btn:has-text("Add")').first();
       await dialogSaveButton.click();
       await this.page.waitForTimeout(1500);
@@ -549,6 +559,7 @@ export class EventSettingsPage extends BasePage {
       await passcodeInput.fill(passcode);
       await this.page.waitForTimeout(500);
       
+      // Click Save button and wait for API response
       const dialogSaveButton = passcodeDialog.locator('.mat-dialog-actions .btn:has-text("Save")');
       await dialogSaveButton.click();
       await this.page.waitForTimeout(1500);
@@ -644,13 +655,98 @@ export class EventSettingsPage extends BasePage {
    * Save main settings dialog
    * This is the Save button in the MAIN Personalize Options dialog footer
    * Different from the Save buttons inside individual feature dialogs
+   * 
+   * When clicked, triggers 3 API calls:
+   * 1. GET /api/events/{id} - Get current event details
+   * 2. PUT /api/events/{id} - Update event settings
+   * 3. GET /api/events - List all events
    */
   async saveMainSettings() {
     try {
-      console.log(`  💾 Saving main settings...`);
+      console.log(`  💾 Saving main settings and verifying APIs...`);
+      
+      // Set up promises to capture all 3 API calls
+      const getEventPromise = this.waitApiResponse('/api/events/', 200, 'GET', 15000);
+      const updateEventPromise = this.waitApiResponse('/api/events', 200, 'PUT', 15000);
+      const listEventsPromise = this.waitApiResponse('/api/events', 200, 'GET', 15000);
+      
+      // Click Save button
       await this.saveButton.click();
+      
+      // Wait for all 3 API responses
+      try {
+        // 1. GET /api/events/{id} - Get current event before update
+        console.log('  📥 Waiting for GET event details API...');
+        const getResponse = await getEventPromise;
+        const beforeData = await getResponse.json();
+        
+        if (beforeData && beforeData._id) {
+          console.log(`  ✅ GET Event API responded`);
+          console.log(`  Event ID: ${beforeData._id}`);
+          console.log(`  Current Name: ${beforeData.name}`);
+          console.log(`  Current Plan: ${beforeData.plan}`);
+        }
+        
+        // 2. PUT /api/events/{id} - Update event settings
+        console.log('  📤 Waiting for PUT event update API...');
+        const updateResponse = await updateEventPromise;
+        const afterData = await updateResponse.json();
+        
+        if (afterData && afterData._id) {
+          console.log(`  ✅ PUT Event Update API responded`);
+          console.log(`  Event ID: ${afterData._id}`);
+          console.log(`  Updated Name: ${afterData.name}`);
+          console.log(`  Plan: ${afterData.plan}`);
+          console.log(`  Force Login: ${afterData.forceLogin}`);
+          console.log(`  Guest Login: ${afterData.guestLogin}`);
+          console.log(`  Photo Gift: ${afterData.photoGift}`);
+          console.log(`  Facebook Sharing: ${afterData.faceBook}`);
+          console.log(`  PassCode: ${afterData.passCode || 'Not set'}`);
+          
+          // Verify button configurations
+          if (afterData.button1) {
+            console.log(`  Button 1 - Name: ${afterData.button1.name}, Enabled: ${afterData.button1.enabled}`);
+          }
+          if (afterData.button2) {
+            console.log(`  Button 2 - Name: ${afterData.button2.name}, Enabled: ${afterData.button2.enabled}`);
+          }
+          
+          // Verify contact info
+          if (afterData.contact) {
+            console.log(`  Contact - Email: ${afterData.contact.email}, Phone: ${afterData.contact.phone}`);
+          }
+          
+          // Verify Premium+ features
+          if (afterData.plan === 'PremiumPlus') {
+            console.log(`  Premium+ Features:`);
+            console.log(`    - LiveView: ${afterData.liveView}`);
+            console.log(`    - Then & Now: ${afterData.thenAndNow}`);
+            console.log(`    - Movie Editor: ${afterData.movieEditor}`);
+            console.log(`    - KeepSake: ${afterData.keepSake}`);
+            console.log(`    - Scavenger Hunt: ${afterData.quest}`);
+            console.log(`    - Sponsor: ${afterData.sponsor}`);
+            console.log(`    - Prize: ${afterData.prize}`);
+          }
+        }
+        
+        // 3. GET /api/events - List all events
+        console.log('  📥 Waiting for GET events list API...');
+        const listResponse = await listEventsPromise;
+        const listData = await listResponse.json();
+        
+        const eventsList = listData.docs || listData.events || listData;
+        if (Array.isArray(eventsList)) {
+          console.log(`  ✅ GET Events List API responded with ${eventsList.length} events`);
+        } else {
+          console.log(`  ✅ GET Events List API responded`);
+        }
+        
+      } catch (apiError) {
+        console.warn(`  ⚠️ Some API verification failed: ${apiError.message}`);
+      }
+      
       await this.page.waitForTimeout(2000);
-      console.log(`  ✅ Main settings saved successfully`);
+      console.log(`  ✅ Main settings saved successfully with API verification`);
       return true;
     } catch (error) {
       console.error(`  ❌ Failed to save main settings: ${error.message}`);

@@ -245,31 +245,20 @@ export class ImageDetailPage extends BasePage {
       if (await this.page.locator(selector).count() > 0) {
         console.log(`Found confirmation dialog with selector: ${selector}`);
         confirmDialogVisible = true;
-        break;
       }
     }
-    
-    // Don't actually confirm deletion to avoid modifying data
-    // Instead, click cancel or close the dialog
-    if (confirmDialogVisible) {
-      const cancelButtonSelectors = [
-        'button:has-text("Cancel")',
-        'button:has-text("No")',
-        '.mat-button-base:has-text("Cancel")',
-        '.mat-dialog-actions button:not(:has-text("Delete"))'
-      ];
-      
-      for (const selector of cancelButtonSelectors) {
-        const cancelButton = this.page.locator(selector);
-        if (await cancelButton.count() > 0) {
-          console.log(`Found cancel button with selector: ${selector}`);
-          await cancelButton.first().click();
-          break;
-        }
-      }
-    }
-    
-    return confirmDialogVisible;
+    const buttonYes = this.page.locator('button:has-text("Yes")');    
+
+    const apiResponse = await this.performActionAndWaitForResponse({
+      actionPromise: buttonYes.click(),
+      apiUrl: '/api/posts',
+      statusCode: 200,
+      requestMethod: 'GET'
+    });
+
+    expect(apiResponse).toHaveProperty('message', 'success');
+
+    return true;
   }
 
   async clickSearchButton() {

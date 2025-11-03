@@ -75,10 +75,26 @@ export class JoinEventPage extends BasePage {
   }
 
   async joinByCode(eventCode) {
+    console.log(`🔗 Joining event by code: ${eventCode}`);
+    
     await this.codeInput.waitFor({ state: 'visible', timeout: 15000 });
     await this.codeInput.fill(eventCode);
     await this.joinConfirmButton.waitFor({ state: 'visible', timeout: 10000 });
-    await this.joinConfirmButton.click();
+    
+    // Wait for event details API response when joining
+    // Note: performActionAndWaitForResponse already returns parsed JSON, not Response object
+    const eventData = await this.performActionAndWaitForResponse({
+      actionPromise: this.joinConfirmButton.click(),
+      apiUrl: `/api/events`,
+      statusCode: 200,
+      requestMethod: 'GET'
+    });
+    
+    // Verify event details from API (eventData is already parsed JSON)
+    expect(eventData).toHaveProperty('_id');
+    expect(eventData).toHaveProperty('name');
+    expect(eventData).toHaveProperty('linkName');
+    
     await this.page.waitForLoadState('networkidle');
   }
 
@@ -95,6 +111,8 @@ export class JoinEventPage extends BasePage {
 
 
   async openGuestLoginAndPostAsGuest(nickname , eventCode) {
+    console.log(`👤 Logging in as guest: ${nickname}`);
+    
     await this.moreMenuButton.click();
     await this.page.waitForTimeout(500);
     if (await this.moreLogoutItem.isVisible().catch(() => false)) {
@@ -123,8 +141,19 @@ export class JoinEventPage extends BasePage {
       const btn = document.querySelector('#guest-login-dialog button');
       return btn && !btn.hasAttribute('disabled');
     }, { timeout: 5000 }).catch(() => {});
-    await this.postAsGuestButton.click();
+    
+    // Wait for guest login API response
+    const guestLoginResponse = await this.performActionAndWaitForResponse({
+      actionPromise: this.postAsGuestButton.click(),
+      apiUrl: '/api/users/guest-register-login',
+      statusCode: 200,
+      requestMethod: 'POST'
+    });
+    
+    expect(guestLoginResponse).toHaveProperty('message', 'success');
+    
     // Guest login closes dialog and returns to event detail
+    await this.page.waitForTimeout(1000);
   }
 
   async openPlusMenu() {

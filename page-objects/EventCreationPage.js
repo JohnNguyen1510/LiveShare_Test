@@ -259,10 +259,40 @@ export class EventCreationPage extends BasePage {
    */
   async launchEvent() {
     try {
-      console.log('Launching event...');
+      console.log('Launching event and waiting for API response...');
       
       await this.launchEventButton.waitFor({ state: 'visible', timeout: 10000 });
-      await this.launchEventButton.click();
+      
+      // Wait for event creation API response
+      const createEventResponse = await this.performActionAndWaitForResponse({
+        actionPromise: this.launchEventButton.click(),
+        apiUrl: '/api/events',
+        statusCode: 200,
+        requestMethod: 'POST'
+      });
+      
+      // Verify event creation API response
+      if (createEventResponse && createEventResponse._id) {
+        console.log('✅ Event created successfully via API');
+        console.log(`Event ID: ${createEventResponse._id}`);
+        console.log(`Event Name: ${createEventResponse.name || 'Unknown'}`);
+        console.log(`Link Name/Code: ${createEventResponse.linkName || 'Unknown'}`);
+        
+        // Store event data in localStorage for other tests
+        await this.page.evaluate((eventData) => {
+          localStorage.setItem('LAST_CREATED_EVENT', JSON.stringify({
+            id: eventData._id,
+            name: eventData.name,
+            eventCode: eventData.linkName,
+            createdAt: eventData.createdAt
+          }));
+        }, createEventResponse);
+        
+        console.log('✅ Event data stored in localStorage');
+      } else {
+        console.warn('⚠️ Unexpected event creation response:', createEventResponse);
+      }
+      
       await this.page.waitForTimeout(3000);
       await this.takeScreenshot('event-launched');
       

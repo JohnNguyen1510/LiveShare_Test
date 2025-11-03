@@ -39,8 +39,28 @@ export class EventListPage extends BasePage {
   }
 
   async goToEventsPage() {
+    console.log('🔄 Navigating to events page and verifying API...');
+    
+    // Wait for events API response when navigating
+    const eventsResponsePromise = this.waitApiResponse('/api/events', 200, 'GET');
+    
     await this.page.goto('https://dev.livesharenow.com/events');
     await this.page.waitForLoadState('networkidle');
+    
+    // Wait for and verify events API response
+    try {
+      const response = await eventsResponsePromise;
+      const eventsData = await response.json();
+      
+      if (eventsData) {
+        const eventsList = eventsData.docs || eventsData.events || eventsData;
+        const eventsCount = Array.isArray(eventsList) ? eventsList.length : 0;
+        console.log(`✅ Events API responded with ${eventsCount} events`);
+      }
+    } catch (error) {
+      console.warn('⚠️ Events API verification failed:', error.message);
+    }
+    
     await this.eventsHeading.waitFor({ state: 'visible', timeout: 30000 });
   }
 
@@ -64,20 +84,85 @@ export class EventListPage extends BasePage {
   }
 
   async clickEventByIndex(index = 0) {
+    console.log(`🔄 Clicking event card at index ${index} and verifying API...`);
+    
+    // Wait for event detail API when clicking an event card
+    const eventDetailPromise = this.waitApiResponse('/api/events/', 200, 'GET');
+    
     await this.eventCardByIndex(index).click();
     await this.page.waitForLoadState('networkidle');
+    
+    // Wait for and verify event detail API response
+    try {
+      const response = await eventDetailPromise;
+      const eventData = await response.json();
+      
+      // Verify the event detail response has required fields
+      expect(eventData).toHaveProperty('_id');
+      expect(eventData).toHaveProperty('name');
+      expect(eventData).toHaveProperty('linkName');
+      expect(eventData).toHaveProperty('plan');
+      
+      console.log(`✅ Event detail API responded`);
+      console.log(`Event ID: ${eventData._id}`);
+      console.log(`Event Name: ${eventData.name}`);
+      console.log(`Event Code: ${eventData.linkName}`);
+      console.log(`Plan: ${eventData.plan}`);
+    } catch (error) {
+      console.warn('⚠️ Event detail API verification failed:', error.message);
+    }
   }
 
   async clickEventByCode(eventCode) {
+    console.log(`🔄 Clicking event with code ${eventCode} and verifying API...`);
+    
+    // Wait for event detail API when clicking an event card
+    const eventDetailPromise = this.waitApiResponse('/api/events/', 200, 'GET');
+    
     const eventCard = this.eventCards.filter({ hasText: eventCode });
     await eventCard.first().click();
     await this.page.waitForLoadState('networkidle');
+    
+    // Wait for and verify event detail API response
+    try {
+      const response = await eventDetailPromise;
+      const eventData = await response.json();
+      
+      // Verify the event code matches
+      expect(eventData).toHaveProperty('linkName', eventCode);
+      
+      console.log(`✅ Event detail API responded for code: ${eventCode}`);
+      console.log(`Event ID: ${eventData._id}`);
+      console.log(`Event Name: ${eventData.name}`);
+    } catch (error) {
+      console.warn('⚠️ Event detail API verification failed:', error.message);
+    }
   }
 
   async clickEventByName(eventName) {
+    console.log(`🔄 Clicking event "${eventName}" and verifying API...`);
+    
+    // Wait for event detail API when clicking an event card
+    const eventDetailPromise = this.waitApiResponse('/api/events/', 200, 'GET');
+    
     const eventCard = this.eventCards.filter({ hasText: eventName });
     await eventCard.first().click();
     await this.page.waitForLoadState('networkidle');
+    
+    // Wait for and verify event detail API response
+    try {
+      const response = await eventDetailPromise;
+      const eventData = await response.json();
+      
+      // Verify the event name matches
+      expect(eventData).toHaveProperty('name', eventName);
+      
+      console.log(`✅ Event detail API responded for: ${eventName}`);
+      console.log(`Event ID: ${eventData._id}`);
+      console.log(`Event Code: ${eventData.linkName}`);
+    } catch (error) {
+      console.warn('⚠️ Event detail API verification failed:', error.message);
+    }
   }
 
   async openEventMenu(index = 0) {

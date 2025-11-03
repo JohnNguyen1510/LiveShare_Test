@@ -74,6 +74,8 @@ export class RegisterPage extends BasePage {
   }
 
   async fillRegistrationForm(name, email, password) {
+    console.log(`📝 Filling registration form for: ${email}`);
+    
     // Fill name
     await this.nameInput.waitFor({ state: 'visible', timeout: 10000 });
     await this.nameInput.fill(name);
@@ -90,11 +92,21 @@ export class RegisterPage extends BasePage {
     await this.page.waitForTimeout(1000);
     await this.page.keyboard.press('Enter');
 
-    // Fill confirm password
+    // Fill confirm password and wait for registration API
     await this.confirmPasswordInput.fill(password);
     await this.page.waitForTimeout(1000);
     await this.passwordInput.fill(password);
     await this.page.keyboard.press('Enter');
+    console.log('Submitting registration and waiting for API response...');
+    
+    // Wait for registration API response
+    const registerResponse = await this.performActionAndWaitForResponse({
+      actionPromise: this.createAccountButton.click(),
+      apiUrl: '/api/users',
+      statusCode: 200,
+      requestMethod: 'POST'
+    });
+    
   }
 
   async generateTestCredentials() {

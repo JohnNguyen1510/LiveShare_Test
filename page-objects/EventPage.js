@@ -167,11 +167,27 @@ export class EventPage extends BasePage {
       
       await this.page.waitForTimeout(1000);
       
-      // Click Save button to save the event name
+      // Click Save button and wait for settings update API
       const saveButton = this.page.locator('.mat-dialog-actions .btn:has-text("Save"), button:has-text("Save")').first();
       if (await saveButton.isVisible().catch(() => false)) {
-        console.log('Clicking Save button for Event Name');
-        await saveButton.click();
+        console.log('Clicking Save button for Event Name and waiting for API...');
+        
+        // Wait for event settings update API response
+        const settingsResponse = await this.performActionAndWaitForResponse({
+          actionPromise: saveButton.click(),
+          apiUrl: '/api/events',
+          statusCode: 200,
+          requestMethod: 'PUT'
+        });
+        
+        // Verify settings API response
+        if (settingsResponse && settingsResponse._id) {
+          console.log('✅ Event settings updated via API');
+          console.log(`Event Name: ${settingsResponse.name || name}`);
+        } else {
+          console.warn('⚠️ Unexpected settings response:', settingsResponse);
+        }
+        
         await this.page.waitForTimeout(2000);
       } else {
         console.error('Could not find Save button for Event Name');
@@ -713,7 +729,7 @@ export class EventPage extends BasePage {
    */
   async clickFinalSave() {
     try {
-      console.log('Clicking final save button...');
+      console.log('💾 Clicking final save button and waiting for API...');
       console.log('Looking for final save button...');
       
       // First try to find Save button specifically in the personalize dialog
@@ -728,7 +744,24 @@ export class EventPage extends BasePage {
         const saveButton = this.page.locator(selector).first();
         if (await saveButton.isVisible().catch(() => false)) {
           console.log(`Found final save button in personalize dialog using selector: ${selector}`);
-          await saveButton.click();
+          
+          // Wait for settings update API response
+          const settingsResponse = await this.performActionAndWaitForResponse({
+            actionPromise: saveButton.click(),
+            apiUrl: '/api/events',
+            statusCode: 200,
+            requestMethod: 'PUT'
+          });
+          
+          // Verify settings API response
+          if (settingsResponse && settingsResponse._id) {
+            console.log('✅ All event settings saved via API');
+            console.log(`Event ID: ${settingsResponse._id}`);
+            console.log(`Event Name: ${settingsResponse.name || 'Unknown'}`);
+            console.log(`Plan: ${settingsResponse.plan || 'Unknown'}`);
+          } else {
+            console.warn('⚠️ Unexpected final settings response:', settingsResponse);
+          }
           
           // Wait longer for save operation to complete
           await this.page.waitForTimeout(3000);

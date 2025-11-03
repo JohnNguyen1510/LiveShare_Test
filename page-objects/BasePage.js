@@ -328,4 +328,56 @@ export class BasePage {
     const data = await this.performActionAndWaitForResponse({ actionPromise, apiUrl, statusCode, requestMethod });
     return data;
   }
+
+  /**
+   * Get API response data by waiting for response
+   * @param {string} apiUrl - API URL substring to match
+   * @param {number} statusCode - Expected status code
+   * @param {string} [requestMethod] - Optional HTTP method
+   * @param {Object} [requestPayload] - Optional request payload to match
+   * @returns {Promise<any>} Parsed response data
+   */
+  async getApiResponse(apiUrl, statusCode = 200, requestMethod = null, requestPayload = null) {
+    const response = await this.waitApiResponse(apiUrl, statusCode, requestMethod, requestPayload);
+    let responseData = await response.json().catch(() => response.text());
+    
+    // If response has docs property, return docs array
+    if (responseData && typeof responseData === 'object' && responseData.docs) {
+      responseData = responseData.docs;
+    }
+    
+    return responseData;
+  }
+
+  /**
+   * Helper method to check if actual payload contains expected payload
+   * @param {Object} actualPayload - The actual request payload
+   * @param {Object} expectedPayload - The expected payload to match
+   * @returns {boolean} - True if actual payload contains expected payload
+   */
+  containsPayload(actualPayload, expectedPayload) {
+    if (typeof expectedPayload !== 'object' || expectedPayload === null) {
+      return actualPayload === expectedPayload;
+    }
+    
+    if (typeof actualPayload !== 'object' || actualPayload === null) {
+      return false;
+    }
+    
+    for (const key in expectedPayload) {
+      if (!(key in actualPayload)) {
+        return false;
+      }
+      
+      if (typeof expectedPayload[key] === 'object' && expectedPayload[key] !== null) {
+        if (!this.containsPayload(actualPayload[key], expectedPayload[key])) {
+          return false;
+        }
+      } else if (actualPayload[key] !== expectedPayload[key]) {
+        return false;
+      }
+    }
+    
+    return true;
+  }
 } 

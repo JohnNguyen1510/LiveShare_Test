@@ -96,13 +96,6 @@ async function setupFreshAccountAndEvent(page, context, tierName) {
     await registerPage.fillRegistrationForm(testData.name, testData.email, testData.password);
     await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-05-registration-form-filled.png`) });
 
-    // Create account
-    console.log('📍 Step 6: Creating account...');
-    const createAccountButton = page.locator('button:has-text("Create Account")').first();
-    await expect(createAccountButton).toBeVisible();
-    await createAccountButton.click();
-    await page.waitForTimeout(2000);
-    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-06-account-creation-submitted.png`) });
 
     // Handle OTP verification
     console.log('📍 Step 7: Handling OTP verification...');

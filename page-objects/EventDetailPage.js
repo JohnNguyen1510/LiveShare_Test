@@ -688,9 +688,28 @@ export class EventDetailPage extends BasePage {
    * Click POST button in Then & Now dialog
    */
   async clickThenAndNowPostButton() {
+    console.log('📤 Posting Then & Now and waiting for API response...');
+    
     const postButton = this.page.locator('button:has-text("POST")').first();
     await postButton.waitFor({ state: 'visible', timeout: 5000 });
-    await postButton.click();
+    
+    // Wait for post creation API response
+    const postResponse = await this.performActionAndWaitForResponse({
+      actionPromise: postButton.click(),
+      apiUrl: '/api/posts',
+      statusCode: 200,
+      requestMethod: 'POST'
+    });
+    
+    // Verify post API response
+    if (postResponse && postResponse._id) {
+      console.log('✅ Then & Now post created successfully');
+      console.log(`Post ID: ${postResponse._id}`);
+      console.log(`Post Type: ${postResponse.type || postResponse.postType || 'Unknown'}`);
+    } else {
+      console.warn('⚠️ Unexpected post response:', postResponse);
+    }
+    
     await this.page.waitForTimeout(3000); // Wait for post to complete
   }
 
@@ -843,10 +862,25 @@ export class EventDetailPage extends BasePage {
    * Click POST button in post-message dialog
    */
   async clickPostMessageButton() {
+    console.log('📤 Posting content and waiting for API response...');
+    
     const postButton = this.page.locator('app-post-message button:has-text("POST")').first();
     await postButton.waitFor({ state: 'visible', timeout: 5000 });
-    await postButton.click();
-    await this.page.waitForTimeout(3000);
+    
+    // Wait for post creation API response
+    const postResponse = await this.performActionAndWaitForResponse({
+      actionPromise: postButton.click(),
+      apiUrl: '/api/posts',
+      statusCode: 200,
+      requestMethod: 'POST'
+    });
+    
+    expect(postResponse).toHaveProperty('_id');
+    expect(postResponse).toHaveProperty('org');
+    expect(postResponse).toHaveProperty('imageUrl');
+    expect(postResponse).toHaveProperty('mediaId');
+    
+    console.log('✅ Post created successfully');
   }
 
   // ============================================================================

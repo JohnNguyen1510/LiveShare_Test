@@ -290,23 +290,45 @@ export class LoginPage extends BasePage {
       await this.emailLoginInput.fill(email);
       await this.takeScreenshot('email-filled');
 
-      // Step 4: Click Continue button
+      // Step 4: Click Continue button and wait for password screen
       console.log('Clicking Continue button...');
       await this.continueButton.waitFor({ state: 'visible', timeout: 5000 });
       await this.continueButton.click();
       await this.page.waitForTimeout(3000);
       await this.takeScreenshot('after-continue-click');
+      
       // Step 5: Fill password input
       console.log('Filling password input...');
       await this.emailPasswordInput.waitFor({ state: 'visible', timeout: 5000 });
       await this.emailPasswordInput.fill(password);
       await this.takeScreenshot('password-filled');
-      // Step 6: Click Submit button
-      await this.continueButton.click();
+      
+      // Step 6: Click Submit button and wait for login API response
+      console.log('Submitting login and waiting for API response...');
+      const loginResponse = await this.performActionAndWaitForResponse({
+        actionPromise: this.continueButton.click(),
+        apiUrl: '/api/users/login',
+        statusCode: 200,
+        requestMethod: 'POST'
+      });
+      
+      // Verify login API response
+      if (loginResponse && loginResponse.message === 'success') {
+        console.log('✅ Login API returned success');
+        console.log(`User: ${loginResponse.user?.name || 'Unknown'}, Email: ${loginResponse.user?.email || email}`);
+        
+        // Store access token if available
+        if (loginResponse.accessToken || loginResponse.token) {
+          console.log('✅ Access token received from API');
+        }
+      } else {
+        console.warn('⚠️ Unexpected login response:', loginResponse);
+      }
+      
       await this.page.waitForTimeout(3000);
       await this.takeScreenshot('after-submit-click');
 
-      // Step 5: Wait for authentication success indicators
+      // Step 7: Wait for authentication success indicators
       console.log('Waiting for authentication success...');
       
       // Wait for either dashboard content or redirect
