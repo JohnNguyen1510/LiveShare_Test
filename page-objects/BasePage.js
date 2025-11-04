@@ -380,4 +380,71 @@ export class BasePage {
     
     return true;
   }
+
+  // ============================================================================
+  // TEST HELPER METHODS - Logging & Screenshots
+  // ============================================================================
+
+  /**
+   * Capture screenshot with timestamp
+   * @param {string} testCase - Test case identifier
+   * @param {string} step - Step description
+   * @returns {Promise<string>} Screenshot filename
+   */
+  async captureScreenshot(testCase, step) {
+    const timestamp = Date.now();
+    const filename = `${testCase}-${step}-${timestamp}.png`;
+    const screenshotsDir = './screenshots';
+    
+    try {
+      await this.page.screenshot({ 
+        path: `${screenshotsDir}/${filename}`,
+        fullPage: true 
+      });
+      return filename;
+    } catch (error) {
+      console.error(`Failed to capture screenshot: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Log test step with formatting
+   * @param {string} message - Log message
+   * @param {string} level - Log level (info, success, error, warning)
+   */
+  logStep(message, level = 'info') {
+    const icons = {
+      info: '📍',
+      success: '✅',
+      error: '❌',
+      warning: '⚠'
+    };
+    const icon = icons[level] || '•';
+    console.log(`${icon} ${message}`);
+  }
+
+  /**
+   * Print test header
+   * @param {string} testCase - Test case ID
+   * @param {string} description - Test description
+   */
+  printTestHeader(testCase, description) {
+    console.log('\n╔════════════════════════════════════════════════════════╗');
+    console.log(`║     ${testCase}: ${description.padEnd(36, ' ')}║`);
+    console.log('╚════════════════════════════════════════════════════════╝\n');
+  }
+
+  /**
+   * Print test footer
+   * @param {string} testCase - Test case ID
+   * @param {boolean} passed - Test result
+   */
+  printTestFooter(testCase, passed = true) {
+    const status = passed ? '✅ PASSED' : '❌ FAILED';
+    const message = `${testCase}: ${status}`;
+    console.log('\n╔════════════════════════════════════════════════════════╗');
+    console.log(`║   ${message.padEnd(51, ' ')}║`);
+    console.log('╚════════════════════════════════════════════════════════╝\n');
+  }
 } 

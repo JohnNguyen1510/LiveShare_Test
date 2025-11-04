@@ -1,14 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { RegisterPage } from '../page-objects/RegisterPage.js';
 import { SubscriptionPage } from '../page-objects/SubscriptionPage.js';
 import { PaymentPage } from '../page-objects/PaymentPage.js';
 import { EventCreationPage } from '../page-objects/EventCreationPage.js';
 import path from 'path';
 import fs from 'fs';
-import Mailosaur from 'mailosaur';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 // Create screenshots directory if it doesn't exist
 const screenshotsDir = path.join(process.cwd(), 'screenshots');
@@ -18,118 +13,15 @@ if (!fs.existsSync(screenshotsDir)) {
 
 /**
  * Setup function for creating fresh account and event for each test
+ * Now uses SubscriptionPage method instead of inline logic
  * @param {import('@playwright/test').Page} page - Playwright page instance
  * @param {import('@playwright/test').BrowserContext} context - Browser context
  * @param {string} testName - Name of the test for unique identification
  * @returns {Promise<{success: boolean, testData: Object}>} Setup result with test data
  */
 async function setupFreshAccountAndEvent(page, context, testName) {
-  console.log(`🚀 Starting fresh account and event setup for: ${testName}`);
-  
-  try {
-    // Skip test if Mailosaur is not configured
-    if (!process.env.MAILOSAUR_API_KEY || !process.env.MAILOSAUR_SERVER_ID) {
-      console.warn('⚠️ Mailosaur environment variables not set, skipping setup');
-      return { success: false, testData: null };
-    }
-
-    // Initialize page objects
-    const registerPage = new RegisterPage(page);
-    const eventCreationPage = new EventCreationPage(page);
-    
-    // Setup Mailosaur for email verification
-    const mailosaurClient = new Mailosaur(process.env.MAILOSAUR_API_KEY);
-    const serverId = process.env.MAILOSAUR_SERVER_ID;
-    const timestamp = Date.now();
-    const testEmail = `auto_${testName.toLowerCase().replace(/\s+/g, '_')}_${timestamp}@${serverId}.mailosaur.net`;
-    
-    const testData = {
-      email: testEmail,
-      name: `Auto User ${testName}`,
-      password: 't123',
-      eventName: `Auto Event ${testName} ${timestamp}`,
-      timestamp: timestamp
-    };
-
-    console.log(`📧 Using test email: ${testEmail}`);
-
-    // Step 1: Navigate to application
-    console.log('📍 Step 1: Navigating to application...');
-    await page.goto('https://dev.livesharenow.com/');
-    await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: path.join(screenshotsDir, `${testName}-01-app-loaded.png`) });
-
-    // Step 2: Complete registration flow
-    console.log('📍 Step 2: Starting registration process...');
-    await registerPage.clickCreateAccount();
-    await page.screenshot({ path: path.join(screenshotsDir, `${testName}-02-create-account-clicked.png`) });
-
-    // Choose email signup
-    console.log('📍 Step 3: Choosing email signup...');
-    const emailSignupSuccess = await registerPage.clickEmailSignup();
-    if (!emailSignupSuccess) {
-      throw new Error('Failed to click email signup');
-    }
-    await page.screenshot({ path: path.join(screenshotsDir, `${testName}-03-email-signup-selected.png`) });
-
-    // Handle terms and conditions
-    console.log('📍 Step 4: Handling terms and conditions...');
-    await registerPage.handleTermsAndConditions();
-    await page.screenshot({ path: path.join(screenshotsDir, `${testName}-04-terms-accepted.png`) });
-
-    // Fill registration form
-    console.log('📍 Step 5: Filling registration form...');
-    await registerPage.fillRegistrationForm(testData.name, testData.email, testData.password);
-    await page.screenshot({ path: path.join(screenshotsDir, `${testName}-05-registration-form-filled.png`) });
-    
-    // Handle OTP verification
-    console.log('📍 Step 7: Handling OTP verification...');
-    console.log('⏳ Waiting for verification email...');
-    const signUpEmail = await mailosaurClient.messages.get(serverId, {
-      sentTo: testEmail
-    });
-    const verifyEmail = signUpEmail.html.codes[0].value;
-    console.log(`📧 Received OTP code: ${verifyEmail}`);
-    
-    // Wait for OTP input fields and fill them
-    const otpInputs = page.locator('.otp-box');
-    await otpInputs.first().waitFor({ state: 'visible', timeout: 10000 });
-    
-    const otpCode = verifyEmail.toString();
-    for (let i = 0; i < otpCode.length && i < 6; i++) {
-      const input = otpInputs.nth(i);
-      await input.waitFor({ state: 'visible', timeout: 5000 });
-      await input.fill(otpCode[i]);
-      await page.waitForTimeout(200);
-    }
-    
-    await page.screenshot({ path: path.join(screenshotsDir, `${testName}-07-otp-filled.png`) });
-
-    // Complete registration
-    const continueToEventButton = page.locator('button:has-text("Continue to the Event")').first();
-    await expect(continueToEventButton).toBeVisible();
-    await continueToEventButton.click();
-    await page.waitForTimeout(3000);
-    await page.screenshot({ path: path.join(screenshotsDir, `${testName}-08-registration-completed.png`) });
-
-    // Step 8: Create a new event
-    console.log('📍 Step 8: Creating new event...');
-    const eventCreationStarted = await eventCreationPage.startEventCreation();
-    if (!eventCreationStarted) {
-      throw new Error('Failed to start event creation');
-    }
-    await page.screenshot({ path: path.join(screenshotsDir, `${testName}-09-event-created.png`) });
-    await page.waitForTimeout(4000);
-
-    console.log(`✅ Fresh account and event setup completed successfully for: ${testName}`);
-    return { success: true, testData };
-    
-  } catch (error) {
-    console.error(`❌ Setup failed for ${testName}:`, error.message);
-    await page.screenshot({ path: path.join(screenshotsDir, `${testName}-error-setup.png`) });
-    return { success: false, testData: null };
-  }
+  const subscriptionPage = new SubscriptionPage(page);
+  return await subscriptionPage.setupFreshAccountAndEvent(testName, context);
 }
 
 // Shared test state để lưu trữ browser context và page từ SE-001

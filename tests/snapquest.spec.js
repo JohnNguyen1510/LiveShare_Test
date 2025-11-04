@@ -28,39 +28,39 @@ test.describe('SnapQuest Feature Tests ', () => {
 
   test('TC-APP-SQ-001: Verify accessing "Join to events button" from plus icon in Joined Events page using POM', async ({ page, context }) => {
     try {
-    console.log('Starting test: TC-APP-SQ-001');
+    basePage.logStep('Starting test: TC-APP-SQ-001', 'info');
 
       await page.goto('https://dev.livesharenow.com/events');
       await page.waitForTimeout(2000);
       // Verify join functionality using POM method
       const joinButtonFound = await snapQuestPage.verifyJoinFunctionality();
       
-      console.log('✅ TC-APP-SQ-001 completed with expected warning: Join button not found using POM structure');
+      basePage.logStep('TC-APP-SQ-001 completed with expected warning: Join button not found using POM structure', 'success');
       
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-join-functionality-${Date.now()}.png`) });
+      await basePage.captureScreenshot('error-join-functionality', `error-${Date.now()}`);
       throw error;
     }
   });
 
   test('TC-APP-SQ-002: Verify accessing "Join" button in nondashboard website using POM', async ({ page, context }) => {
     try {
-    console.log('Starting test: TC-APP-SQ-002');
+    basePage.logStep('Starting test: TC-APP-SQ-002', 'info');
 
       // Verify non-dashboard join functionality using POM method
       const result = await snapQuestPage.verifyNonDashboardJoin();
       
-      console.log('✅ TC-APP-SQ-002 completed successfully using POM structure');
+      basePage.logStep('TC-APP-SQ-002 completed successfully using POM structure', 'success');
       
         } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-nondashboard-join-${Date.now()}.png`) });
+      await basePage.captureScreenshot('error-nondashboard-join', `error-${Date.now()}`);
       throw error;
     }
   });
 
   test('TC-APP-FSQ-001: Verify "Grid View" button functionality using POM', async ({ page, context }) => {
     try {
-      console.log('Starting test: TC-APP-FSQ-001');
+      basePage.logStep('Starting test: TC-APP-FSQ-001', 'info');
       
       // Navigate to app and login
       await page.goto('https://dev.livesharenow.com/');
@@ -70,17 +70,17 @@ test.describe('SnapQuest Feature Tests ', () => {
       // Verify grid view functionality using POM method
       const gridViewButtonFound = await snapQuestPage.verifyGridViewFunctionality();
       
-      console.log('✅ TC-APP-FSQ-001 completed successfully using POM structure');
+      basePage.logStep('TC-APP-FSQ-001 completed successfully using POM structure', 'success');
       
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-grid-view-${Date.now()}.png`) });
+      await basePage.captureScreenshot('error-grid-view', `error-${Date.now()}`);
       throw error;
     }
   });
 
   test('TC-APP-FSQ-002: Verify "Share" button functionality using POM', async ({ page, context }) => {
     try {
-      console.log('Starting test: TC-APP-FSQ-002');
+      basePage.logStep('Starting test: TC-APP-FSQ-002', 'info');
       
       // Navigate to app and login
       await page.goto('https://dev.livesharenow.com/');
@@ -90,10 +90,10 @@ test.describe('SnapQuest Feature Tests ', () => {
       // Verify share functionality using POM method
       const shareButtonFound = await snapQuestPage.verifyShareFunctionality();
       
-      console.log('✅ TC-APP-FSQ-002 completed successfully using POM structure');
+      basePage.logStep('TC-APP-FSQ-002 completed successfully using POM structure', 'success');
       
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-share-button-${Date.now()}.png`) });
+      await basePage.captureScreenshot('error-share-button', `error-${Date.now()}`);
       throw error;
     }
   });
@@ -103,10 +103,10 @@ test.describe('SnapQuest Feature Tests ', () => {
       // Verify button links functionality using POM method
       const result = await snapQuestPage.verifyButtonLinks();
       
-      console.log('✅ TC-APP-FSQ-003 & TC-APP-FSQ-004 completed successfully using POM structure');
+      basePage.logStep('TC-APP-FSQ-003 & TC-APP-FSQ-004 completed successfully using POM structure', 'success');
       
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-button-links-${Date.now()}.png`) });
+      await basePage.captureScreenshot('error-button-links', `error-${Date.now()}`);
       throw error;
     }
   });

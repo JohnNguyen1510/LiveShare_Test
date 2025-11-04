@@ -1,18 +1,11 @@
 import { test, expect } from '@playwright/test';
-import { RegisterPage } from '../page-objects/RegisterPage.js';
 import { LoginPage } from '../page-objects/LoginPage.js';
 import { SubscriptionPage } from '../page-objects/SubscriptionPage.js';
-import { PaymentPage } from '../page-objects/PaymentPage.js';
 import { EventCreationPage } from '../page-objects/EventCreationPage.js';
 import { EventSettingsPage } from '../page-objects/EventSettingsPage.js';
 import { EventPage } from '../page-objects/EventPage.js';
 import path from 'path';
 import fs from 'fs';
-import Mailosaur from 'mailosaur';
-import dotenv from 'dotenv';
-
-
-dotenv.config();
 
 
 // Create screenshots directory if it doesn't exist
@@ -30,234 +23,37 @@ if (!fs.existsSync(screenshotsDir)) {
 
 /**
 * Setup function for creating fresh account and event for each tier test
+* Now uses SubscriptionPage method instead of inline logic
 * @param {import('@playwright/test').Page} page - Playwright page instance
 * @param {import('@playwright/test').BrowserContext} context - Browser context
 * @param {string} tierName - Name of the tier (Free, Standard, Premium, Premium+)
 * @returns {Promise<{success: boolean, testData: Object}>} Setup result with test data
 */
 async function setupFreshAccountAndEvent(page, context, tierName) {
-  console.log(`🚀 Starting fresh account and event setup for: ${tierName} Tier`);
+  const subscriptionPage = new SubscriptionPage(page);
+  const result = await subscriptionPage.setupFreshAccountAndEvent(tierName, context);
   
-  try {
-    // Skip test if Mailosaur is not configured
-    if (!process.env.MAILOSAUR_API_KEY || !process.env.MAILOSAUR_SERVER_ID) {
-      console.warn('⚠️ Mailosaur environment variables not set, skipping setup');
-      return { success: false, testData: null };
-    }
-
-    // Initialize page objects
-    const registerPage = new RegisterPage(page);
-    const eventCreationPage = new EventCreationPage(page);
-    
-    // Setup Mailosaur for email verification
-    const mailosaurClient = new Mailosaur(process.env.MAILOSAUR_API_KEY);
-    const serverId = process.env.MAILOSAUR_SERVER_ID;
-    const timestamp = Date.now();
-    const testEmail = `auto_settings_${tierName.toLowerCase().replace(/\+/g, 'plus')}_${timestamp}@${serverId}.mailosaur.net`;
-    
-    const testData = {
-      email: testEmail,
-      name: `Auto Settings ${tierName} Tester`,
-      password: 't123',
-      eventName: `Settings Test ${tierName} ${timestamp}`,
-      timestamp: timestamp,
-      tier: tierName
-    };
-
-    console.log(`📧 Using test email: ${testEmail}`);
-
-    // Step 1: Navigate to application
-    console.log('📍 Step 1: Navigating to application...');
-    await page.goto('https://dev.livesharenow.com/');
-    await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-01-app-loaded.png`) });
-
-    // Step 2: Complete registration flow
-    console.log('📍 Step 2: Starting registration process...');
-    await registerPage.clickCreateAccount();
-    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-02-create-account-clicked.png`) });
-
-    // Choose email signup
-    console.log('📍 Step 3: Choosing email signup...');
-    const emailSignupSuccess = await registerPage.clickEmailSignup();
-    if (!emailSignupSuccess) {
-      throw new Error('Failed to click email signup');
-    }
-    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-03-email-signup-selected.png`) });
-
-    // Handle terms and conditions
-    console.log('📍 Step 4: Handling terms and conditions...');
-    await registerPage.handleTermsAndConditions();
-    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-04-terms-accepted.png`) });
-
-    // Fill registration form
-    console.log('📍 Step 5: Filling registration form...');
-    await registerPage.fillRegistrationForm(testData.name, testData.email, testData.password);
-    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-05-registration-form-filled.png`) });
-
-
-    // Handle OTP verification
-    console.log('📍 Step 7: Handling OTP verification...');
-    console.log('⏳ Waiting for verification email...');
-    const signUpEmail = await mailosaurClient.messages.get(serverId, {
-      sentTo: testEmail
-    });
-    const verifyEmail = signUpEmail.html.codes[0].value;
-    console.log(`📧 Received OTP code: ${verifyEmail}`);
-    
-    // Wait for OTP input fields and fill them
-    const otpInputs = page.locator('.otp-box');
-    await otpInputs.first().waitFor({ state: 'visible', timeout: 10000 });
-    
-    const otpCode = verifyEmail.toString();
-    for (let i = 0; i < otpCode.length && i < 6; i++) {
-      const input = otpInputs.nth(i);
-      await input.waitFor({ state: 'visible', timeout: 5000 });
-      await input.fill(otpCode[i]);
-      await page.waitForTimeout(200);
-    }
-    
-    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-07-otp-filled.png`) });
-
-    // Complete registration
-    const continueToEventButton = page.locator('button:has-text("Continue to the Event")').first();
-    await expect(continueToEventButton).toBeVisible();
-    await continueToEventButton.click();
-    await page.waitForTimeout(3000);
-    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-08-registration-completed.png`) });
-
-    // Step 8: Event is automatically created during registration
-    console.log('📍 Step 8: Event automatically created...');
-    await page.waitForTimeout(2000);
-    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-09-event-created.png`) });
-
-    console.log(`✅ Fresh account and event setup completed successfully for: ${tierName} Tier`);
-    return { success: true, testData };
-    
-  } catch (error) {
-    console.error(`❌ Setup failed for ${tierName} Tier:`, error.message);
-    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-error-setup.png`) });
-    return { success: false, testData: null };
+  // Add tier to testData
+  if (result.success && result.testData) {
+    result.testData.tier = tierName;
   }
+  
+  return result;
 }
 
 
 /**
 * Subscribe to a plan and handle payment (after account and event are created)
+* Now uses SubscriptionPage method instead of inline logic
 * @param {import('@playwright/test').Page} page - Playwright page instance
 * @param {import('@playwright/test').BrowserContext} context - Browser context
-* @param {string} planName - Plan name (Standard Event, Premium Event, Premium+ Event)
+* @param {string} planName - Plan name (Standard Plan, Premium Plan, Premium+ Plan)
 * @param {string} tierName - Tier name for screenshot naming
 * @returns {Promise<boolean>} Success status
 */
 async function subscribeAndPayForPlan(page, planName, tierName) {
-  console.log(`💳 Subscribing to ${planName} for ${tierName} Tier...`);
-  
-  try {
-    const subscriptionPage = new SubscriptionPage(page);
-    const paymentPage = new PaymentPage(page);
-    
-
-    // Navigate to subscription
-    console.log('📍 Step 1: Navigating to subscription...');
-    const subscriptionNavigationSuccess = await subscriptionPage.navigateToSubscription();
-    if (!subscriptionNavigationSuccess) {
-      throw new Error('Failed to navigate to subscription');
-    }
-    
-    await page.waitForTimeout(2000);
-    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-10-subscription-page.png`) });
-    
-    // Select plan
-    console.log(`📍 Step 2: Selecting ${planName}...`);
-    const selectResult = await subscriptionPage.choosePlanAndClickSelect(planName);
-    if (!selectResult.success) {
-      throw new Error(`Failed to select ${planName}`);
-    }
-    
-    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-11-plan-selected.png`) });
-    
-    // Handle payment based on navigation type
-    console.log(`📍 Step 3: Handling payment flow (${selectResult.navigationType})...`);
-    
-    let paymentSuccess = false;
-    
-    if (selectResult.navigationType === 'newPage' && selectResult.newPage) {
-      // New page/window opened
-      console.log('✅ Processing payment in new window...');
-      const stripePage = selectResult.newPage;
-      await stripePage.waitForLoadState('domcontentloaded');
-      await stripePage.waitForTimeout(2000);
-      await stripePage.screenshot({ path: path.join(screenshotsDir, `${tierName}-12-stripe-checkout.png`) });
-      
-      const stripePayment = new PaymentPage(stripePage);
-      await stripePayment.verifyOnStripeCheckoutPage();
-      await stripePayment.waitForStripeCheckoutReady();
-      
-      const paymentDetails = stripePayment.getDefaultPaymentDetails();
-      paymentSuccess = await stripePayment.completePaymentFlow(paymentDetails);
-      await stripePage.screenshot({ path: path.join(screenshotsDir, `${tierName}-13-payment-completed.png`) });
-      
-      await stripePage.close();
-      console.log('✅ Payment completed in new window and closed');
-      
-    } else if (selectResult.navigationType === 'redirect') {
-      // Page redirected to payment
-      console.log('✅ Processing payment after redirect...');
-      await page.waitForLoadState('domcontentloaded');
-      await page.waitForTimeout(2000);
-      await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-12-payment-redirect.png`) });
-      
-      const stripePayment = new PaymentPage(page);
-      await stripePayment.verifyOnStripeCheckoutPage();
-      await stripePayment.waitForStripeCheckoutReady();
-      
-      const paymentDetails = stripePayment.getDefaultPaymentDetails();
-      paymentSuccess = await stripePayment.completePaymentFlow(paymentDetails);
-      await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-13-payment-completed.png`) });
-      
-      console.log('✅ Payment completed after redirect');
-      
-    } else {
-      // Same page payment (modal/dialog)
-      console.log('✅ Processing payment on same page...');
-      await page.waitForTimeout(2000);
-      await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-12-same-page-payment.png`) });
-      
-      const stripePayment = new PaymentPage(page);
-      
-      // Wait for payment form to appear
-      await page.waitForSelector('input[id="cardNumber"], input[placeholder*="card"], .payment-form', { timeout: 10000 });
-      
-      const paymentDetails = stripePayment.getDefaultPaymentDetails();
-      paymentSuccess = await stripePayment.completePaymentFlow(paymentDetails);
-      await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-13-payment-completed.png`) });
-      
-      console.log('✅ Payment completed on same page');
-    }
-    
-    if (!paymentSuccess) {
-      throw new Error('Payment failed');
-    }
-    
-    // Step 4: Verify subscription success
-    console.log('📍 Step 4: Verifying subscription success...');
-    await page.waitForTimeout(5000);
-    await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-14-subscription-confirmed.png`) });
-    
-    console.log(`✅ Successfully subscribed to ${planName} for ${tierName} Tier`);
-    return true;
-    
-  } catch (error) {
-    console.error(`❌ Subscription failed for ${tierName} Tier:`, error.message);
-    try {
-      await page.screenshot({ path: path.join(screenshotsDir, `${tierName}-subscription-error.png`) });
-    } catch (screenshotError) {
-      console.log('⚠️ Could not take error screenshot (page may be closed)');
-    }
-    return false;
-  }
+  const subscriptionPage = new SubscriptionPage(page);
+  return await subscriptionPage.subscribeAndPayForPlan(planName, tierName);
 }
 
 

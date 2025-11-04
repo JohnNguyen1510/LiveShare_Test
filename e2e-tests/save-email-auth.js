@@ -119,6 +119,8 @@ async function saveEmailAuth() {
 
         // Attempt to open the newly created event detail by clicking the first card
         try {
+          await page.goto('https://dev.livesharenow.com/events');
+          await eventListPage.waitForEventsToLoad();
           await eventListPage.clickEventByIndex(0);
         } catch {}
 

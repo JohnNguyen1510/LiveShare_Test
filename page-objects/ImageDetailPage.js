@@ -4,7 +4,6 @@ import { BasePage } from './BasePage.js';
 export class ImageDetailPage extends BasePage {
   constructor(page) {
     super(page);
-    this.page = page;
 
     // Image detail view locators
     this.imageDetailView = this.page.locator('.image-detail-view, .image-viewer, .photo-detail');
@@ -12,9 +11,7 @@ export class ImageDetailPage extends BasePage {
     // Action buttons in image detail
     this.pinButton = this.page.locator('button:has(mat-icon:text("push_pin"))').first();
     this.giftButton = this.page.locator('button:has(mat-icon:text("redeem"))').first();
-    this.ellipsisButton = this.page.locator(
-      'button.mat-menu-trigger[tabindex="0"]:has(mat-icon:has-text("more_vert"))'
-    );
+    this.ellipsisButton = this.page.locator('button.mat-menu-trigger[tabindex="0"]:has(mat-icon:has-text("more_vert"))');
     this.searchButton = this.page.locator('button:has(mat-icon:text("search")), button:has(mat-icon:text("zoom_in")), button:has(mat-icon:text("crop"))').first();
     
     // Menu options
@@ -29,6 +26,7 @@ export class ImageDetailPage extends BasePage {
     // Delete confirmation
     this.deleteConfirmation = this.page.locator('.confirmation-dialog, .mat-dialog-container:has-text("Delete")').first();
     this.cancelButton = this.page.locator('button:has-text("Cancel"), button:has-text("No")').first();
+    this.yesButton = this.page.locator('button:has-text("Yes")');
     
     // Image selectors for navigation
     this.imageSelectors = [
@@ -40,6 +38,46 @@ export class ImageDetailPage extends BasePage {
       '.grid-container img',
       '.gallery-grid img',
       '.grid-component img'
+    ];
+    
+    // Search button selectors
+    this.searchButtonSelectors = [
+      'button:has(mat-icon:text("search"))', 
+      'button:has(mat-icon:text("zoom_in"))',
+      'button:has(mat-icon:text("crop"))',
+      'button.search-button',
+      '.search-icon',
+      '.btn-ghost:has(mat-icon:text("crop"))',
+      '.text-right .btn-ghost'
+    ];
+    
+    // Menu selectors
+    this.menuSelectors = [
+      '.mat-menu-content',
+      '.dropdown-content',
+      '.menu-content',
+      '.cdk-overlay-pane',
+      '.mat-menu-panel'
+    ];
+    
+    // Edit window selectors
+    this.editWindowSelectors = [
+      '.dialog-content',
+      '.edit-dialog',
+      'input[placeholder*="Title"]',
+      'input[placeholder*="Caption"]',
+      '.edit-div',
+      '.caption-text:has-text("Title")',
+      '.caption-text:has-text("Caption")'
+    ];
+    
+    // Delete confirmation selectors
+    this.deleteConfirmSelectors = [
+      '.confirmation-dialog',
+      '.mat-dialog-container:has-text("Delete")',
+      'div:has-text("Are you sure")',
+      '.dialog-content:has-text("Delete")',
+      '.mat-dialog-content:has-text("Delete")'
     ];
   }
 
@@ -107,27 +145,17 @@ export class ImageDetailPage extends BasePage {
   async clickFirstImage() {
     console.log('Looking for images in the event detail page...');
     
-    let imageFound = false;
+    const result = await this.tryMultipleSelectors(this.imageSelectors, 'click');
     
-    for (const selector of this.imageSelectors) {
-      const images = this.page.locator(selector);
-      if (await images.count() > 0) {
-        console.log(`Found image with selector: ${selector}`);
-        await images.first().click();
-        imageFound = true;
-        break;
-      }
-    }
-    
-    if (!imageFound) {
+    if (!result.success) {
+      console.error('Could not find any images in the event detail page');
+      await this.takeScreenshot('error-no-images-found');
       throw new Error('Could not find any images in the event detail page');
     }
     
-    // Wait for the image detail view to load
+    console.log(`✅ Found and clicked image with selector: ${result.selector}`);
     await this.page.waitForTimeout(2000);
-    await this.takeScreenshot('image-detail-view');
-    
-    return imageFound;
+    return true;
   }
 
   async clickPinButton() {
@@ -145,164 +173,95 @@ export class ImageDetailPage extends BasePage {
     // Check if the button or icon state changed
     let buttonChanged = initialState !== updatedState || initialIconState !== updatedIconState;
     
-    // If class check didn't work, try checking for color change or other indicators
+    // If class check didn't work, try checking for color indicators
     if (!buttonChanged) {
       const isOrangeVisible = await this.page.locator('mat-icon.text-orange-600').count() > 0;
       const isPinnedIndicatorVisible = await this.page.locator('.pinned-indicator').count() > 0;
       buttonChanged = isOrangeVisible || isPinnedIndicatorVisible;
     }
     
-    await this.takeScreenshot('after-pin-click');
+    console.log(`✅ Pin button ${buttonChanged ? 'changed state' : 'clicked'}`);
     return buttonChanged;
   }
 
 
   async clickEllipsisButton() {
     await this.ellipsisButton.waitFor({ state: 'visible', timeout: 5000 });
-    
     console.log('Clicking ellipsis button...');
     await this.ellipsisButton.click();
     await this.page.waitForTimeout(2000);
     
-    await this.takeScreenshot('after-ellipsis-click');
+    // Check if menu appears
+    const result = await this.tryMultipleSelectors(this.menuSelectors, 'isVisible');
     
-    // Check if a menu appears after clicking
-    const menuSelectors = [
-      '.mat-menu-content',
-      '.dropdown-content',
-      '.menu-content',
-      '.cdk-overlay-pane',
-      '.mat-menu-panel'
-    ];
-    
-    let menuVisible = false;
-    
-    for (const selector of menuSelectors) {
-      if (await this.page.locator(selector).count() > 0) {
-        console.log(`Found menu with selector: ${selector}`);
-        menuVisible = true;
-        break;
-      }
+    if (result.success) {
+      console.log(`✅ Menu appeared with selector: ${result.selector}`);
+      return true;
     }
     
-    return menuVisible;
+    return false;
   }
 
   async clickEditOption() {
     await this.editOption.waitFor({ state: 'visible', timeout: 5000 });
-    
     console.log('Clicking edit option...');
     await this.editOption.click();
     await this.page.waitForTimeout(2000);
     
-    await this.takeScreenshot('edit-window');
-    
     // Check if edit window appears
-    const editWindowSelectors = [
-      '.dialog-content',
-      '.edit-dialog',
-      'input[placeholder*="Title"]',
-      'input[placeholder*="Caption"]',
-      '.edit-div',
-      '.caption-text:has-text("Title")',
-      '.caption-text:has-text("Caption")'
-    ];
+    const result = await this.tryMultipleSelectors(this.editWindowSelectors, 'isVisible');
     
-    let editWindowVisible = false;
-    
-    for (const selector of editWindowSelectors) {
-      if (await this.page.locator(selector).count() > 0) {
-        console.log(`Found edit window with selector: ${selector}`);
-        editWindowVisible = true;
-        break;
-      }
+    if (result.success) {
+      console.log(`✅ Edit window appeared with selector: ${result.selector}`);
+      return true;
     }
     
-    return editWindowVisible;
+    return false;
   }
 
   async clickDeleteOption() {
     await this.deleteOption.waitFor({ state: 'visible', timeout: 5000 });
-    
     console.log('Clicking delete option...');
     await this.deleteOption.click();
     await this.page.waitForTimeout(2000);
     
-    await this.takeScreenshot('delete-confirmation');
-    
     // Check if confirmation dialog appears
-    const confirmDialogSelectors = [
-      '.confirmation-dialog',
-      '.mat-dialog-container:has-text("Delete")',
-      'div:has-text("Are you sure")',
-      '.dialog-content:has-text("Delete")',
-      '.mat-dialog-content:has-text("Delete")'
-    ];
+    const result = await this.tryMultipleSelectors(this.deleteConfirmSelectors, 'isVisible');
     
-    let confirmDialogVisible = false;
-    
-    for (const selector of confirmDialogSelectors) {
-      if (await this.page.locator(selector).count() > 0) {
-        console.log(`Found confirmation dialog with selector: ${selector}`);
-        confirmDialogVisible = true;
-      }
+    if (result.success) {
+      console.log(`✅ Delete confirmation appeared with selector: ${result.selector}`);
     }
-    const buttonYes = this.page.locator('button:has-text("Yes")');    
-
+    
+    // Click Yes and verify API
     const apiResponse = await this.performActionAndWaitForResponse({
-      actionPromise: buttonYes.click(),
+      actionPromise: this.yesButton.click(),
       apiUrl: '/api/posts',
       statusCode: 200,
       requestMethod: 'GET'
     });
 
     expect(apiResponse).toHaveProperty('message', 'success');
-
     return true;
   }
 
   async clickSearchButton() {
-    const searchButtonSelectors = [
-      'button:has(mat-icon:text("search"))', 
-      'button:has(mat-icon:text("zoom_in"))',
-      'button:has(mat-icon:text("crop"))',
-      'button.search-button',
-      '.search-icon',
-      '.btn-ghost:has(mat-icon:text("crop"))',
-      '.text-right .btn-ghost'
-    ];
+    const result = await this.tryMultipleSelectors(this.searchButtonSelectors, 'isVisible');
     
-    let searchButton = null;
-    
-    for (const selector of searchButtonSelectors) {
-      const buttons = this.page.locator(selector);
-      if (await buttons.count() > 0) {
-        console.log(`Found search/crop button with selector: ${selector}`);
-        searchButton = buttons.first();
-        break;
-      }
-    }
-    
-    if (!searchButton) {
-      console.log('Warning: Search/crop button not found in the interface');
+    if (!result.success) {
+      console.log('⚠️ Search/crop button not found in the interface');
       return { found: false, changed: false };
     }
     
-    // Get initial state
-    const initialState = await searchButton.getAttribute('class');
+    console.log(`Found search/crop button with selector: ${result.selector}`);
+    const initialState = await result.element.getAttribute('class');
     
-    console.log('Clicking search/crop button...');
-    await searchButton.click();
+    await result.element.click();
     await this.page.waitForTimeout(2000);
     
-    // Get updated state
-    const updatedState = await searchButton.getAttribute('class');
-    
-    // Check if button state changed
+    const updatedState = await result.element.getAttribute('class');
     const buttonChanged = initialState !== updatedState;
     
-    await this.takeScreenshot('after-search-click');
-    
+    console.log(`✅ Search button ${buttonChanged ? 'changed state' : 'clicked'}`);
     return { found: true, changed: buttonChanged };
   }
 
@@ -347,6 +306,24 @@ export class ImageDetailPage extends BasePage {
     
     expect(result.changed, 'Search/crop button should change state when clicked').toBeTruthy();
     return result;
+  }
+
+  /**
+   * Complete workflow to open event and click first image
+   * @param {string} eventName - Event name to open
+   */
+  async openEventAndClickFirstImage(eventName) {
+    const EventListPageClass = (await import('./EventListPage.js')).EventListPage;
+    const EventDetailPageClass = (await import('./EventDetailPage.js')).EventDetailPage;
+    
+    const eventListPage = new EventListPageClass(this.page);
+    const eventDetailPage = new EventDetailPageClass(this.page);
+    
+    await eventListPage.goToEventsPage();
+    await eventListPage.clickEventByName(eventName);
+    await eventDetailPage.waitForEventDetailToLoad();
+    await this.page.waitForTimeout(8000);
+    await this.clickFirstImage();
   }
 }
 

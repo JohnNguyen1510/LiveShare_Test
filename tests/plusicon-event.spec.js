@@ -69,66 +69,6 @@ const TEST_DATA = {
 };
 
 // ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-/**
- * Capture screenshot with timestamp
- * @param {Page} page - Playwright page object
- * @param {string} testCase - Test case identifier
- * @param {string} step - Step description
- */
-async function captureScreenshot(page, testCase, step) {
-  const timestamp = Date.now();
-  const filename = `${testCase}-${step}-${timestamp}.png`;
-  await page.screenshot({ 
-    path: path.join(screenshotsDir, filename),
-    fullPage: true 
-  });
-  return filename;
-}
-
-/**
- * Log test step with formatting
- * @param {string} message - Log message
- * @param {string} level - Log level (info, success, error)
- */
-function logStep(message, level = 'info') {
-  const icons = {
-    info: '📍',
-    success: '✅',
-    error: '❌',
-    warning: '⚠'
-  };
-  const icon = icons[level] || '•';
-  console.log(`${icon} ${message}`);
-}
-
-/**
- * Print test header
- * @param {string} testCase - Test case ID
- * @param {string} description - Test description
- */
-function printTestHeader(testCase, description) {
-  console.log('\n╔════════════════════════════════════════════════════════╗');
-  console.log(`║     ${testCase}: ${description.padEnd(36, ' ')}║`);
-  console.log('╚════════════════════════════════════════════════════════╝\n');
-}
-
-/**
- * Print test footer
- * @param {string} testCase - Test case ID
- * @param {boolean} passed - Test result
- */
-function printTestFooter(testCase, passed = true) {
-  const status = passed ? '✅ PASSED' : '❌ FAILED';
-  const message = passed ? `${testCase}: ${status}` : `${testCase}: ${status}`;
-  console.log('\n╔════════════════════════════════════════════════════════╗');
-  console.log(`║   ${message.padEnd(51, ' ')}║`);
-  console.log('╚════════════════════════════════════════════════════════╝\n');
-}
-
-// ============================================================================
 // TEST SUITE
 // ============================================================================
 
@@ -145,34 +85,31 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
    * This runs before each test to ensure we start from the event detail page
    */
   test.beforeEach(async ({ page }) => {
-    logStep('Starting test setup...', 'info');
-    
     // Initialize page objects
     loginPage = new LoginPage(page);
     eventListPage = new EventListPage(page);
     eventDetailPage = new EventDetailPage(page);
     basePage = new BasePage(page);
 
+    basePage.logStep('Starting test setup', 'info');
+
     try {
       // Navigate to events page
-      logStep('Navigating to events page...', 'info');
       await eventListPage.goToEventsPage();
       await eventListPage.waitForEventsToLoad();
       await eventListPage.verifyEventsPageLoaded();
       
       // Select first event
-      logStep('Selecting first event...', 'info');
       await eventListPage.clickEventByIndex(0);
       await page.waitForTimeout(2000);
       
       // Wait for event detail page to load
-      logStep('Waiting for event detail page to load...', 'info');
       await eventDetailPage.waitForEventDetailToLoad();
       await eventDetailPage.verifyEventDetailLoaded();
       
-      logStep('Setup complete - Event detail page loaded', 'success');
+      basePage.logStep('Setup complete - Event detail page loaded', 'success');
     } catch (error) {
-      logStep(`Setup failed: ${error.message}`, 'error');
+      basePage.logStep(`Setup failed: ${error.message}`, 'error');
       throw error;
     }
   });
@@ -201,60 +138,47 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
    * - Post is created successfully
    */
   test('TC-APP-VIEW-001: Verify "Then & Now" button functionality', async ({ page }) => {
-    printTestHeader('TC-APP-VIEW-001', 'Then & Now Functionality');
+    basePage.printTestHeader('TC-APP-VIEW-001', 'Then & Now Functionality');
 
     try {
       // STEP 1: Click plus icon to reveal feature options
-      logStep('Step 1: Clicking plus icon to reveal feature options');
+      basePage.logStep('Step 1: Clicking plus icon to reveal feature options');
       await eventDetailPage.clickAddButtonToRevealFeatures();
-      await captureScreenshot(page, 'tc001', 'step1-plus-icon-menu');
-      logStep('Plus icon menu revealed', 'success');
       await page.waitForTimeout(1000);
 
       // STEP 2: Verify Then & Now button is visible
-      logStep('Step 2: Verifying "Then & Now" button is visible');
+      basePage.logStep('Step 2: Verifying "Then & Now" button is visible');
       const thenAndNowVisible = await eventDetailPage.verifyThenAndNowButton();
       expect(thenAndNowVisible, '"Then & Now" button should be visible').toBeTruthy();
-      await captureScreenshot(page, 'tc001', 'step2-then-and-now-button');
-      logStep('"Then & Now" button verified as visible', 'success');
 
       // STEP 3: Click "Then & Now" button
-      logStep('Step 3: Clicking "Then & Now" button');
+      basePage.logStep('Step 3: Clicking "Then & Now" button');
       await eventDetailPage.clickThenAndNowButton();
-      await captureScreenshot(page, 'tc001', 'step3-then-and-now-dialog');
-      logStep('"Then & Now" dialog opened', 'success');
 
       // STEP 4: Verify Then & Now dialog UI
-      logStep('Step 4: Verifying "Then & Now" dialog UI elements');
+      basePage.logStep('Step 4: Verifying "Then & Now" dialog UI elements');
       await eventDetailPage.verifyThenAndNowDialog();
-      await captureScreenshot(page, 'tc001', 'step4-dialog-ui-verified');
-      logStep('Dialog UI verified - All elements present', 'success');
 
       // STEP 5-6: Upload images for THEN and NOW
-      logStep('Step 5-6: Uploading images for THEN and NOW');
+      basePage.logStep('Step 5-6: Uploading images for THEN and NOW');
       await eventDetailPage.uploadThenAndNowImages(TEST_IMAGE_PATH);
-      await captureScreenshot(page, 'tc001', 'step5-6-images-uploaded');
-      logStep('Images uploaded for both THEN and NOW', 'success');
 
       // STEP 7: Click POST button
-      logStep('Step 7: Clicking POST button');
+      basePage.logStep('Step 7: Clicking POST button');
       await eventDetailPage.clickThenAndNowPostButton();
-      await captureScreenshot(page, 'tc001', 'step7-post-clicked');
-      logStep('POST button clicked', 'success');
 
       // STEP 8: Verify post success (wait for dialog to close)
-      logStep('Step 8: Verifying post creation');
+      basePage.logStep('Step 8: Verifying post creation');
       await page.waitForTimeout(2000);
       const dialogClosed = await page.locator('app-then-and-now').count() === 0;
       expect(dialogClosed).toBeTruthy();
-      logStep('Post created successfully', 'success');
 
-      printTestFooter('TC-APP-VIEW-001', true);
+      basePage.printTestFooter('TC-APP-VIEW-001', true);
 
     } catch (error) {
-      logStep(`TC-APP-VIEW-001 FAILED: ${error.message}`, 'error');
-      await captureScreenshot(page, 'tc001', 'error');
-      printTestFooter('TC-APP-VIEW-001', false);
+      basePage.logStep(`TC-APP-VIEW-001 FAILED: ${error.message}`, 'error');
+      await basePage.captureScreenshot('tc001', 'error');
+      basePage.printTestFooter('TC-APP-VIEW-001', false);
       throw error;
     }
   });
@@ -280,59 +204,59 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
    * - Privacy message is displayed
    */
   test('TC-APP-VIEW-002: Verify "KeepSake" button functionality', async ({ page }) => {
-    printTestHeader('TC-APP-VIEW-002', 'KeepSake Functionality');
+    basePage.printTestHeader('TC-APP-VIEW-002', 'KeepSake Functionality');
 
     try {
       // STEP 1: Click plus icon
-      logStep('Step 1: Clicking plus icon to reveal feature options');
+      basePage.logStep('Step 1: Clicking plus icon to reveal feature options');
       await eventDetailPage.clickAddButtonToRevealFeatures();
-      await captureScreenshot(page, 'tc002', 'step1-plus-icon-menu');
-      logStep('Plus icon menu revealed', 'success');
+      await basePage.captureScreenshot('tc002', 'step1-plus-icon-menu');
+      basePage.logStep('Plus icon menu revealed', 'success');
 
       // STEP 2: Verify KeepSake button is visible
-      logStep('Step 2: Verifying "KeepSake" button is visible');
+      basePage.logStep('Step 2: Verifying "KeepSake" button is visible');
       const keepSakeVisible = await eventDetailPage.verifyKeepSakeButton();
       expect(keepSakeVisible, '"KeepSake" button should be visible').toBeTruthy();
-      await captureScreenshot(page, 'tc002', 'step2-keepsake-button');
-      logStep('"KeepSake" button verified as visible', 'success');
+      await basePage.captureScreenshot('tc002', 'step2-keepsake-button');
+      basePage.logStep('"KeepSake" button verified as visible', 'success');
 
       // STEP 3: Click "KeepSake" button
-      logStep('Step 3: Clicking "KeepSake" button');
+      basePage.logStep('Step 3: Clicking "KeepSake" button');
       await eventDetailPage.clickKeepSakeButton();
-      await captureScreenshot(page, 'tc002', 'step3-keepsake-dialog');
-      logStep('"KeepSake" dialog opened', 'success');
+      await basePage.captureScreenshot('tc002', 'step3-keepsake-dialog');
+      basePage.logStep('"KeepSake" dialog opened', 'success');
 
       // STEP 4: Verify KeepSake dialog UI (Photos and Videos buttons)
-      logStep('Step 4: Verifying "Photos" and "Videos" buttons');
+      basePage.logStep('Step 4: Verifying "Photos" and "Videos" buttons');
       await eventDetailPage.verifyKeepSakeDialog();
-      await captureScreenshot(page, 'tc002', 'step4-dialog-buttons');
-      logStep('Photos and Videos buttons verified', 'success');
+      await basePage.captureScreenshot('tc002', 'step4-dialog-buttons');
+      basePage.logStep('Photos and Videos buttons verified', 'success');
 
       // STEP 5: Click Videos and upload file
-      logStep('Step 5: Clicking "Videos" and uploading file');
+      basePage.logStep('Step 5: Clicking "Videos" and uploading file');
       await eventDetailPage.uploadKeepSakeVideo(TEST_IMAGE_PATH);
-      await captureScreenshot(page, 'tc002', 'step5-video-uploaded');
-      logStep('Video/file uploaded', 'success');
+      await basePage.captureScreenshot('tc002', 'step5-video-uploaded');
+      basePage.logStep('Video/file uploaded', 'success');
 
       // STEP 6: Click POST button
-      logStep('Step 6: Clicking POST button');
+      basePage.logStep('Step 6: Clicking POST button');
       await eventDetailPage.clickPostMessageButton();
-      await captureScreenshot(page, 'tc002', 'step6-post-clicked');
-      logStep('POST button clicked', 'success');
+      await basePage.captureScreenshot('tc002', 'step6-post-clicked');
+      basePage.logStep('POST button clicked', 'success');
 
       // STEP 7: Verify thank you dialog
-      logStep('Step 7: Verifying KeepSake thank you dialog');
+      basePage.logStep('Step 7: Verifying KeepSake thank you dialog');
       await page.waitForTimeout(2000);
       await eventDetailPage.verifyKeepSakeThankYouDialog();
-      await captureScreenshot(page, 'tc002', 'step7-thankyou-dialog');
-      logStep('Thank you dialog verified with unlock date', 'success');
+      await basePage.captureScreenshot('tc002', 'step7-thankyou-dialog');
+      basePage.logStep('Thank you dialog verified with unlock date', 'success');
 
-      printTestFooter('TC-APP-VIEW-002', true);
+      basePage.printTestFooter('TC-APP-VIEW-002', true);
 
     } catch (error) {
-      logStep(`TC-APP-VIEW-002 FAILED: ${error.message}`, 'error');
-      await captureScreenshot(page, 'tc002', 'error');
-      printTestFooter('TC-APP-VIEW-002', false);
+      basePage.logStep(`TC-APP-VIEW-002 FAILED: ${error.message}`, 'error');
+      await basePage.captureScreenshot('tc002', 'error');
+      basePage.printTestFooter('TC-APP-VIEW-002', false);
       throw error;
     }
   });
@@ -362,63 +286,63 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
    * Note: This feature may not be enabled in all events. Test will be skipped if not available.
    */
   test('TC-APP-VIEW-003: Verify "Clue" (Scavenger Hunt) button functionality', async ({ page }) => {
-    printTestHeader('TC-APP-VIEW-003', 'Clue (Scavenger Hunt) Feature');
+    basePage.printTestHeader('TC-APP-VIEW-003', 'Clue (Scavenger Hunt) Feature');
 
     try {
       // STEP 1: Click plus icon
-      logStep('Step 1: Clicking plus icon to reveal feature options');
+      basePage.logStep('Step 1: Clicking plus icon to reveal feature options');
       await eventDetailPage.clickAddButtonToRevealFeatures();
-      await captureScreenshot(page, 'tc003', 'step1-plus-icon-menu');
-      logStep('Plus icon menu revealed', 'success');
+      await basePage.captureScreenshot('tc003', 'step1-plus-icon-menu');
+      basePage.logStep('Plus icon menu revealed', 'success');
 
       // STEP 2: Verify Clue button is visible
-      logStep('Step 2: Verifying "Clue" button is visible');
+      basePage.logStep('Step 2: Verifying "Clue" button is visible');
       const clueVisible = await eventDetailPage.verifyClueButton();
       
       // Skip test if feature not enabled
       if (!clueVisible) {
-        logStep('⚠ "Clue" feature is not enabled for this event - SKIPPING TEST', 'warning');
+        basePage.logStep('⚠ "Clue" feature is not enabled for this event - SKIPPING TEST', 'warning');
         test.skip();
         return;
       }
       
-      await captureScreenshot(page, 'tc003', 'step2-clue-button');
-      logStep('"Clue" button verified as visible', 'success');
+      await basePage.captureScreenshot('tc003', 'step2-clue-button');
+      basePage.logStep('"Clue" button verified as visible', 'success');
 
       // STEP 3: Click "Clue" button
-      logStep('Step 3: Clicking "Clue" button');
+      basePage.logStep('Step 3: Clicking "Clue" button');
       await eventDetailPage.clickClueButton();
-      await captureScreenshot(page, 'tc003', 'step3-clue-dialog');
-      logStep('"Clue" dialog opened', 'success');
+      await basePage.captureScreenshot('tc003', 'step3-clue-dialog');
+      basePage.logStep('"Clue" dialog opened', 'success');
 
       // STEP 4: Verify post-message dialog UI
-      logStep('Step 4: Verifying post-message dialog UI');
+      basePage.logStep('Step 4: Verifying post-message dialog UI');
       await eventDetailPage.verifyPostMessageDialog();
-      await captureScreenshot(page, 'tc003', 'step4-dialog-ui');
-      logStep('Dialog UI verified (close, checkbox, POST button)', 'success');
+      await basePage.captureScreenshot('tc003', 'step4-dialog-ui');
+      basePage.logStep('Dialog UI verified (close, checkbox, POST button)', 'success');
 
       // STEP 5-6: Upload image and fill title and caption
-      logStep('Step 5-6: Uploading image and filling title and caption');
+      basePage.logStep('Step 5-6: Uploading image and filling title and caption');
       await eventDetailPage.uploadClueWithInfo(
         TEST_IMAGE_PATH,
         TEST_DATA.CLUE.TITLE,
         TEST_DATA.CLUE.CAPTION
       );
-      await captureScreenshot(page, 'tc003', 'step5-6-info-filled');
-      logStep('Image uploaded, title and caption filled', 'success');
+      await basePage.captureScreenshot('tc003', 'step5-6-info-filled');
+      basePage.logStep('Image uploaded, title and caption filled', 'success');
 
       // STEP 7: Click POST button
-      logStep('Step 7: Clicking POST button');
+      basePage.logStep('Step 7: Clicking POST button');
       await eventDetailPage.clickPostMessageButton();
-      await captureScreenshot(page, 'tc003', 'step7-post-clicked');
-      logStep('POST button clicked', 'success');
+      await basePage.captureScreenshot('tc003', 'step7-post-clicked');
+      basePage.logStep('POST button clicked', 'success');
 
-      printTestFooter('TC-APP-VIEW-003', true);
+      basePage.printTestFooter('TC-APP-VIEW-003', true);
 
     } catch (error) {
-      logStep(`TC-APP-VIEW-003 FAILED: ${error.message}`, 'error');
-      await captureScreenshot(page, 'tc003', 'error');
-      printTestFooter('TC-APP-VIEW-003', false);
+      basePage.logStep(`TC-APP-VIEW-003 FAILED: ${error.message}`, 'error');
+      await basePage.captureScreenshot('tc003', 'error');
+      basePage.printTestFooter('TC-APP-VIEW-003', false);
       throw error;
     }
   });
@@ -445,57 +369,57 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
    * - Post is created successfully
    */
   test('TC-APP-VIEW-004: Verify "Sponsor" button functionality', async ({ page }) => {
-    printTestHeader('TC-APP-VIEW-004', 'Sponsor Functionality');
+    basePage.printTestHeader('TC-APP-VIEW-004', 'Sponsor Functionality');
 
     try {
       // STEP 1: Click plus icon
-      logStep('Step 1: Clicking plus icon to reveal feature options');
+      basePage.logStep('Step 1: Clicking plus icon to reveal feature options');
       await eventDetailPage.clickAddButtonToRevealFeatures();
-      await captureScreenshot(page, 'tc004', 'step1-plus-icon-menu');
-      logStep('Plus icon menu revealed', 'success');
+      await basePage.captureScreenshot('tc004', 'step1-plus-icon-menu');
+      basePage.logStep('Plus icon menu revealed', 'success');
 
       // STEP 2: Verify Sponsor button is visible
-      logStep('Step 2: Verifying "Sponsor" button is visible');
+      basePage.logStep('Step 2: Verifying "Sponsor" button is visible');
       const sponsorVisible = await eventDetailPage.verifySponsorButton();
       expect(sponsorVisible, '"Sponsor" button should be visible').toBeTruthy();
-      await captureScreenshot(page, 'tc004', 'step2-sponsor-button');
-      logStep('"Sponsor" button verified as visible', 'success');
+      await basePage.captureScreenshot('tc004', 'step2-sponsor-button');
+      basePage.logStep('"Sponsor" button verified as visible', 'success');
 
       // STEP 3: Click "Sponsor" button
-      logStep('Step 3: Clicking "Sponsor" button');
+      basePage.logStep('Step 3: Clicking "Sponsor" button');
       await eventDetailPage.clickSponsorButton();
       await page.waitForTimeout(1000);
-      await captureScreenshot(page, 'tc004', 'step3-sponsor-dialog');
-      logStep('"Sponsor" dialog opened', 'success');
+      await basePage.captureScreenshot('tc004', 'step3-sponsor-dialog');
+      basePage.logStep('"Sponsor" dialog opened', 'success');
 
       // STEP 4: Upload image FIRST (TC-001/TC-002 success pattern)
-      logStep('Step 4: Uploading image and filling sponsor info');
+      basePage.logStep('Step 4: Uploading image and filling sponsor info');
       await eventDetailPage.uploadSponsorWithInfo(
         TEST_IMAGE_PATH,
         TEST_DATA.SPONSOR.URL,
         TEST_DATA.SPONSOR.ROWS_BEFORE,
         TEST_DATA.SPONSOR.ROWS_BETWEEN
       );
-      await captureScreenshot(page, 'tc004', 'step4-upload-complete');
-      logStep('Image uploaded and info filled successfully', 'success');
+      await basePage.captureScreenshot('tc004', 'step4-upload-complete');
+      basePage.logStep('Image uploaded and info filled successfully', 'success');
 
       // STEP 5: Verify UI elements AFTER upload (optional verification)
-      logStep('Step 5: Verifying post-message dialog UI elements');
+      basePage.logStep('Step 5: Verifying post-message dialog UI elements');
       await eventDetailPage.verifyPostMessageDialog();
-      logStep('Dialog UI verified after upload', 'success');
+      basePage.logStep('Dialog UI verified after upload', 'success');
 
       // STEP 6: Click POST button
-      logStep('Step 6: Clicking POST button');
+      basePage.logStep('Step 6: Clicking POST button');
       await eventDetailPage.clickPostMessageButton();
-      await captureScreenshot(page, 'tc004', 'step6-post-clicked');
-      logStep('POST button clicked', 'success');
+      await basePage.captureScreenshot('tc004', 'step6-post-clicked');
+      basePage.logStep('POST button clicked', 'success');
 
-      printTestFooter('TC-APP-VIEW-004', true);
+      basePage.printTestFooter('TC-APP-VIEW-004', true);
 
     } catch (error) {
-      logStep(`TC-APP-VIEW-004 FAILED: ${error.message}`, 'error');
-      await captureScreenshot(page, 'tc004', 'error');
-      printTestFooter('TC-APP-VIEW-004', false);
+      basePage.logStep(`TC-APP-VIEW-004 FAILED: ${error.message}`, 'error');
+      await basePage.captureScreenshot('tc004', 'error');
+      basePage.printTestFooter('TC-APP-VIEW-004', false);
       throw error;
     }
   });
@@ -521,55 +445,55 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
    * - Post is created successfully
    */
   test('TC-APP-VIEW-005: Verify "Prize" button functionality', async ({ page }) => {
-    printTestHeader('TC-APP-VIEW-005', 'Prize Functionality');
+    basePage.printTestHeader('TC-APP-VIEW-005', 'Prize Functionality');
 
     try {
       // STEP 1: Click plus icon
-      logStep('Step 1: Clicking plus icon to reveal feature options');
+      basePage.logStep('Step 1: Clicking plus icon to reveal feature options');
       await eventDetailPage.clickAddButtonToRevealFeatures();
-      await captureScreenshot(page, 'tc005', 'step1-plus-icon-menu');
-      logStep('Plus icon menu revealed', 'success');
+      await basePage.captureScreenshot('tc005', 'step1-plus-icon-menu');
+      basePage.logStep('Plus icon menu revealed', 'success');
 
       // STEP 2: Verify Prize button is visible
-      logStep('Step 2: Verifying "Prize" button is visible');
+      basePage.logStep('Step 2: Verifying "Prize" button is visible');
       const prizeVisible = await eventDetailPage.verifyPrizeButton();
       expect(prizeVisible, '"Prize" button should be visible').toBeTruthy();
-      await captureScreenshot(page, 'tc005', 'step2-prize-button');
-      logStep('"Prize" button verified as visible', 'success');
+      await basePage.captureScreenshot('tc005', 'step2-prize-button');
+      basePage.logStep('"Prize" button verified as visible', 'success');
 
       // STEP 3: Click "Prize" button
-      logStep('Step 3: Clicking "Prize" button');
+      basePage.logStep('Step 3: Clicking "Prize" button');
       await eventDetailPage.clickPrizeButton();
       await page.waitForTimeout(1000);
-      await captureScreenshot(page, 'tc005', 'step3-prize-dialog');
-      logStep('"Prize" dialog opened', 'success');
+      await basePage.captureScreenshot('tc005', 'step3-prize-dialog');
+      basePage.logStep('"Prize" dialog opened', 'success');
 
       // STEP 4: Upload image FIRST (TC-001/TC-002 success pattern)
-      logStep('Step 4: Uploading image and filling caption');
+      basePage.logStep('Step 4: Uploading image and filling caption');
       await eventDetailPage.uploadPrizeWithCaption(
         TEST_IMAGE_PATH,
         TEST_DATA.PRIZE.CAPTION
       );
-      await captureScreenshot(page, 'tc005', 'step4-upload-complete');
-      logStep('Image uploaded and caption filled successfully', 'success');
+      await basePage.captureScreenshot('tc005', 'step4-upload-complete');
+      basePage.logStep('Image uploaded and caption filled successfully', 'success');
 
       // STEP 5: Verify UI elements AFTER upload (optional verification)
-      logStep('Step 5: Verifying post-message dialog UI elements');
+      basePage.logStep('Step 5: Verifying post-message dialog UI elements');
       await eventDetailPage.verifyPostMessageDialog();
-      logStep('Dialog UI verified after upload', 'success');
+      basePage.logStep('Dialog UI verified after upload', 'success');
 
       // STEP 6: Click POST button
-      logStep('Step 6: Clicking POST button');
+      basePage.logStep('Step 6: Clicking POST button');
       await eventDetailPage.clickPostMessageButton();
-      await captureScreenshot(page, 'tc005', 'step6-post-clicked');
-      logStep('POST button clicked', 'success');
+      await basePage.captureScreenshot('tc005', 'step6-post-clicked');
+      basePage.logStep('POST button clicked', 'success');
 
-      printTestFooter('TC-APP-VIEW-005', true);
+      basePage.printTestFooter('TC-APP-VIEW-005', true);
 
     } catch (error) {
-      logStep(`TC-APP-VIEW-005 FAILED: ${error.message}`, 'error');
-      await captureScreenshot(page, 'tc005', 'error');
-      printTestFooter('TC-APP-VIEW-005', false);
+      basePage.logStep(`TC-APP-VIEW-005 FAILED: ${error.message}`, 'error');
+      await basePage.captureScreenshot('tc005', 'error');
+      basePage.printTestFooter('TC-APP-VIEW-005', false);
       throw error;
     }
   });
@@ -599,42 +523,42 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
    * - Message appears in the event feed with correct caption
    */
   test('TC-APP-VIEW-006: Verify "Message" button functionality', async ({ page }) => {
-    printTestHeader('TC-APP-VIEW-006', 'Message Functionality');
+    basePage.printTestHeader('TC-APP-VIEW-006', 'Message Functionality');
 
     try {
       // STEP 1: Click plus icon
-      logStep('Step 1: Clicking plus icon to reveal feature options');
+      basePage.logStep('Step 1: Clicking plus icon to reveal feature options');
       await eventDetailPage.clickAddButtonToRevealFeatures();
-      await captureScreenshot(page, 'tc006', 'step1-plus-icon-menu');
-      logStep('Plus icon menu revealed', 'success');
+      await basePage.captureScreenshot('tc006', 'step1-plus-icon-menu');
+      basePage.logStep('Plus icon menu revealed', 'success');
 
       // STEP 2: Verify Message button is visible
-      logStep('Step 2: Verifying "Message" button is visible');
+      basePage.logStep('Step 2: Verifying "Message" button is visible');
       const messageVisible = await eventDetailPage.verifyMessageButton();
       expect(messageVisible, '"Message" button should be visible').toBeTruthy();
-      await captureScreenshot(page, 'tc006', 'step2-message-button');
-      logStep('"Message" button verified as visible', 'success');
+      await basePage.captureScreenshot('tc006', 'step2-message-button');
+      basePage.logStep('"Message" button verified as visible', 'success');
 
       // STEP 3: Click "Message" button
-      logStep('Step 3: Clicking "Message" button');
+      basePage.logStep('Step 3: Clicking "Message" button');
       await eventDetailPage.clickMessageButton();
-      await captureScreenshot(page, 'tc006', 'step3-message-dialog');
-      logStep('"Message" dialog opened', 'success');
+      await basePage.captureScreenshot('tc006', 'step3-message-dialog');
+      basePage.logStep('"Message" dialog opened', 'success');
 
       // STEP 4: Verify post-message dialog UI
-      logStep('Step 4: Verifying post-message dialog UI');
+      basePage.logStep('Step 4: Verifying post-message dialog UI');
       await eventDetailPage.verifyPostMessageDialog();
-      await captureScreenshot(page, 'tc006', 'step4-dialog-ui');
-      logStep('Dialog UI verified', 'success');
+      await basePage.captureScreenshot('tc006', 'step4-dialog-ui');
+      basePage.logStep('Dialog UI verified', 'success');
 
       // STEP 5: Fill caption
-      logStep('Step 5: Filling message caption');
+      basePage.logStep('Step 5: Filling message caption');
       await eventDetailPage.fillMessageCaption(TEST_DATA.MESSAGE.CAPTION);
-      await captureScreenshot(page, 'tc006', 'step5-caption-filled');
-      logStep('Caption filled', 'success');
+      await basePage.captureScreenshot('tc006', 'step5-caption-filled');
+      basePage.logStep('Caption filled', 'success');
 
       // STEP 6: Set up API response listener and click POST button
-      logStep('Step 6: Setting up API listener and clicking POST button');
+      basePage.logStep('Step 6: Setting up API listener and clicking POST button');
       
       // Listen for the POST request to verify successful response
       const responsePromise = page.waitForResponse(
@@ -643,10 +567,10 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
       );
       
       await eventDetailPage.clickPostMessageButton();
-      await captureScreenshot(page, 'tc006', 'step6-post-clicked');
+      await basePage.captureScreenshot('tc006', 'step6-post-clicked');
       
       // STEP 7: Verify API response
-      logStep('Step 7: Verifying API response');
+      basePage.logStep('Step 7: Verifying API response');
       const response = await responsePromise;
       const status = response.status();
       
@@ -655,17 +579,17 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
       
       expect(status, `POST request should return 200 or 201, but got ${status}`).toBeLessThan(300);
       expect(status, `POST request should return 200 or 201, but got ${status}`).toBeGreaterThanOrEqual(200);
-      logStep(`API response verified: ${status}`, 'success');
+      basePage.logStep(`API response verified: ${status}`, 'success');
       
       // STEP 8: Verify dialog closes (indicating success)
-      logStep('Step 8: Verifying post-message dialog closes');
+      basePage.logStep('Step 8: Verifying post-message dialog closes');
       const postMessageDialog = page.locator('app-post-message');
       await expect(postMessageDialog).toBeHidden({ timeout: 10000 });
-      await captureScreenshot(page, 'tc006', 'step8-dialog-closed');
-      logStep('Dialog closed successfully', 'success');
+      await basePage.captureScreenshot('tc006', 'step8-dialog-closed');
+      basePage.logStep('Dialog closed successfully', 'success');
       
       // STEP 9: Verify message appears in feed
-      logStep('Step 9: Verifying message appears in event feed');
+      basePage.logStep('Step 9: Verifying message appears in event feed');
       await page.waitForTimeout(2000); // Wait for feed to update
       
       // Look for the message in the feed
@@ -674,15 +598,15 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
       }).first();
       
       await expect(messageInFeed).toBeVisible({ timeout: 10000 });
-      await captureScreenshot(page, 'tc006', 'step9-message-in-feed');
-      logStep('Message verified in feed', 'success');
+      await basePage.captureScreenshot('tc006', 'step9-message-in-feed');
+      basePage.logStep('Message verified in feed', 'success');
 
-      printTestFooter('TC-APP-VIEW-006', true);
+      basePage.printTestFooter('TC-APP-VIEW-006', true);
 
     } catch (error) {
-      logStep(`TC-APP-VIEW-006 FAILED: ${error.message}`, 'error');
-      await captureScreenshot(page, 'tc006', 'error');
-      printTestFooter('TC-APP-VIEW-006', false);
+      basePage.logStep(`TC-APP-VIEW-006 FAILED: ${error.message}`, 'error');
+      await basePage.captureScreenshot('tc006', 'error');
+      basePage.printTestFooter('TC-APP-VIEW-006', false);
       throw error;
     }
   });
@@ -708,55 +632,55 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
    * - Post is created successfully
    */
   test('TC-APP-VIEW-007: Verify "Photos" button functionality', async ({ page }) => {
-    printTestHeader('TC-APP-VIEW-007', 'Photos Functionality');
+    basePage.printTestHeader('TC-APP-VIEW-007', 'Photos Functionality');
 
     try {
       // STEP 1: Click plus icon
-      logStep('Step 1: Clicking plus icon to reveal feature options');
+      basePage.logStep('Step 1: Clicking plus icon to reveal feature options');
       await eventDetailPage.clickAddButtonToRevealFeatures();
-      await captureScreenshot(page, 'tc007', 'step1-plus-icon-menu');
-      logStep('Plus icon menu revealed', 'success');
+      await basePage.captureScreenshot('tc007', 'step1-plus-icon-menu');
+      basePage.logStep('Plus icon menu revealed', 'success');
 
       // STEP 2: Verify Photos button is visible
-      logStep('Step 2: Verifying "Photos" button is visible');
+      basePage.logStep('Step 2: Verifying "Photos" button is visible');
       const photosVisible = await eventDetailPage.verifyPhotosButton();
       expect(photosVisible, '"Photos" button should be visible').toBeTruthy();
-      await captureScreenshot(page, 'tc007', 'step2-photos-button');
-      logStep('"Photos" button verified as visible', 'success');
+      await basePage.captureScreenshot('tc007', 'step2-photos-button');
+      basePage.logStep('"Photos" button verified as visible', 'success');
 
       // STEP 3: Click "Photos" button
-      logStep('Step 3: Clicking "Photos" button');
+      basePage.logStep('Step 3: Clicking "Photos" button');
       await eventDetailPage.clickPhotosButton();
       await page.waitForTimeout(1000);
-      await captureScreenshot(page, 'tc007', 'step3-photos-dialog');
-      logStep('"Photos" dialog opened', 'success');
+      await basePage.captureScreenshot('tc007', 'step3-photos-dialog');
+      basePage.logStep('"Photos" dialog opened', 'success');
 
       // STEP 4: Upload photo FIRST (TC-001/TC-002 success pattern)
-      logStep('Step 4: Uploading photo and filling caption');
+      basePage.logStep('Step 4: Uploading photo and filling caption');
       await eventDetailPage.uploadPhotoWithCaption(
         TEST_IMAGE_PATH,
         TEST_DATA.PHOTOS.CAPTION
       );
-      await captureScreenshot(page, 'tc007', 'step4-upload-complete');
-      logStep('Photo uploaded and caption filled successfully', 'success');
+      await basePage.captureScreenshot('tc007', 'step4-upload-complete');
+      basePage.logStep('Photo uploaded and caption filled successfully', 'success');
 
       // STEP 5: Verify UI elements AFTER upload (optional verification)
-      logStep('Step 5: Verifying post-message dialog UI elements');
+      basePage.logStep('Step 5: Verifying post-message dialog UI elements');
       await eventDetailPage.verifyPostMessageDialog();
-      logStep('Dialog UI verified after upload', 'success');
+      basePage.logStep('Dialog UI verified after upload', 'success');
 
       // STEP 6: Click POST button
-      logStep('Step 6: Clicking POST button');
+      basePage.logStep('Step 6: Clicking POST button');
       await eventDetailPage.clickPostMessageButton();
-      await captureScreenshot(page, 'tc007', 'step6-post-clicked');
-      logStep('POST button clicked', 'success');
+      await basePage.captureScreenshot('tc007', 'step6-post-clicked');
+      basePage.logStep('POST button clicked', 'success');
 
-      printTestFooter('TC-APP-VIEW-007', true);
+      basePage.printTestFooter('TC-APP-VIEW-007', true);
 
     } catch (error) {
-      logStep(`TC-APP-VIEW-007 FAILED: ${error.message}`, 'error');
-      await captureScreenshot(page, 'tc007', 'error');
-      printTestFooter('TC-APP-VIEW-007', false);
+      basePage.logStep(`TC-APP-VIEW-007 FAILED: ${error.message}`, 'error');
+      await basePage.captureScreenshot('tc007', 'error');
+      basePage.printTestFooter('TC-APP-VIEW-007', false);
       throw error;
     }
   });
@@ -782,55 +706,55 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
    * - Post is created successfully
    */
   test('TC-APP-VIEW-008: Verify "Videos" button functionality', async ({ page }) => {
-    printTestHeader('TC-APP-VIEW-008', 'Videos Functionality');
+    basePage.printTestHeader('TC-APP-VIEW-008', 'Videos Functionality');
 
     try {
       // STEP 1: Click plus icon
-      logStep('Step 1: Clicking plus icon to reveal feature options');
+      basePage.logStep('Step 1: Clicking plus icon to reveal feature options');
       await eventDetailPage.clickAddButtonToRevealFeatures();
-      await captureScreenshot(page, 'tc008', 'step1-plus-icon-menu');
-      logStep('Plus icon menu revealed', 'success');
+      await basePage.captureScreenshot('tc008', 'step1-plus-icon-menu');
+      basePage.logStep('Plus icon menu revealed', 'success');
 
       // STEP 2: Verify Videos button is visible
-      logStep('Step 2: Verifying "Videos" button is visible');
+      basePage.logStep('Step 2: Verifying "Videos" button is visible');
       const videosVisible = await eventDetailPage.verifyVideosButton();
       expect(videosVisible, '"Videos" button should be visible').toBeTruthy();
-      await captureScreenshot(page, 'tc008', 'step2-videos-button');
-      logStep('"Videos" button verified as visible', 'success');
+      await basePage.captureScreenshot('tc008', 'step2-videos-button');
+      basePage.logStep('"Videos" button verified as visible', 'success');
 
       // STEP 3: Click "Videos" button
-      logStep('Step 3: Clicking "Videos" button');
+      basePage.logStep('Step 3: Clicking "Videos" button');
       await eventDetailPage.clickVideosButton();
       await page.waitForTimeout(1000);
-      await captureScreenshot(page, 'tc008', 'step3-videos-dialog');
-      logStep('"Videos" dialog opened', 'success');
+      await basePage.captureScreenshot('tc008', 'step3-videos-dialog');
+      basePage.logStep('"Videos" dialog opened', 'success');
 
       // STEP 4: Upload video FIRST (TC-001/TC-002 success pattern)
-      logStep('Step 4: Uploading video and filling caption');
+      basePage.logStep('Step 4: Uploading video and filling caption');
       await eventDetailPage.uploadVideoWithCaption(
         TEST_IMAGE_PATH,
         TEST_DATA.VIDEOS.CAPTION
       );
-      await captureScreenshot(page, 'tc008', 'step4-upload-complete');
-      logStep('Video uploaded and caption filled successfully', 'success');
+      await basePage.captureScreenshot('tc008', 'step4-upload-complete');
+      basePage.logStep('Video uploaded and caption filled successfully', 'success');
 
       // STEP 5: Verify UI elements AFTER upload (optional verification)
-      logStep('Step 5: Verifying post-message dialog UI elements');
+      basePage.logStep('Step 5: Verifying post-message dialog UI elements');
       await eventDetailPage.verifyPostMessageDialog();
-      logStep('Dialog UI verified after upload', 'success');
+      basePage.logStep('Dialog UI verified after upload', 'success');
 
       // STEP 6: Click POST button
-      logStep('Step 6: Clicking POST button');
+      basePage.logStep('Step 6: Clicking POST button');
       await eventDetailPage.clickPostMessageButton();
-      await captureScreenshot(page, 'tc008', 'step6-post-clicked');
-      logStep('POST button clicked', 'success');
+      await basePage.captureScreenshot('tc008', 'step6-post-clicked');
+      basePage.logStep('POST button clicked', 'success');
 
-      printTestFooter('TC-APP-VIEW-008', true);
+      basePage.printTestFooter('TC-APP-VIEW-008', true);
 
     } catch (error) {
-      logStep(`TC-APP-VIEW-008 FAILED: ${error.message}`, 'error');
-      await captureScreenshot(page, 'tc008', 'error');
-      printTestFooter('TC-APP-VIEW-008', false);
+      basePage.logStep(`TC-APP-VIEW-008 FAILED: ${error.message}`, 'error');
+      await basePage.captureScreenshot('tc008', 'error');
+      basePage.printTestFooter('TC-APP-VIEW-008', false);
       throw error;
     }
   });
@@ -859,18 +783,18 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
    * - Menu displays correctly with proper layout
    */
   test('TC-APP-VIEW-ALL: Comprehensive Plus Icon Features Verification', async ({ page }) => {
-    printTestHeader('TC-APP-VIEW-ALL', 'All Features Comprehensive Test');
+    basePage.printTestHeader('TC-APP-VIEW-ALL', 'All Features Comprehensive Test');
     
     try {
       // Click add button to reveal feature options
-      logStep('Clicking plus icon to reveal all feature options');
+      basePage.logStep('Clicking plus icon to reveal all feature options');
       await eventDetailPage.clickAddButtonToRevealFeatures();
-      await captureScreenshot(page, 'tc-all', 'feature-options');
-      logStep('Plus icon menu revealed', 'success');
+      await basePage.captureScreenshot('tc-all', 'feature-options');
+      basePage.logStep('Plus icon menu revealed', 'success');
       await page.waitForTimeout(1000);
       
       // Verify all plus icon features
-      logStep('Verifying all plus icon features are visible');
+      basePage.logStep('Verifying all plus icon features are visible');
       const features = await eventDetailPage.verifyAllPlusIconFeatures();
       
       // Verify each feature individually
@@ -919,7 +843,7 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
       // Assert at least some core features are visible
       expect(enabledCount, 'At least some core features should be enabled').toBeGreaterThan(0);
       
-      await captureScreenshot(page, 'tc-all', 'all-features-verified');
+      await basePage.captureScreenshot('tc-all', 'all-features-verified');
       
       console.log('\n╔════════════════════════════════════════════════════════╗');
       console.log('║  ✅ PLUS ICON FEATURES VERIFICATION COMPLETE!        ║');
@@ -938,12 +862,12 @@ test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
       
       console.log('╚════════════════════════════════════════════════════════╝\n');
 
-      printTestFooter('TC-APP-VIEW-ALL', true);
+      basePage.printTestFooter('TC-APP-VIEW-ALL', true);
       
     } catch (error) {
-      logStep(`Comprehensive test FAILED: ${error.message}`, 'error');
-      await captureScreenshot(page, 'tc-all', 'error');
-      printTestFooter('TC-APP-VIEW-ALL', false);
+      basePage.logStep(`Comprehensive test FAILED: ${error.message}`, 'error');
+      await basePage.captureScreenshot('tc-all', 'error');
+      basePage.printTestFooter('TC-APP-VIEW-ALL', false);
       throw error;
     }
   });
