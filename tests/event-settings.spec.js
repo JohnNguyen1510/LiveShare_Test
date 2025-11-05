@@ -46,7 +46,7 @@ async function subscribeAndPayForPlan(page, planName, tierName) {
  */
 
 test.describe('Event Settings - Comprehensive Testing Suite', () => {
-  test.setTimeout(600000);
+  test.setTimeout(300000);
 
   /**
    * ============================================================================

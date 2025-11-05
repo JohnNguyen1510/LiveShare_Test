@@ -13,7 +13,7 @@ if (!fs.existsSync(screenshotsDir)) {
 }
 
 test.describe('App-Register', () => {
-  test.setTimeout(240000);
+  test.setTimeout(120000);
   let registerPage
 
   test.beforeEach(async ({ page }) => {
@@ -30,14 +30,17 @@ test.describe('App-Register', () => {
 
     const mailosaurClient = new Mailosaur(process.env.MAILOSAUR_API_KEY);
     const serverId = process.env.MAILOSAUR_SERVER_ID;
+    // Generate unique identifiers for parallel-safe email
     const timestamp = Date.now();
-    const emailAddress = `auto_${timestamp}@${serverId}.mailosaur.net`;
+    const randomId = Math.random().toString(36).substring(2, 8);
+    const processId = process.pid || Math.floor(Math.random() * 10000);
+    const emailAddress = `auto_${timestamp}_${processId}_${randomId}@${serverId}.mailosaur.net`;
 
     console.log(`📧 Using email: ${emailAddress}`);
 
     // Prepare credentials for Mailosaur email
     const credentials = {
-      name: `auto_user_${timestamp}`,
+      name: `auto_user_${timestamp}_${processId}`,
       email: emailAddress,
       password: '123456!'
     };

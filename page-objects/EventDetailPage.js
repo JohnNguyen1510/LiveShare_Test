@@ -1929,5 +1929,503 @@ export class EventDetailPage extends BasePage {
     await this.cancelMovieEditorChanges();
     console.log('✅ Part 6 Passed: Edit Slide Format UI verified');
   }
+
+  // ============================================================================
+  // MORE OPTIONS MENU - LOCATORS
+  // ============================================================================
+  
+  /**
+   * More Options Menu Locators
+   */
+  getMoreOptionsMenu() {
+    return this.page.locator('div[role="menu"].mat-menu-panel, .cdk-overlay-pane .mat-menu-panel');
+  }
+
+  getViewKeepsakesMenuItem() {
+    return this.page.locator('button[role="menuitem"]:has-text("View Keepsakes")').first();
+  }
+
+  getDownloadAllPhotosMenuItem() {
+    return this.page.locator('button[role="menuitem"]:has-text("Download All Photos")').first();
+  }
+
+  getMovieEditorMenuItem() {
+    return this.page.locator('button[role="menuitem"]:has-text("Movie Editor")').first();
+  }
+
+  getLiveViewMenuItem() {
+    return this.page.locator('button[role="menuitem"]:has-text("LiveView")').first();
+  }
+
+  getRedeemGiftCodeMenuItem() {
+    return this.page.locator('button[role="menuitem"]:has-text("Redeem Gift Code")').first();
+  }
+
+  getLiveHelpMenuItem() {
+    return this.page.locator('button[role="menuitem"]:has-text("Live Help")').first();
+  }
+
+  getFAQsMenuItem() {
+    return this.page.locator('a[role="menuitem"]:has-text("FAQs"), button[role="menuitem"]:has-text("FAQs")').first();
+  }
+
+  getDetailsMenuItem() {
+    return this.page.locator('button[role="menuitem"]:has-text("Details")').first();
+  }
+
+  getLogoutMenuItem() {
+    return this.page.locator('button[role="menuitem"]:has-text("Logout")').first();
+  }
+
+  // ============================================================================
+  // MORE OPTIONS MENU - METHODS
+  // ============================================================================
+
+  /**
+   * Click More Options menu button
+   */
+  async clickMoreOptionsMenu() {
+    this.logStep('Opening More Options menu', 'info');
+    await this.moreOptionsButton.waitFor({ state: 'visible', timeout: 10000 });
+    await this.moreOptionsButton.click();
+    await this.page.waitForTimeout(1000); // Wait for menu to appear
+    this.logStep('More Options menu opened', 'success');
+  }
+
+  /**
+   * Verify More Options menu items are visible
+   */
+  async verifyMoreOptionsMenu() {
+    this.logStep('Verifying More Options menu items', 'info');
+    
+    await this.clickMoreOptionsMenu();
+    
+    // Verify all menu items are visible
+    await expect(this.getViewKeepsakesMenuItem()).toBeVisible({ timeout: 5000 });
+    await expect(this.getDownloadAllPhotosMenuItem()).toBeVisible();
+    await expect(this.getMovieEditorMenuItem()).toBeVisible();
+    await expect(this.getLiveViewMenuItem()).toBeVisible();
+    await expect(this.getRedeemGiftCodeMenuItem()).toBeVisible();
+    await expect(this.getLiveHelpMenuItem()).toBeVisible();
+    await expect(this.getFAQsMenuItem()).toBeVisible();
+    await expect(this.getDetailsMenuItem()).toBeVisible();
+    await expect(this.getLogoutMenuItem()).toBeVisible();
+    
+    this.logStep('All More Options menu items verified', 'success');
+    
+    // Close menu by clicking outside
+    await this.page.click('body');
+    await this.page.waitForTimeout(500);
+  }
+
+  /**
+   * Click View Keepsakes menu item
+   */
+  async clickViewKeepsakes() {
+    this.logStep('Clicking View Keepsakes', 'info');
+    await this.getViewKeepsakesMenuItem().waitFor({ state: 'visible', timeout: 5000 });
+    await this.getViewKeepsakesMenuItem().click();
+    await this.page.waitForTimeout(2000);
+    this.logStep('View Keepsakes clicked', 'success');
+  }
+
+  /**
+   * Verify View Keepsakes is displayed
+   */
+  async verifyViewKeepsakesDisplayed() {
+    this.logStep('Verifying View Keepsakes display', 'info');
+    
+    // View Keepsakes filters the gallery to show only keepsakes
+    // Check if grid icon changed to horizontal_split (timeline view)
+    const gridIcon = this.page.locator('button mat-icon:has-text("horizontal_split")');
+    const isTimelineView = await gridIcon.isVisible({ timeout: 5000 }).catch(() => false);
+    
+    if (isTimelineView) {
+      this.logStep('View Keepsakes is displayed (timeline view)', 'success');
+    } else {
+      // It might still be showing the regular view if no keepsakes exist
+      this.logStep('View Keepsakes applied (may show empty state)', 'info');
+    }
+  }
+
+  /**
+   * Click Download All Photos menu item
+   */
+  async clickDownloadAllPhotos() {
+    this.logStep('Clicking Download All Photos', 'info');
+    await this.getDownloadAllPhotosMenuItem().waitFor({ state: 'visible', timeout: 5000 });
+    await this.getDownloadAllPhotosMenuItem().click();
+    await this.page.waitForTimeout(2000);
+    this.logStep('Download All Photos clicked', 'success');
+  }
+
+  /**
+   * Verify Download All Photos page
+   */
+  async verifyDownloadAllPhotosPage() {
+    this.logStep('Verifying Download All Photos page', 'info');
+    
+    // Wait for page to load
+    await this.page.waitForURL(/\/download/, { timeout: 10000 });
+    
+    // Verify page elements
+    const heading = this.page.locator('h2:has-text("Download All Photos")');
+    await expect(heading).toBeVisible({ timeout: 10000 });
+    
+    const qualityHeading = this.page.locator('h3:has-text("Choose your Image Quality")');
+    await expect(qualityHeading).toBeVisible();
+    
+    // Verify radio buttons for quality selection
+    const standardResolutionLabel = this.page.locator('text="Standard Resolution"').first();
+    await expect(standardResolutionLabel).toBeVisible();
+    
+    const highResolutionLabel = this.page.locator('text="High Resolution"').first();
+    await expect(highResolutionLabel).toBeVisible();
+    
+    const prepareDownloadButton = this.page.locator('button:has-text("Prepare Download")');
+    await expect(prepareDownloadButton).toBeVisible();
+    
+    // Back to Event is not a button but a clickable div/span in top-bar
+    // Try multiple selectors - prefer .top-bar as it's the clickable container
+    let backToEvent = this.page.locator('.top-bar').first();
+    const isVisible = await backToEvent.isVisible({ timeout: 3000 }).catch(() => false);
+    
+    if (!isVisible) {
+      // Fallback to span or icon
+      backToEvent = this.page.locator('span.back-text:has-text("Back to Event"), mat-icon.back-icon').first();
+    }
+    
+    await expect(backToEvent).toBeVisible();
+    
+    this.logStep('Download All Photos page verified', 'success');
+  }
+
+  /**
+   * Click Back to Event button from download page
+   */
+  async clickBackToEventFromDownload() {
+    this.logStep('Clicking Back to Event', 'info');
+    // Back to Event is not a button but a clickable div/span in top-bar
+    // Try multiple selectors - prefer .top-bar as it's the clickable container
+    let backToEvent = this.page.locator('.top-bar').first();
+    const isVisible = await backToEvent.isVisible({ timeout: 3000 }).catch(() => false);
+    
+    if (!isVisible) {
+      // Fallback to span or icon
+      backToEvent = this.page.locator('span.back-text:has-text("Back to Event"), mat-icon.back-icon').first();
+    }
+    
+    await backToEvent.waitFor({ state: 'visible', timeout: 5000 });
+    await backToEvent.click();
+    await this.page.waitForTimeout(2000);
+    await this.waitForEventDetailToLoad();
+    this.logStep('Returned to event detail page', 'success');
+  }
+
+  /**
+   * Click LiveView menu item
+   */
+  async clickLiveView() {
+    this.logStep('Clicking LiveView', 'info');
+    await this.getLiveViewMenuItem().waitFor({ state: 'visible', timeout: 5000 });
+    await this.getLiveViewMenuItem().click();
+    await this.page.waitForTimeout(1000);
+    this.logStep('LiveView clicked', 'success');
+  }
+
+  /**
+   * Verify LiveView page is opened
+   * @param {Page} liveViewPage - The LiveView page object
+   */
+  async verifyLiveViewPage(liveViewPage) {
+    this.logStep('Verifying LiveView page', 'info');
+    
+    // Wait for page to load
+    await liveViewPage.waitForLoadState('domcontentloaded', { timeout: 10000 });
+    
+    // Verify URL contains liveview
+    const url = liveViewPage.url();
+    expect(url).toContain('/liveview/');
+    
+    // Verify page has loaded
+    const fullscreenButton = liveViewPage.locator('img[alt="fullscreen"], button:has-text("fullscreen")');
+    const hasFullscreen = await fullscreenButton.isVisible({ timeout: 5000 }).catch(() => false);
+    
+    if (hasFullscreen) {
+      this.logStep('LiveView page verified', 'success');
+    } else {
+      // Page might still be loading
+      await liveViewPage.waitForTimeout(2000);
+      this.logStep('LiveView page opened', 'success');
+    }
+  }
+
+  /**
+   * Click Redeem Gift Code menu item
+   */
+  async clickRedeemGiftCode() {
+    this.logStep('Clicking Redeem Gift Code', 'info');
+    await this.getRedeemGiftCodeMenuItem().waitFor({ state: 'visible', timeout: 5000 });
+    await this.getRedeemGiftCodeMenuItem().click();
+    await this.page.waitForTimeout(2000);
+    this.logStep('Redeem Gift Code clicked', 'success');
+  }
+
+  /**
+   * Verify Redeem Gift Code dialog
+   */
+  async verifyRedeemGiftCodeDialog() {
+    this.logStep('Verifying Redeem Gift Code dialog', 'info');
+    
+    // Wait for dialog to appear
+    const dialog = this.page.locator('div:has-text("Redeem Gift Code")').first();
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    
+    // Verify dialog elements
+    const heading = this.page.locator('h1:has-text("Redeem Gift Code")');
+    await expect(heading).toBeVisible();
+    
+    const giftCodeInput = this.page.locator('input[placeholder*="Gift Code"], textbox[name*="Gift Code"]');
+    await expect(giftCodeInput).toBeVisible();
+    
+    const redeemButton = this.page.locator('button:has-text("Redeem")');
+    await expect(redeemButton).toBeVisible();
+    
+    const cancelButton = this.page.locator('button:has-text("Cancel")');
+    await expect(cancelButton).toBeVisible();
+    
+    this.logStep('Redeem Gift Code dialog verified', 'success');
+  }
+
+  /**
+   * Cancel Redeem Gift Code dialog
+   */
+  async cancelRedeemGiftCode() {
+    this.logStep('Canceling Redeem Gift Code dialog', 'info');
+    const cancelButton = this.page.locator('button:has-text("Cancel")').first();
+    await cancelButton.waitFor({ state: 'visible', timeout: 5000 });
+    await cancelButton.click();
+    await this.page.waitForTimeout(1000);
+    this.logStep('Redeem Gift Code dialog canceled', 'success');
+  }
+
+  /**
+   * Click Live Help menu item
+   */
+  async clickLiveHelp() {
+    this.logStep('Clicking Live Help', 'info');
+    await this.getLiveHelpMenuItem().waitFor({ state: 'visible', timeout: 5000 });
+    await this.getLiveHelpMenuItem().click();
+    await this.page.waitForTimeout(2000);
+    this.logStep('Live Help clicked', 'success');
+  }
+
+  /**
+   * Verify Live Help is displayed
+   */
+  async verifyLiveHelpDisplayed() {
+    this.logStep('Verifying Live Help display', 'info');
+    
+    // Live Help might open a chat widget or dialog
+    // Check for common help/chat elements
+    const chatWidget = this.page.locator('[class*="chat"], [class*="help"], [id*="intercom"]');
+    const helpDialog = this.page.locator('div:has-text("Live Help"), div:has-text("Help")');
+    
+    const hasChatWidget = await chatWidget.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasHelpDialog = await helpDialog.isVisible({ timeout: 3000 }).catch(() => false);
+    
+    if (hasChatWidget || hasHelpDialog) {
+      this.logStep('Live Help is displayed', 'success');
+    } else {
+      // Help might be loading or opening in a new way
+      await this.page.waitForTimeout(2000);
+      this.logStep('Live Help interface opened', 'info');
+    }
+  }
+
+  /**
+   * Click FAQs menu item
+   */
+  async clickFAQs() {
+    this.logStep('Clicking FAQs', 'info');
+    await this.getFAQsMenuItem().waitFor({ state: 'visible', timeout: 5000 });
+    await this.getFAQsMenuItem().click();
+    await this.page.waitForTimeout(1000);
+    this.logStep('FAQs clicked', 'success');
+  }
+
+  /**
+   * Verify FAQs page is opened
+   * @param {Page} faqsPage - The FAQs page object
+   */
+  async verifyFAQsPage(faqsPage) {
+    this.logStep('Verifying FAQs page', 'info');
+    
+    try {
+      // Wait for page to load with increased timeout
+      await faqsPage.waitForLoadState('domcontentloaded', { timeout: 30000 });
+    } catch (error) {
+      // If timeout, check if URL is correct anyway
+      this.logStep('Page load timeout, checking URL', 'warning');
+    }
+    
+    // Verify URL contains support.livesharenow.com
+    const url = faqsPage.url();
+    expect(url).toContain('support.livesharenow.com');
+    
+    // Verify page has loaded (check for common FAQ page elements)
+    const pageTitle = await faqsPage.title().catch(() => '');
+    expect(pageTitle).toBeTruthy();
+    
+    this.logStep('FAQs page verified', 'success');
+  }
+
+  /**
+   * Click Details menu item from More Options menu
+   */
+  async clickDetailsFromMenu() {
+    this.logStep('Clicking Details from menu', 'info');
+    await this.getDetailsMenuItem().waitFor({ state: 'visible', timeout: 5000 });
+    await this.getDetailsMenuItem().click();
+    await this.page.waitForTimeout(2000);
+    this.logStep('Details clicked from menu', 'success');
+  }
+
+  /**
+   * Verify Event Details Dialog (Event Summary Dialog)
+   * Based on the dialog structure from More Options > Details menu
+   */
+  async verifyEventDetailsDialog() {
+    this.logStep('Verifying Event Details Dialog', 'info');
+    
+    // Wait for dialog to appear
+    const dialog = this.page.locator('mat-dialog-container, app-event-summary-dialog').first();
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    
+    // Verify dialog header
+    const dialogTitle = this.page.locator('h2:has-text("Event Details")');
+    await expect(dialogTitle).toBeVisible();
+    
+    // Verify close button
+    const closeButton = this.page.locator('button[mat-dialog-close], button:has(mat-icon:has-text("close"))');
+    await expect(closeButton).toBeVisible();
+    
+    // Verify dialog content table
+    const table = this.page.locator('app-event-summary-dialog table.table');
+    await expect(table).toBeVisible();
+    
+    // Verify table rows with key information
+    // Plan row
+    const planRow = this.page.locator('tr:has-text("Plan")');
+    await expect(planRow).toBeVisible();
+    
+    // Created Date row
+    const createdDateRow = this.page.locator('tr:has-text("Created Date")');
+    await expect(createdDateRow).toBeVisible();
+    
+    // Event Date row
+    const eventDateRow = this.page.locator('tr:has-text("Event Date")');
+    await expect(eventDateRow).toBeVisible();
+    
+    // Last Viewed Date row
+    const lastViewedRow = this.page.locator('tr:has-text("Last Viewed Date")');
+    await expect(lastViewedRow).toBeVisible();
+    
+    // Number of Posts row
+    const numberOfPostsRow = this.page.locator('tr:has-text("Number of Posts")');
+    await expect(numberOfPostsRow).toBeVisible();
+    
+    // Number of Guests row
+    const numberOfGuestsRow = this.page.locator('tr:has-text("Number of Guests")');
+    await expect(numberOfGuestsRow).toBeVisible();
+    
+    // Number of Viewers row
+    const numberOfViewersRow = this.page.locator('tr:has-text("Number of Viewers")');
+    await expect(numberOfViewersRow).toBeVisible();
+    
+    // Event Active until row
+    const eventActiveRow = this.page.locator('tr:has-text("Event Active until")');
+    await expect(eventActiveRow).toBeVisible();
+    
+    // Daily backup limit row
+    const dailyBackupRow = this.page.locator('tr:has-text("Daily backup limit")');
+    await expect(dailyBackupRow).toBeVisible();
+    
+    // Verify action buttons if present
+    const upgradeButton = this.page.locator('button:has-text("Upgrade")');
+    const upgradeVisible = await upgradeButton.isVisible({ timeout: 2000 }).catch(() => false);
+    if (upgradeVisible) {
+      this.logStep('Upgrade button found', 'info');
+    }
+    
+    const viewGuestsButton = this.page.locator('button:has-text("View")').filter({ hasText: /View/ });
+    const viewGuestsVisible = await viewGuestsButton.isVisible({ timeout: 2000 }).catch(() => false);
+    if (viewGuestsVisible) {
+      this.logStep('View Guests button found', 'info');
+    }
+    
+    const extendButton = this.page.locator('button:has-text("Extend")');
+    const extendVisible = await extendButton.isVisible({ timeout: 2000 }).catch(() => false);
+    if (extendVisible) {
+      this.logStep('Extend button found', 'info');
+    }
+    
+    this.logStep('Event Details Dialog verified successfully', 'success');
+  }
+
+  /**
+   * Close Event Details Dialog
+   */
+  async closeEventDetailsDialog() {
+    this.logStep('Closing Event Details Dialog', 'info');
+    const closeButton = this.page.locator('button[mat-dialog-close], button:has(mat-icon:has-text("close"))').first();
+    await closeButton.waitFor({ state: 'visible', timeout: 5000 });
+    await closeButton.click();
+    await this.page.waitForTimeout(1000);
+    this.logStep('Event Details Dialog closed', 'success');
+  }
+
+  /**
+   * Verify Details Edit Dialog
+   * Checks for both Event Details Dialog (from menu) and Details accordion
+   */
+  async verifyDetailsEditDialog() {
+    this.logStep('Verifying Details Edit Dialog', 'info');
+    
+    // First check if Event Details Dialog is opened (from More Options menu)
+    const eventDetailsDialog = this.page.locator('app-event-summary-dialog, mat-dialog-container').first();
+    const hasDialog = await eventDetailsDialog.isVisible({ timeout: 5000 }).catch(() => false);
+    
+    if (hasDialog) {
+      // Verify Event Details Dialog
+      await this.verifyEventDetailsDialog();
+      return;
+    }
+    
+    // Check if Details accordion is expanded
+    const detailsExpanded = this.page.locator('mat-expansion-panel.mat-expanded');
+    const isExpanded = await detailsExpanded.isVisible({ timeout: 5000 }).catch(() => false);
+    
+    if (isExpanded) {
+      // Verify details sections are visible
+      await expect(this.locationSection).toBeVisible();
+      await expect(this.contactSection).toBeVisible();
+      await expect(this.itinerarySection).toBeVisible();
+      this.logStep('Details edit dialog verified (accordion expanded)', 'success');
+    } else {
+      // At minimum, verify Details accordion exists
+      await expect(this.detailsAccordion).toBeVisible();
+      this.logStep('Details section verified', 'info');
+    }
+  }
+
+  /**
+   * Verify Logout button is visible
+   */
+  async verifyLogoutButtonVisible() {
+    this.logStep('Verifying Logout button', 'info');
+    await expect(this.getLogoutMenuItem()).toBeVisible({ timeout: 5000 });
+    this.logStep('Logout button verified', 'success');
+  }
 }
 

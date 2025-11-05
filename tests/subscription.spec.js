@@ -17,7 +17,7 @@ async function setupFreshAccountAndEvent(page, context, testName) {
 }
 
 test.describe('App-SubscriptionEvent', () => {
-  test.setTimeout(400000);
+  test.setTimeout(300000);
 
   let subscriptionPage;
   let paymentPage;

@@ -13,7 +13,7 @@ if (!fs.existsSync(screenshotsDir)) {
 
 test.describe('SnapQuest Feature Tests ', () => {
   // Increase timeout for the entire test suite
-  test.setTimeout(240000);
+  test.setTimeout(120000);
   
   let loginPage;
   let snapQuestPage;

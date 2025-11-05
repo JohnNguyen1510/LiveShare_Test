@@ -79,7 +79,10 @@ export class SubscriptionPage extends BasePage {
       const mailosaurClient = new Mailosaur(process.env.MAILOSAUR_API_KEY);
       const serverId = process.env.MAILOSAUR_SERVER_ID;
       const timestamp = Date.now();
-      const testEmail = `auto_${testName.toLowerCase().replace(/\s+/g, '_')}_${timestamp}@${serverId}.mailosaur.net`;
+      // Add random string to ensure uniqueness when running parallel tests
+      const randomId = Math.random().toString(36).substring(2, 8);
+      const processId = process.pid || Math.floor(Math.random() * 10000);
+      const testEmail = `auto_${testName.toLowerCase().replace(/\s+/g, '_')}_${timestamp}_${processId}_${randomId}@${serverId}.mailosaur.net`;
       
       const testData = {
         email: testEmail,

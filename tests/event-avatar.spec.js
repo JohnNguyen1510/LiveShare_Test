@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { EventListPage } from '../page-objects/EventListPage.js';
+import { BasePage } from '../page-objects/BasePage.js';
 import path from 'path';
 import fs from 'fs';
 
@@ -10,7 +11,7 @@ if (!fs.existsSync(screenshotsDir)) {
 }
 
 test.describe('Event Avatar Icon', () => {
-  test.setTimeout(240000);
+  test.setTimeout(120000);
   
   let eventListPage;
 
@@ -25,7 +26,8 @@ test.describe('Event Avatar Icon', () => {
       expect(success, 'Avatar menu workflow should complete successfully').toBeTruthy();
       
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-avatar-icon-${Date.now()}.png`) });
+      const uniqueFilename = BasePage.generateUniqueFilename('error-avatar-icon');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
       throw error;
     }
   });

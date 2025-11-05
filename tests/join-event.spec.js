@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { JoinEventPage } from '../page-objects/JoinEventPage.js';
+import { BasePage } from '../page-objects/BasePage.js';
 import path from 'path';
 import fs from 'fs';
 
@@ -10,7 +11,7 @@ if (!fs.existsSync(screenshotsDir)) {
 }
 
 test.describe('App-JoinEvent', () => {
-  test.setTimeout(240000);
+  test.setTimeout(120000);
 
   let joinEventPage;
   const EVENT_CODE = process.env.JOIN_EVENT_CODE || '53IG60';
@@ -23,7 +24,8 @@ test.describe('App-JoinEvent', () => {
     try {
       await joinEventPage.completeJoinEventWorkflow(EVENT_CODE);
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-je-001-${Date.now()}.png`) });
+      const uniqueFilename = BasePage.generateUniqueFilename('error-je-001');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
       throw error;
     }
   });
@@ -36,7 +38,8 @@ test.describe('App-JoinEvent', () => {
       await joinEventPage.openThenAndNow();
       await joinEventPage.uploadThenAndNowImages(img);
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-je-002-${Date.now()}.png`) });
+      const uniqueFilename = BasePage.generateUniqueFilename('error-je-002');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
       throw error;
     }
   });
@@ -51,7 +54,8 @@ test.describe('App-JoinEvent', () => {
       await joinEventPage.imageFileInput.first().setInputFiles(img);
       await page.waitForTimeout(2000);
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-je-003-${Date.now()}.png`) });
+      const uniqueFilename = BasePage.generateUniqueFilename('error-je-003');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
       throw error;
     }
   });
@@ -62,7 +66,8 @@ test.describe('App-JoinEvent', () => {
       await joinEventPage.completeGuestPostSetup(EVENT_CODE, 'Auto Guest JE005');
       await joinEventPage.uploadMessageWithImage(img, 'Auto caption from JE-005');
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-je-005-${Date.now()}.png`) });
+      const uniqueFilename = BasePage.generateUniqueFilename('error-je-005');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
       throw error;
     }
   });
@@ -75,7 +80,8 @@ test.describe('App-JoinEvent', () => {
       await joinEventPage.uploadPhotoFromPlus(img);
       await page.waitForTimeout(3000);
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-je-006-${Date.now()}.png`) });
+      const uniqueFilename = BasePage.generateUniqueFilename('error-je-006');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
       throw error;
     }
   });
@@ -88,7 +94,8 @@ test.describe('App-JoinEvent', () => {
       await joinEventPage.uploadVideoFromPlus(vid);
       await page.waitForTimeout(3000);
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-je-007-${Date.now()}.png`) });
+      const uniqueFilename = BasePage.generateUniqueFilename('error-je-007');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
       throw error;
     }
   });
@@ -98,7 +105,8 @@ test.describe('App-JoinEvent', () => {
       await joinEventPage.completeJoinEventWorkflow(EVENT_CODE);
       await joinEventPage.verifyGridViewOptions();
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-je-008-${Date.now()}.png`) });
+      const uniqueFilename = BasePage.generateUniqueFilename('error-je-008');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
       throw error;
     }
   });
@@ -108,7 +116,8 @@ test.describe('App-JoinEvent', () => {
       await joinEventPage.completeJoinEventWorkflow(EVENT_CODE);
       await joinEventPage.verifyShareFunctionality();
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-je-009-${Date.now()}.png`) });
+      const uniqueFilename = BasePage.generateUniqueFilename('error-je-009');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
       throw error;
     }
   });
@@ -129,7 +138,8 @@ test.describe('App-JoinEvent', () => {
       
       if (popup) await popup.close().catch(() => {});
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-je-010-${Date.now()}.png`) });
+      const uniqueFilename = BasePage.generateUniqueFilename('error-je-010');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
       throw error;
     }
   });
@@ -139,7 +149,8 @@ test.describe('App-JoinEvent', () => {
       await joinEventPage.completeJoinEventWorkflow(EVENT_CODE);
       await joinEventPage.redeemGiftCode('TEST123');
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-je-011-${Date.now()}.png`) });
+      const uniqueFilename = BasePage.generateUniqueFilename('error-je-011');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
       throw error;
     }
   });

@@ -17,6 +17,27 @@ export class BasePage {
   }
 
   /**
+   * Generate unique identifier for parallel-safe test data
+   * @returns {Object} Object with timestamp, processId, and randomId
+   */
+  static generateUniqueId() {
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substring(2, 8);
+    const processId = process.pid || Math.floor(Math.random() * 10000);
+    return { timestamp, processId, randomId, uniqueId: `${timestamp}_${processId}_${randomId}` };
+  }
+
+  /**
+   * Generate unique filename for screenshots (parallel-safe)
+   * @param {string} prefix - Filename prefix
+   * @returns {string} Unique filename
+   */
+  static generateUniqueFilename(prefix) {
+    const { uniqueId } = BasePage.generateUniqueId();
+    return `${prefix}-${uniqueId}`;
+  }
+
+  /**
    * Đợi đến khi event settings hoàn thành
    * @param {number} timeout Timeout in milliseconds
    * @returns {Promise<boolean>} Whether the wait was successful
@@ -68,7 +89,6 @@ export class BasePage {
   async waitForPageLoad(timeout = 30000) {
     try {
       await this.page.waitForLoadState('domcontentloaded', { timeout });
-      await this.page.waitForTimeout(1000);
       await this.page.waitForLoadState('networkidle', { timeout });
       return true;
     } catch (error) {
@@ -145,8 +165,8 @@ export class BasePage {
         // Try to scroll element into view if possible
         await element.scrollIntoViewIfNeeded().catch(() => {});
         
-        // Wait a moment to ensure element is ready for interaction
-        await this.page.waitForTimeout(500);
+        // Wait briefly for element to be stable (reduced from 500ms to 100ms)
+        await this.page.waitForTimeout(100);
         
         // Try to click with force option to handle overlay issues
         await element.click({ force: true, ...options });
@@ -183,7 +203,7 @@ export class BasePage {
             const isVisible = await element.isVisible({ timeout: 2000 }).catch(() => false);
             if (isVisible) {
               await element.scrollIntoViewIfNeeded().catch(() => {});
-              await this.page.waitForTimeout(500);
+              await this.page.waitForTimeout(100);
               await element.click({ force: true, ...options });
               return { success: true, selector, element };
             }
@@ -392,8 +412,8 @@ export class BasePage {
    * @returns {Promise<string>} Screenshot filename
    */
   async captureScreenshot(testCase, step) {
-    const timestamp = Date.now();
-    const filename = `${testCase}-${step}-${timestamp}.png`;
+    const { uniqueId } = BasePage.generateUniqueId();
+    const filename = `${testCase}-${step}-${uniqueId}.png`;
     const screenshotsDir = './screenshots';
     
     try {

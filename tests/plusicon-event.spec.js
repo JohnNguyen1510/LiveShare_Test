@@ -73,7 +73,7 @@ const TEST_DATA = {
 // ============================================================================
 
 test.describe('Plus Icon Features Verification - Complete Test Suite', () => {
-  test.setTimeout(240000);
+  test.setTimeout(120000);
   
   let loginPage;
   let eventListPage;

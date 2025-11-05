@@ -177,9 +177,11 @@ export class RegisterPage extends BasePage {
 
   async generateTestCredentials() {
     const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substring(2, 8);
+    const processId = process.pid || Math.floor(Math.random() * 10000);
     return {
-      name: `auto_user_${timestamp}`,
-      email: `auto_${timestamp}@gmail.com`,
+      name: `auto_user_${timestamp}_${processId}`,
+      email: `auto_${timestamp}_${processId}_${randomId}@gmail.com`,
       password: '123456!'
     };
   }

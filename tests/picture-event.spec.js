@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { ImageDetailPage } from '../page-objects/ImageDetailPage.js';
+import { BasePage } from '../page-objects/BasePage.js';
 import path from 'path';
 import fs from 'fs';
 import { EventListPage } from '../page-objects/EventListPage.js';
@@ -13,7 +14,7 @@ if (!fs.existsSync(screenshotsDir)) {
 }
 
 // Increase test timeout for reliability
-test.setTimeout(5 * 60 * 1000); // 5 minutes
+test.setTimeout(120000); // 2 minutes (optimized)
 
 test.describe('Picture In Event Detail', () => {
   let imageDetailPage;
@@ -57,9 +58,11 @@ test.describe('Picture In Event Detail', () => {
       const setupEventCreation = new EventCreationPage(setupPage);
       const setupEventDetail = new EventDetailPage(setupPage);
 
-      // Generate unique event name
+      // Generate unique event name for parallel-safe execution
       const timestamp = Date.now();
-      createdEventName = `Picture Test Event ${timestamp}`;
+      const randomId = Math.random().toString(36).substring(2, 8);
+      const processId = process.pid || Math.floor(Math.random() * 10000);
+      createdEventName = `Picture Test Event ${timestamp}_${processId}_${randomId}`;
       
       console.log(`📝 Creating event: ${createdEventName}`);
       
@@ -152,7 +155,7 @@ test.describe('Picture In Event Detail', () => {
     } catch (error) {
       console.error('❌ Error in beforeAll setup:', error);
       await setupPage.screenshot({ 
-        path: path.join(process.cwd(), 'screenshots', `setup-error-${Date.now()}.png`) 
+        path: path.join(process.cwd(), 'screenshots', `${BasePage.generateUniqueFilename('setup-error')}.png`) 
       });
       throw error;
     } finally {
@@ -166,7 +169,8 @@ test.describe('Picture In Event Detail', () => {
       await imageDetailPage.verifyPinButtonFunctionality();
       console.log('✅ TC-APP-PIDe-001 completed successfully');
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-pin-button-${Date.now()}.png`) });
+      const uniqueFilename = BasePage.generateUniqueFilename('error-pin-button');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
       throw error;
     }
   });
@@ -176,7 +180,8 @@ test.describe('Picture In Event Detail', () => {
       await imageDetailPage.openEventAndClickFirstImage(createdEventName);
       console.log('✅ TC-APP-PIDe-002 completed successfully');
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-gift-button-${Date.now()}.png`) });
+      const uniqueFilename = BasePage.generateUniqueFilename('error-gift-button');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
       throw error;
     }
   });
@@ -187,7 +192,8 @@ test.describe('Picture In Event Detail', () => {
       await imageDetailPage.verifyEllipsisButtonFunctionality();
       console.log('✅ TC-APP-PIDe-003 completed successfully');
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-ellipsis-button-${Date.now()}.png`) });
+      const uniqueFilename = BasePage.generateUniqueFilename('error-ellipsis-button');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
       throw error;
     }
   });
@@ -199,7 +205,8 @@ test.describe('Picture In Event Detail', () => {
       await imageDetailPage.verifyEditFunctionality();
       console.log('✅ TC-APP-PIDe-003A completed successfully');
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-edit-function-${Date.now()}.png`) });
+      const uniqueFilename = BasePage.generateUniqueFilename('error-edit-function');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
       throw error;
     }
   });
@@ -211,7 +218,8 @@ test.describe('Picture In Event Detail', () => {
       await imageDetailPage.verifyDeleteFunctionality();
       console.log('✅ TC-APP-PIDe-003B completed successfully');
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-delete-function-${Date.now()}.png`) });
+      const uniqueFilename = BasePage.generateUniqueFilename('error-delete-function');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
       throw error;
     }
   });
@@ -228,7 +236,8 @@ test.describe('Picture In Event Detail', () => {
       
       console.log('✅ TC-APP-PIDe-004 completed successfully');
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-search-button-${Date.now()}.png`) });
+      const uniqueFilename = BasePage.generateUniqueFilename('error-search-button');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
       throw error;
     }
   });
@@ -246,7 +255,8 @@ test.describe('Picture In Event Detail', () => {
       await expect(page.locator('.image-container img, .grid-container img').first()).toBeVisible();
       console.log('✅ TC-APP-PIDe-005 completed successfully');
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-upload-single-${Date.now()}.png`) });
+      const uniqueFilename = BasePage.generateUniqueFilename('error-upload-single');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
       throw error;
     }
   });
@@ -268,7 +278,8 @@ test.describe('Picture In Event Detail', () => {
       await expect(page.locator('.image-container img, .grid-container img').first()).toBeVisible();
       console.log('✅ TC-APP-PIDe-006 completed successfully');
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-upload-multi-${Date.now()}.png`) });
+      const uniqueFilename = BasePage.generateUniqueFilename('error-upload-multi');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
       throw error;
     }
   });
