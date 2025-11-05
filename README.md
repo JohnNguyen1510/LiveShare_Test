@@ -24,8 +24,8 @@ GOOGLE_EMAIL=your.test@email.com
 GOOGLE_PASSWORD=your-test-password
 BASE_URL=https://dev.livesharenow.com
 
-MAILOSAUR_API_KEY=DhYu7OEq2GNmz2mBTXq5iAw8QEpAxIbq
-MAILOSAUR_SERVER_ID=j2o5ywsb
+MAILOSAUR_API_KEY=qNpWhGe55FwNoZKcsD4FGCCjImSB2tWS
+MAILOSAUR_SERVER_ID=zgjgtyfx
 
 LIVESHARE_EMAIL=goes-silver@rh4q55kj.mailosaur.net
 LIVESHARE_PASSWORD=t123
