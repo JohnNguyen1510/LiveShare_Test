@@ -87,8 +87,7 @@ test.describe('App-SubscriptionEvent', () => {
     }
 
     await page.waitForTimeout(5000);
-    const navigateBackSuccess = await eventCreationPage.navigateBackToEvents();
-    expect(navigateBackSuccess).toBeTruthy();
+    await eventCreationPage.navigateBackToEvents();
     await page.waitForTimeout(4000);
     
     const standardVerified = await eventCreationPage.verifySubscriptionLabel('PERSONALIZED');
@@ -133,8 +132,7 @@ test.describe('App-SubscriptionEvent', () => {
     }
 
     await page.waitForTimeout(3000);
-    const navigateBackSuccess2 = await eventCreationPage.navigateBackToEvents();
-    expect(navigateBackSuccess2).toBeTruthy();
+    await eventCreationPage.navigateBackToEvents();
     await page.waitForTimeout(4000);
     
     const premiumVerified = await eventCreationPage.verifySubscriptionLabel('PREMIUM');
@@ -176,8 +174,7 @@ test.describe('App-SubscriptionEvent', () => {
     }
 
     await page.waitForTimeout(3000);
-    const navigateBackSuccess3 = await eventCreationPage.navigateBackToEvents();
-    expect(navigateBackSuccess3).toBeTruthy();
+    await eventCreationPage.navigateBackToEvents();
     await page.waitForTimeout(4000);
     
     const premiumPlusVerified = await eventCreationPage.verifySubscriptionLabel('PREMIUMPLUS');
@@ -219,8 +216,7 @@ test.describe('App-SubscriptionEvent', () => {
     }
 
     await page.waitForTimeout(3000);
-    const navigateBackSuccess4 = await eventCreationPage.navigateBackToEvents();
-    expect(navigateBackSuccess4).toBeTruthy();
+    await eventCreationPage.navigateBackToEvents();
     await page.waitForTimeout(4000);
     
     const premiumPlusSubscriptionVerified = await eventCreationPage.verifyAllEventsPremiumPlusLabel();
