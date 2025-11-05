@@ -1,5 +1,7 @@
 import { expect } from '@playwright/test';
 import { BasePage } from './BasePage.js';
+import { EventCreationPage } from './EventCreationPage.js';
+import { EventPage } from './EventPage.js';
 
 /**
  * EventSettingsPage - Professional Page Object for Event Settings
@@ -973,6 +975,333 @@ export class EventSettingsPage extends BasePage {
     results.success = results.failed === 0;
     console.log(`\n📊 Toggle Results: ${results.enabled} enabled, ${results.failed} failed`);
     return results;
+  }
+
+  /**
+   * ============================================================================
+   * SECTION 6: VERIFICATION HELPER METHODS
+   * ============================================================================
+   */
+
+  /**
+   * Verify "Preview for Free" text does NOT appear for a given feature
+   * @param {string} featureName - Feature name to check
+   * @returns {Promise<boolean>} True if feature does NOT have "Preview for Free" text
+   */
+  async verifyNoPreviewForFree(featureName) {
+    this.logStep(`Checking "${featureName}" - should NOT have "Preview for Free"`, 'info');
+    
+    const featureOption = this.optionByLabel(featureName);
+    const isVisible = await featureOption.isVisible().catch(() => false);
+    
+    if (!isVisible) {
+      this.logStep(`Feature "${featureName}" not found in UI`, 'warning');
+      return true;
+    }
+    
+    const featureText = await featureOption.textContent();
+    const hasPreviewForFree = featureText.toLowerCase().includes('preview for free');
+    
+    if (hasPreviewForFree) {
+      this.logStep(`Has "Preview for Free" (should not have it)`, 'error');
+      await this.captureScreenshot(`error-${featureName.toLowerCase().replace(/\s+/g, '-')}-has-preview-for-free`, 'error');
+      return false;
+    }
+    
+    this.logStep(`Does NOT have "Preview for Free"`, 'success');
+    return true;
+  }
+
+  /**
+   * Verify "Preview for Free" text DOES appear for a given feature
+   * @param {string} featureName - Feature name to check
+   * @returns {Promise<boolean>} True if feature HAS "Preview for Free" text
+   */
+  async verifyHasPreviewForFree(featureName) {
+    this.logStep(`Checking "${featureName}" - should HAVE "Preview for Free"`, 'info');
+    
+    const featureOption = this.optionByLabel(featureName);
+    const isVisible = await featureOption.isVisible().catch(() => false);
+    
+    if (!isVisible) {
+      this.logStep(`Feature "${featureName}" not found in UI`, 'warning');
+      return true;
+    }
+    
+    const featureText = await featureOption.textContent();
+    const hasPreviewForFree = featureText.toLowerCase().includes('preview for free');
+    
+    if (hasPreviewForFree) {
+      this.logStep(`Has "Preview for Free" (as expected)`, 'success');
+      return true;
+    }
+    
+    this.logStep(`Does NOT have "Preview for Free" (should have it)`, 'error');
+    await this.captureScreenshot(`error-${featureName.toLowerCase().replace(/\s+/g, '-')}-missing-preview-for-free`, 'error');
+    return false;
+  }
+
+  /**
+   * Verify menu options are visible with exact text matching
+   * @param {string[]} expectedMenuItems - Array of expected menu item texts
+   * @returns {Promise<{success: boolean, visible: string[], notVisible: string[]}>}
+   */
+  async verifyMenuOptions(expectedMenuItems) {
+    this.logStep(`Verifying menu options: ${expectedMenuItems.join(', ')}`, 'info');
+    
+    const results = { success: true, visible: [], notVisible: [], details: {} };
+    
+    try {
+      const moreButton = this.page.locator('button:has(mat-icon:text("more_vert"))').first();
+      await moreButton.waitFor({ state: 'visible', timeout: 5000 });
+      await moreButton.click();
+      await this.page.waitForTimeout(1500);
+      
+      const menuPanel = this.page.locator('.mat-menu-panel[role="menu"]').first();
+      await menuPanel.waitFor({ state: 'visible', timeout: 5000 });
+      
+      const allMenuItems = await this.page.locator('button[role="menuitem"]').all();
+      
+      for (const expectedItem of expectedMenuItems) {
+        let found = false;
+        let matchedItemText = '';
+        
+        for (const menuItem of allMenuItems) {
+          const isVisible = await menuItem.isVisible().catch(() => false);
+          if (!isVisible) continue;
+          
+          const itemText = await menuItem.evaluate(el => {
+            const clone = el.cloneNode(true);
+            const icons = clone.querySelectorAll('mat-icon');
+            icons.forEach(icon => icon.remove());
+            return clone.textContent.trim();
+          }).catch(() => '');
+          
+          if (itemText === expectedItem) {
+            found = true;
+            matchedItemText = itemText;
+            break;
+          }
+        }
+        
+        if (found) {
+          results.visible.push(expectedItem);
+          results.details[expectedItem] = { found: true, text: matchedItemText };
+        } else {
+          results.notVisible.push(expectedItem);
+          results.details[expectedItem] = { found: false, text: null };
+        }
+      }
+      
+      await this.page.keyboard.press('Escape');
+      await this.page.waitForTimeout(500);
+      
+    } catch (error) {
+      this.logStep(`Error during menu verification: ${error.message}`, 'error');
+      await this.page.keyboard.press('Escape').catch(() => {});
+      results.success = false;
+    }
+    
+    results.success = results.notVisible.length === 0;
+    this.logStep(`Menu Options: Found ${results.visible.length}/${expectedMenuItems.length}, Missing ${results.notVisible.length}`, results.success ? 'success' : 'warning');
+    
+    return results;
+  }
+
+  /**
+   * Verify footer buttons are visible with exact text matching
+   * @param {string[]} expectedButtons - Array of expected button texts
+   * @returns {Promise<{success: boolean, visible: string[], notVisible: string[]}>}
+   */
+  async verifyFooterButtons(expectedButtons) {
+    this.logStep(`Verifying footer buttons: ${expectedButtons.join(', ')}`, 'info');
+    
+    const results = { success: true, visible: [], notVisible: [], details: {} };
+    
+    try {
+      const addButton = this.page.locator('button.menu-button:has(mat-icon:text("add"))').first();
+      await addButton.waitFor({ state: 'visible', timeout: 5000 });
+      await addButton.click();
+      await this.page.waitForTimeout(1500);
+      
+      const footerBtnGroup = this.page.locator('.footer-btn-group');
+      await footerBtnGroup.waitFor({ state: 'visible', timeout: 5000 });
+      
+      const allButtons = await this.page.locator('.footer-btn-group button.btn').all();
+      
+      for (const buttonName of expectedButtons) {
+        let found = false;
+        let matchedButtonText = '';
+        
+        for (const button of allButtons) {
+          const isVisible = await button.isVisible().catch(() => false);
+          if (!isVisible) continue;
+          
+          const buttonText = await button.evaluate(el => {
+            const clone = el.cloneNode(true);
+            const icons = clone.querySelectorAll('mat-icon');
+            icons.forEach(icon => icon.remove());
+            return clone.textContent.trim();
+          }).catch(() => '');
+          
+          if (buttonText === buttonName) {
+            found = true;
+            matchedButtonText = buttonText;
+            break;
+          }
+        }
+        
+        if (found) {
+          results.visible.push(buttonName);
+          results.details[buttonName] = { found: true, text: matchedButtonText };
+        } else {
+          results.notVisible.push(buttonName);
+          results.details[buttonName] = { found: false, text: null };
+        }
+      }
+      
+      await addButton.click();
+      await this.page.waitForTimeout(500);
+      
+    } catch (error) {
+      this.logStep(`Error during footer button verification: ${error.message}`, 'error');
+      await this.page.keyboard.press('Escape').catch(() => {});
+      results.success = false;
+    }
+    
+    results.success = results.notVisible.length === 0;
+    this.logStep(`Footer Buttons: Found ${results.visible.length}/${expectedButtons.length}, Missing ${results.notVisible.length}`, results.success ? 'success' : 'warning');
+    
+    return results;
+  }
+
+  /**
+   * Feature tier definitions based on subscription plans
+   */
+  static FeatureTiers = {
+    FREE: [
+      'Event Name',
+      'Event Date',
+      'Location',
+      'Contact',
+      'Itinerary',
+      'Enable Message Post',
+      'Video'
+    ],
+    STANDARD: [
+      'Button Link #1',
+      'Button Link #2',
+      'Welcome Popup',
+      'Enable Photo Gifts',
+      'Event Header Photo',
+      'Popularity Badges',
+      'Force Login'
+    ],
+    PREMIUM: [
+      'Allow sharing via Facebook',
+      'Allow Guest Download',
+      'Add Event Managers',
+      'Allow posting without login',
+      'Require Access Passcode'
+    ],
+    PREMIUM_PLUS: [
+      'LiveView Slideshow',
+      'Then And Now',
+      'Movie Editor',
+      'KeepSake',
+      'Scavenger Hunt',
+      'Sponsor',
+      'Prize'
+    ]
+  };
+
+  /**
+   * Setup test with token: Inject token, Create Event, Open Settings
+   * @param {import('@playwright/test').Page} page - Playwright page instance
+   * @param {Object} testData - Test data containing token
+   * @returns {Promise<boolean>} Success status
+   */
+  async setupTestWithToken(testData) {
+    this.logStep('Setting up test with token', 'info');
+    
+    try {
+      // Inject token
+      await this.page.goto('https://dev.livesharenow.com/');
+      await this.page.waitForLoadState('domcontentloaded');
+      await this.page.evaluate((tokenValue) => {
+        window.localStorage.setItem('ACCESSTOKEN', tokenValue);
+      }, testData.token);
+      await this.page.waitForTimeout(1000);
+      
+      // Create new event
+      const eventCreationPage = new EventCreationPage(this.page);
+      await this.page.goto('https://dev.livesharenow.com/events');
+      await this.page.waitForTimeout(2000);
+      
+      const eventCreated = await eventCreationPage.startEventCreation();
+      if (!eventCreated) {
+        throw new Error('Failed to create event');
+      }
+      await this.page.waitForTimeout(4000);
+      
+      // Open event settings
+      await this.openEventSettings();
+      
+      this.logStep('Test setup completed with token', 'success');
+      return true;
+    } catch (error) {
+      this.logStep(`Test setup with token failed: ${error.message}`, 'error');
+      await this.captureScreenshot('error-test-setup', 'error');
+      return false;
+    }
+  }
+
+  /**
+   * Navigate to event and open settings
+   * @returns {Promise<boolean>} Success status
+   */
+  async openEventSettings() {
+    this.logStep('Navigating to event settings', 'info');
+    
+    try {
+      const eventPage = new EventPage(this.page);
+      
+      await this.page.goto('https://dev.livesharenow.com/events');
+      await this.page.waitForTimeout(2000);
+      
+      await eventPage.clickFirstEvent();
+      await this.page.waitForTimeout(2000);
+      
+      await this.openSettingsIfNeeded();
+      await this.page.waitForTimeout(3000);
+      await this.waitLoaded();
+      
+      this.logStep('Event settings opened', 'success');
+      return true;
+    } catch (error) {
+      this.logStep(`Failed to open settings: ${error.message}`, 'error');
+      await this.captureScreenshot('error-open-settings', 'error');
+      return false;
+    }
+  }
+
+  /**
+   * Get authentication token from page localStorage
+   * @returns {Promise<string|null>} Access token
+   */
+  async getAuthToken() {
+    try {
+      const token = await this.page.evaluate(() => {
+        return window.localStorage.getItem('ACCESSTOKEN') || null;
+      });
+      if (token) {
+        this.logStep('Retrieved ACCESSTOKEN from localStorage', 'success');
+      }
+      return token;
+    } catch (error) {
+      this.logStep(`Failed to get token: ${error.message}`, 'error');
+      return null;
+    }
   }
 
 }
