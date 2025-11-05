@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { LoginPage } from '../page-objects/LoginPage.js';
 import { EventListPage } from '../page-objects/EventListPage.js';
 import { EventDetailPage } from '../page-objects/EventDetailPage.js';
 import { BasePage } from '../page-objects/BasePage.js';
@@ -13,166 +12,332 @@ if (!fs.existsSync(screenshotsDir)) {
 }
 
 // Increase test timeout
-test.setTimeout(5 * 60 * 1000); // 5 minutes
+test.setTimeout(120000); // 2 minutes (optimized)
 
 test.describe('Event Detail UI', () => {
-  let loginPage;
   let eventListPage;
   let eventDetailPage;
-  let basePage;
 
   test.beforeEach(async ({ page }) => {
-    loginPage = new LoginPage(page);
     eventListPage = new EventListPage(page);
     eventDetailPage = new EventDetailPage(page);
-    basePage = new BasePage(page);
   });
 
-  test('TC-APP-DEEV-01-07: Verify Detail Event UI using POM', async ({ page, context }) => {
-
-    // Navigate to events page and verify it loads
-    await eventListPage.goToEventsPage();
-    await eventListPage.waitForEventsToLoad();
-    await eventListPage.verifyEventsPageLoaded();
-    
-    // Try to find and click event with "tuanhay" in name
-    console.log('Looking for event with name containing "tuanhay"...');
-    
-    const eventCount = await eventListPage.getEventCount();
-    let eventClicked = false;
-    
-    // Check each event for "tuanhay" in name
-    for (let i = 0; i < eventCount; i++) {
-      try {
-        const eventInfo = await eventListPage.getEventInfo(i);
-        if (eventInfo.name && eventInfo.name.toLowerCase().includes('tuanhay')) {
-          console.log(`Found event with "tuanhay": ${eventInfo.name}`);
-          await eventListPage.clickEventByIndex(i);
-          eventClicked = true;
-          break;
-        }
-      } catch (error) {
-        console.log(`Error checking event ${i}: ${error.message}`);
-      }
-    }
-    
-    // If no "tuanhay" event found, click first available event
-    if (!eventClicked) {
-      console.log('No "tuanhay" event found, clicking first available event');
-      await eventListPage.clickEventByIndex(0);
-    }
-        
-    // Wait for event detail page to load
-    await eventDetailPage.waitForEventDetailToLoad();
-    await eventDetailPage.verifyEventDetailLoaded();
-    await page.screenshot({ path: path.join(screenshotsDir, 'detail-event-loaded.png') });
-    
-    // TC-APP-DEEV-01: Verify event name
-    console.log('TC-APP-DEEV-01: Checking event name');
-    const eventInfo = await eventDetailPage.getEventInfo();
-    expect(eventInfo.name, 'Event name should be visible').toBeTruthy();
-    
-        
-    // TC-APP-DEEV-02: Verify event date
-    console.log('TC-APP-DEEV-02: Checking event date');
-    expect(eventInfo.date, 'Event date should be visible').toBeTruthy();
-    expect(eventInfo.date.length > 0, 'Event date should not be empty').toBeTruthy();
-        
-    // TC-APP-DEEV-03: Verify event header photo
-    console.log('TC-APP-DEEV-03: Checking event header photo');
-    expect(eventInfo.hasImage, 'Event header photo should be visible').toBeTruthy();
-        
-    // TC-APP-DEEV-04: Verify details section
-    console.log('TC-APP-DEEV-04: Checking details section');
-    await eventDetailPage.verifyDetailsSection();
-    
-    // Get location, contact, and itinerary info
-    const locationInfo = await eventDetailPage.getLocationInfo();
-    const contactInfo = await eventDetailPage.getContactInfo();
-    const itineraryInfo = await eventDetailPage.getItineraryInfo();
-    
-    // Verify location section
-    expect(locationInfo.isVisible, 'Location section should be visible').toBeTruthy()
-    
-    // Verify contact section
-    expect(contactInfo.isVisible, 'Contact section should be visible').toBeTruthy();
-    
-    // Verify itinerary section
-    expect(itineraryInfo.isVisible, 'Itinerary section should be visible').toBeTruthy();
-        
-    // TC-APP-DEEV-06: Verify navigation buttons
-    console.log('TC-APP-DEEV-06: Checking navigation buttons');
-    await eventDetailPage.verifyNavigationButtons();
-        
-    // TC-APP-DEEV-07: Verify action buttons
-    console.log('TC-APP-DEEV-07: Checking action buttons');
-    await eventDetailPage.verifyActionButtons();
-    
-    // Summary
-    console.log('✅ All Detail Event UI checks completed using POM structure');
-  });
-
-  test('TC-APP-DEEV-08: Verify Share Event UI', async ({ page, context }) => {
-    // Navigate to events page and verify it loads
-    await eventListPage.goToEventsPage();
-    await eventListPage.waitForEventsToLoad();
-    await eventListPage.verifyEventsPageLoaded();
-    await eventListPage.clickEventByIndex(0);
-
-
-    //TC-APP-DEEV-08: Grid View
-    console.log('TC-APP-DEEV-08: Checking grid view');
-    await eventDetailPage.verifyGridView();
-    
-  });
-
-  test('TC-APP-DEEV-09: Verify Comprehensive Grid Layout Testing', async ({ page, context }) => {
-    // Navigate to events page and verify it loads
-    await eventListPage.goToEventsPage();
-    await eventListPage.waitForEventsToLoad();
-    await eventListPage.verifyEventsPageLoaded();
-    await eventListPage.clickEventByIndex(0);
-
-
-    //TC-APP-DEEV-09: Comprehensive Grid Layout Testing
-    console.log('TC-APP-DEEV-09: Testing all grid layouts (2x2, 3x3, Timeline)');
-    await eventDetailPage.testAllGridLayouts();
-  });
-  test('TC-APP-DEEV-10: Verify Share Functionality', async ({ page, context }) => {
-    // Navigate to events page and verify it loads
-    await eventListPage.goToEventsPage();
-    await eventListPage.waitForEventsToLoad();
-    await eventListPage.verifyEventsPageLoaded();
-
-    // If no "tuanhay" event found, click first available event
-    await eventListPage.clickEventByIndex(0);
-  
-        
-    // Wait for event detail page to load
-    await eventDetailPage.waitForEventDetailToLoad();
-    await eventDetailPage.verifyEventDetailLoaded();
-    await page.screenshot({ path: path.join(screenshotsDir, 'detail-event-loaded.png') });
-
-    //TC-APP-DEEV-10: Share Functionality
-    console.log('TC-APP-DEEV-10: Testing share functionality');
-    await eventDetailPage.verifyShareFunctionality();
-  });
-
-  test('TC-APP-DEEV-11: Verify movie editor work correctly' , async({page,context})=>{
-        // Navigate to events page and verify it loads
-        await eventListPage.goToEventsPage();
-        await eventListPage.waitForEventsToLoad();
-        await eventListPage.verifyEventsPageLoaded();
-    
-        // If no "tuanhay" event found, click first available event
-        await eventListPage.clickEventByIndex(0);
+  test('TC-APP-DEEV-01-07: Verify Detail Event UI', async ({ page }) => {
+    try {
+      // Navigate and open event
+      await eventListPage.goToEventsPage();
+      await eventListPage.waitForEventsToLoad();
+      await eventListPage.verifyEventsPageLoaded();
       
-            
-        // Wait for event detail page to load
-        await eventDetailPage.waitForEventDetailToLoad();
-        await eventDetailPage.verifyEventDetailLoaded();
-        await page.screenshot({ path: path.join(screenshotsDir, 'detail-event-loaded.png') });
+      // Find and click event (prefer "tuanhay" if exists)
+      await eventListPage.clickEventByNameOrFirst('tuanhay');
+      
+      // Verify complete event detail UI
+      await eventDetailPage.verifyCompleteEventDetailUI();
+      
+      console.log('✅ All Detail Event UI checks completed');
+    } catch (error) {
+      const uniqueFilename = BasePage.generateUniqueFilename('error-event-detail');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
+      throw error;
+    }
+  });
 
-        await eventDetailPage.verifyMovieEditorFunctionality()
-  })
+  test('TC-APP-DEEV-08: Verify Comprehensive Grid Layout Testing', async ({ page }) => {
+    try {
+      await eventListPage.goToEventsPage();
+      await eventListPage.waitForEventsToLoad();
+      await eventListPage.verifyEventsPageLoaded();
+      await eventListPage.clickEventByIndex(0);
+
+      console.log('TC-APP-DEEV-08: Testing all grid layouts (2x2, 3x3, Timeline)');
+      await eventDetailPage.testAllGridLayouts();
+    } catch (error) {
+      const uniqueFilename = BasePage.generateUniqueFilename('error-grid-layouts');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
+      throw error;
+    }
+  });
+
+  test('TC-APP-DEEV-09: Verify Share Functionality', async ({ page }) => {
+    try {
+      await eventListPage.goToEventsPage();
+      await eventListPage.waitForEventsToLoad();
+      await eventListPage.verifyEventsPageLoaded();
+      await eventListPage.clickEventByIndex(0);
+      
+      await eventDetailPage.waitForEventDetailToLoad();
+      await eventDetailPage.verifyEventDetailLoaded();
+
+      console.log('TC-APP-DEEV-9: Testing share functionality');
+      await eventDetailPage.verifyShareFunctionality();
+    } catch (error) {
+      const uniqueFilename = BasePage.generateUniqueFilename('error-share');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
+      throw error;
+    }
+  });
+
+  test('TC-APP-DEEV-10: Movie Editor UI Verification', async ({ page }) => {
+    try {
+      console.log('🎬 TC-APP-DEEV-10: Movie Editor UI Verification');
+      
+      // Navigate and open event
+      await eventListPage.goToEventsPage();
+      await eventListPage.waitForEventsToLoad();
+      await eventListPage.verifyEventsPageLoaded();
+      await eventListPage.clickEventByIndex(0);
+      await eventDetailPage.waitForEventDetailToLoad();
+      await eventDetailPage.verifyEventDetailLoaded();
+      
+      // Execute complete movie editor verification workflow
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(2, 8);
+      const processId = process.pid || Math.floor(Math.random() * 10000);
+      const testMovieName = `UI Test Movie ${timestamp}_${processId}_${randomId}`;
+      await eventDetailPage.verifyCompleteMovieEditorWorkflow(testMovieName);
+      
+      console.log('🎉 TC-APP-DEEV-10 PASSED: All Movie Editor UI components verified!');
+    } catch (error) {
+      const uniqueFilename = BasePage.generateUniqueFilename('error-movie-editor');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
+      throw error;
+    }
+  });
+
+  test('TC-APP-DEEV-11: Verify View Keepsakes Functionality', async ({ page }) => {
+    try {
+      console.log('💎 TC-APP-DEEV-13: Verify View Keepsakes Functionality');
+      
+      await eventListPage.goToEventsPage();
+      await eventListPage.waitForEventsToLoad();
+      await eventListPage.verifyEventsPageLoaded();
+      await eventListPage.clickEventByIndex(0);
+      await eventDetailPage.waitForEventDetailToLoad();
+      await eventDetailPage.verifyEventDetailLoaded();
+      
+      // Open More Options menu and click View Keepsakes
+      await eventDetailPage.clickMoreOptionsMenu();
+      await eventDetailPage.clickViewKeepsakes();
+      
+      // Verify keepsakes view is displayed
+      await eventDetailPage.verifyViewKeepsakesDisplayed();
+      
+      console.log('✅ TC-APP-DEEV-11 PASSED: View Keepsakes functionality verified');
+    } catch (error) {
+      const uniqueFilename = BasePage.generateUniqueFilename('error-view-keepsakes');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
+      throw error;
+    }
+  });
+
+  test('TC-APP-DEEV-12: Verify Download All Photos Functionality', async ({ page }) => {
+    try {
+      console.log('📥 TC-APP-DEEV-12: Verify Download All Photos Functionality');
+      
+      await eventListPage.goToEventsPage();
+      await eventListPage.waitForEventsToLoad();
+      await eventListPage.verifyEventsPageLoaded();
+      await eventListPage.clickEventByIndex(0);
+      await eventDetailPage.waitForEventDetailToLoad();
+      await eventDetailPage.verifyEventDetailLoaded();
+      
+      // Open More Options menu and click Download All Photos
+      await eventDetailPage.clickMoreOptionsMenu();
+      await eventDetailPage.clickDownloadAllPhotos();
+      
+      // Verify download page is displayed
+      await eventDetailPage.verifyDownloadAllPhotosPage();
+      
+      // Navigate back to event detail
+      await eventDetailPage.clickBackToEventFromDownload();
+      
+      console.log('✅ TC-APP-DEEV-12 PASSED: Download All Photos functionality verified');
+    } catch (error) {
+      const uniqueFilename = BasePage.generateUniqueFilename('error-download-photos');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
+      throw error;
+    }
+  });
+
+  test('TC-APP-DEEV-13: Verify LiveView Functionality', async ({ page, context }) => {
+    try {
+      console.log('👁️ TC-APP-DEEV-13: Verify LiveView Functionality');
+      
+      await eventListPage.goToEventsPage();
+      await eventListPage.waitForEventsToLoad();
+      await eventListPage.verifyEventsPageLoaded();
+      await eventListPage.clickEventByIndex(0);
+      await eventDetailPage.waitForEventDetailToLoad();
+      await eventDetailPage.verifyEventDetailLoaded();
+      
+      // Open More Options menu and click LiveView
+      await eventDetailPage.clickMoreOptionsMenu();
+      
+      // Wait for new page/tab to open
+      const [newPage] = await Promise.all([
+        context.waitForEvent('page'),
+        eventDetailPage.clickLiveView()
+      ]);
+      
+      // Verify LiveView page is opened
+      await eventDetailPage.verifyLiveViewPage(newPage);
+      
+      // Close the LiveView tab
+      await newPage.close();
+      
+      console.log('✅ TC-APP-DEEV-13 PASSED: LiveView functionality verified');
+    } catch (error) {
+      const uniqueFilename = BasePage.generateUniqueFilename('error-liveview');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
+      throw error;
+    }
+  });
+
+  test('TC-APP-DEEV-14 4: Verify Redeem Gift Code Functionality', async ({ page }) => {
+    try {
+      console.log('🎁 TC-APP-DEEV-14: Verify Redeem Gift Code Functionality');
+      
+      await eventListPage.goToEventsPage();
+      await eventListPage.waitForEventsToLoad();
+      await eventListPage.verifyEventsPageLoaded();
+      await eventListPage.clickEventByIndex(0);
+      await eventDetailPage.waitForEventDetailToLoad();
+      await eventDetailPage.verifyEventDetailLoaded();
+      
+      // Open More Options menu and click Redeem Gift Code
+      await eventDetailPage.clickMoreOptionsMenu();
+      await eventDetailPage.clickRedeemGiftCode();
+      
+      // Verify redeem gift code dialog
+      await eventDetailPage.verifyRedeemGiftCodeDialog();
+      
+      // Test cancel functionality
+      await eventDetailPage.cancelRedeemGiftCode();
+      
+      console.log('✅ TC-APP-DEEV-14 PASSED: Redeem Gift Code functionality verified');
+    } catch (error) {
+      const uniqueFilename = BasePage.generateUniqueFilename('error-redeem-gift-code');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
+      throw error;
+    }
+  });
+
+  test('TC-APP-DEEV-15: Verify Live Help Functionality', async ({ page }) => {
+    try {
+      console.log('💬 TC-APP-DEEV-15: Verify Live Help Functionality');
+      
+      await eventListPage.goToEventsPage();
+      await eventListPage.waitForEventsToLoad();
+      await eventListPage.verifyEventsPageLoaded();
+      await eventListPage.clickEventByIndex(0);
+      await eventDetailPage.waitForEventDetailToLoad();
+      await eventDetailPage.verifyEventDetailLoaded();
+      
+      // Open More Options menu and click Live Help
+      await eventDetailPage.clickMoreOptionsMenu();
+      await eventDetailPage.clickLiveHelp();
+      
+      // Verify live help interface is displayed
+      await eventDetailPage.verifyLiveHelpDisplayed();
+      
+      console.log('✅ TC-APP-DEEV-15 PASSED: Live Help functionality verified');
+    } catch (error) {
+      const uniqueFilename = BasePage.generateUniqueFilename('error-live-help');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
+      throw error;
+    }
+  });
+
+  test('TC-APP-DEEV-16: Verify FAQs Link', async ({ page, context }) => {
+    try {
+      console.log('❓ TC-APP-DEEV-16: Verify FAQs Link');
+      
+      await eventListPage.goToEventsPage();
+      await eventListPage.waitForEventsToLoad();
+      await eventListPage.verifyEventsPageLoaded();
+      await eventListPage.clickEventByIndex(0);
+      await eventDetailPage.waitForEventDetailToLoad();
+      await eventDetailPage.verifyEventDetailLoaded();
+      
+      // Open More Options menu and click FAQs
+      await eventDetailPage.clickMoreOptionsMenu();
+      
+      // Wait for new page to open
+      const [newPage] = await Promise.all([
+        context.waitForEvent('page'),
+        eventDetailPage.clickFAQs()
+      ]);
+      
+      // Verify FAQs page is opened
+      await eventDetailPage.verifyFAQsPage(newPage);
+      
+      // Close the FAQs tab
+      await newPage.close();
+      
+      console.log('✅ TC-APP-DEEV-16 PASSED: FAQs link verified');
+    } catch (error) {
+      const uniqueFilename = BasePage.generateUniqueFilename('error-faqs');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
+      throw error;
+    }
+  });
+
+  test('TC-APP-DEEV-17: Verify Event Details Dialog Comprehensive', async ({ page }) => {
+    try {
+      console.log('📋 TC-APP-DEEV-17: Verify Event Details Dialog Comprehensive');
+      
+      await eventListPage.goToEventsPage();
+      await eventListPage.waitForEventsToLoad();
+      await eventListPage.verifyEventsPageLoaded();
+      await eventListPage.clickEventByIndex(0);
+      await eventDetailPage.waitForEventDetailToLoad();
+      await eventDetailPage.verifyEventDetailLoaded();
+      
+      // Open More Options menu and click Details
+      await eventDetailPage.clickMoreOptionsMenu();
+      await eventDetailPage.clickDetailsFromMenu();
+      
+      // Verify Event Details Dialog with all fields
+      await eventDetailPage.verifyEventDetailsDialog();
+      
+      // Close the dialog
+      await eventDetailPage.closeEventDetailsDialog();
+      
+      console.log('✅ TC-APP-DEEV-17 PASSED: Event Details Dialog verified comprehensively');
+    } catch (error) {
+      const uniqueFilename = BasePage.generateUniqueFilename('error-event-details-dialog');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
+      throw error;
+    }
+  });
+
+  test('TC-APP-DEEV-18: Verify Logout Functionality', async ({ page }) => {
+    try {
+      console.log('🚪 TC-APP-DEEV-18: Verify Logout Functionality');
+      
+      await eventListPage.goToEventsPage();
+      await eventListPage.waitForEventsToLoad();
+      await eventListPage.verifyEventsPageLoaded();
+      await eventListPage.clickEventByIndex(0);
+      await eventDetailPage.waitForEventDetailToLoad();
+      await eventDetailPage.verifyEventDetailLoaded();
+      
+      // Open More Options menu
+      await eventDetailPage.clickMoreOptionsMenu();
+      
+      // Verify logout button is visible
+      await eventDetailPage.verifyLogoutButtonVisible();
+      
+      // Note: We don't actually logout to avoid breaking other tests
+      // Just verify the button exists
+      
+      console.log('✅ TC-APP-DEEV-18 PASSED: Logout button verified');
+    } catch (error) {
+      const uniqueFilename = BasePage.generateUniqueFilename('error-logout');
+      await page.screenshot({ path: path.join(screenshotsDir, `${uniqueFilename}.png`) });
+      throw error;
+    }
+  });
 });

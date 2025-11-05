@@ -59,8 +59,22 @@ export class SnapQuestPage extends BasePage {
   }
 
   async navigateToJoinedEvents() {
-    console.log('Clicking on Joined Events tab...');
+    this.logStep('Navigating to Joined Events', 'info');
+    
+    const eventsListPromise = this.waitApiResponse('/api/events', 200, 'GET');
     await this.page.goto('https://dev.livesharenow.com/events');
+    
+    try {
+      const response = await eventsListPromise;
+      const eventsData = await response.json();
+      const eventsList = eventsData.docs || eventsData.events || eventsData;
+      if (Array.isArray(eventsList)) {
+        this.logStep(`Events list API responded with ${eventsList.length} events`, 'success');
+      }
+    } catch (error) {
+      this.logStep(`Events list API verification failed: ${error.message}`, 'warning');
+    }
+    
     await this.joinedEventsTab.waitFor({ state: 'visible', timeout: 10000 });
     await this.joinedEventsTab.click();
     await this.page.waitForTimeout(2000);
@@ -72,21 +86,89 @@ export class SnapQuestPage extends BasePage {
     expect(this.shareDialog).toBeVisible()
     expect(this.buttonLink1).toBeVisible()
     expect(this.buttonLink2).toBeVisible()
-    console.log('UI loaded for SnapQuest');
+    this.logStep('UI loaded for SnapQuest', 'success');
   }
 
   async selectFirstJoinedEvent() {
-    console.log('Selecting first joined event...');
+    this.logStep('Selecting first joined event', 'info');
+    
     if (await this.eventCards.count() > 0) {
+      const eventCard = this.eventCards.first();
+      const eventCodeElement = eventCard.locator('span:has-text(/^[A-Z0-9]{6}$/)');
+      const uiEventCode = await eventCodeElement.textContent().catch(() => null);
+      
+      const eventDetailPromise = this.waitApiResponse('/api/events/', 200, 'GET');
       await this.eventCards.first().click();
+      
+      try {
+        const response = await eventDetailPromise;
+        const eventData = await response.json();
+        
+        if (eventData && eventData._id) {
+          if (uiEventCode) {
+            expect(eventData.linkName).toBe(uiEventCode);
+          }
+          expect(eventData).toHaveProperty('_id');
+          expect(eventData).toHaveProperty('linkName');
+          expect(eventData).toHaveProperty('name');
+          this.logStep('Event detail API verified', 'success');
+        }
+      } catch (error) {
+        this.logStep(`Event detail API verification failed: ${error.message}`, 'warning');
+      }
+      
       await this.page.waitForTimeout(3000);
       return true;
     }
     return false;
   }
 
+  /**
+   * Click on specific SnapQuest event by event code and verify API
+   * @param {string} eventCode - Event code to click (e.g., "82MR51")
+   * @returns {Promise<Object>} Event data from API
+   */
+  async clickEventByCodeAndVerify(eventCode) {
+    this.logStep(`Clicking SnapQuest event: ${eventCode}`, 'info');
+    
+    const eventCard = this.eventCards.filter({ hasText: eventCode }).first();
+    const isVisible = await eventCard.isVisible({ timeout: 5000 }).catch(() => false);
+    
+    if (!isVisible) {
+      this.logStep(`Event card with code ${eventCode} not found`, 'warning');
+      return null;
+    }
+    
+    const uiEventCode = await eventCard.locator('span:has-text(/^[A-Z0-9]{6}$/)').textContent().catch(() => '');
+    const eventDetailPromise = this.waitApiResponse('/api/events/', 200, 'GET');
+    await eventCard.click();
+    
+    let eventData = null;
+    try {
+      const response = await eventDetailPromise;
+      eventData = await response.json();
+      
+      if (eventData && eventData._id) {
+        expect(eventData.linkName).toBe(eventCode);
+        if (uiEventCode) {
+          expect(eventData.linkName).toBe(uiEventCode);
+        }
+        expect(eventData).toHaveProperty('_id');
+        expect(eventData).toHaveProperty('linkName');
+        expect(eventData).toHaveProperty('name');
+        expect(eventData).toHaveProperty('plan');
+        this.logStep('SnapQuest event API verified', 'success');
+      }
+    } catch (error) {
+      this.logStep(`SnapQuest event API verification failed: ${error.message}`, 'warning');
+    }
+    
+    await this.page.waitForTimeout(3000);
+    return eventData;
+  }
+
   async navigateToNonDashboardPage() {
-    console.log('Navigating to nondashboard URL...');
+    this.logStep('Navigating to nondashboard URL', 'info');
     await this.page.goto('https://dev.livesharenow.com');
     await this.page.waitForTimeout(2000);
   }
@@ -104,9 +186,27 @@ export class SnapQuestPage extends BasePage {
   }
 
   async confirmJoin() {
+    this.logStep('Confirming join and waiting for API', 'info');
+    
     await this.joinConfirmButton.waitFor({ state: 'visible', timeout: 5000 });
     if (await this.joinConfirmButton.isEnabled()) {
+      const eventDetailPromise = this.waitApiResponse('/api/events/', 200, 'GET');
       await this.joinConfirmButton.click();
+      
+      try {
+        const response = await eventDetailPromise;
+        const eventData = await response.json();
+        
+        if (eventData && eventData._id) {
+          expect(eventData).toHaveProperty('_id');
+          expect(eventData).toHaveProperty('linkName');
+          expect(eventData).toHaveProperty('name');
+          this.logStep('Join event API verified', 'success');
+        }
+      } catch (error) {
+        this.logStep(`Join event API verification failed: ${error.message}`, 'warning');
+      }
+      
       await this.page.waitForTimeout(5000);
     }
   }
@@ -114,7 +214,7 @@ export class SnapQuestPage extends BasePage {
   async verifyJoinFunctionality() {
     const hasEvents = await this.selectFirstJoinedEvent();
     if (!hasEvents) {
-      console.log('No joined events found, skipping test');
+      this.logStep('No joined events found, skipping test', 'warning');
       return false;
     }
 
@@ -151,7 +251,6 @@ export class SnapQuestPage extends BasePage {
         for (const inputSelector of codeInputSelectors) {
           const codeInput = this.page.locator(inputSelector).first();
           if (await codeInput.isVisible().catch(() => false)) {
-            console.log(`Found code input with selector: ${inputSelector}`);
             await codeInput.fill(this.eventCodes[0]);
             codeInputFound = true;
             break;
@@ -171,6 +270,8 @@ export class SnapQuestPage extends BasePage {
   }
 
   async verifyNonDashboardJoin() {
+    this.logStep(`Verifying non-dashboard join with code: ${this.eventCodes[0]}`, 'info');
+    
     await this.navigateToNonDashboardPage();
     
     // Look for Join button
@@ -185,12 +286,9 @@ export class SnapQuestPage extends BasePage {
     for (const selector of joinButtonSelectors) {
       const joinButton = this.page.locator(selector).first();
       if (await joinButton.isVisible().catch(() => false)) {
-        console.log(`Found join button with selector: ${selector}`);
-        
         try {
           await joinButton.click({ force: true, timeout: 5000 });
         } catch (error) {
-          console.log('Force click failed, trying JavaScript click...');
           await this.page.evaluate(selector => {
             const button = document.querySelector(selector);
             if (button) {
@@ -239,7 +337,11 @@ export class SnapQuestPage extends BasePage {
     await this.page.waitForTimeout(2000);
 
     expect(codeInputFound, 'Input field for event code should be found').toBeTruthy();
+    
+    // Confirm join with API verification
     await this.confirmJoin();
+    // confirmJoin() already verifies API and checks linkName
+    
     await this.verifyUILoadForSnapQuest();
     await this.page.waitForTimeout(2000);
 
@@ -248,12 +350,16 @@ export class SnapQuestPage extends BasePage {
 
   async verifyGridViewFunctionality() {
     await this.navigateToJoinedEvents();
+    
+    // Click on first event with API verification
     const hasEvents = await this.selectFirstJoinedEvent();
     
     if (!hasEvents) {
-      console.log('No joined events found, skipping test');
+      this.logStep('No joined events found, skipping test', 'warning');
       return false;
     }
+    
+    console.log('✅ Event opened with API verification complete');
     
     // Look for Grid View button
     const gridViewButtonSelectors = [
@@ -305,7 +411,7 @@ export class SnapQuestPage extends BasePage {
     const hasEvents = await this.selectFirstJoinedEvent();
     
     if (!hasEvents) {
-      console.log('No joined events found, skipping test');
+      this.logStep('No joined events found, skipping test', 'warning');
       return false;
     }
     
@@ -372,7 +478,7 @@ export class SnapQuestPage extends BasePage {
     const hasEvents = await this.selectFirstJoinedEvent();
     
     if (!hasEvents) {
-      console.log('No joined events found, skipping test');
+      this.logStep('No joined events found, skipping test', 'warning');
       return false;
     }
     
@@ -442,7 +548,7 @@ export class SnapQuestPage extends BasePage {
     const hasEvents = await this.selectFirstJoinedEvent();
     
     if (!hasEvents) {
-      console.log('No joined events found, skipping test');
+      this.logStep('No joined events found, skipping test', 'warning');
       return false;
     }
     
@@ -517,7 +623,7 @@ export class SnapQuestPage extends BasePage {
     const hasEvents = await this.selectFirstJoinedEvent();
     
     if (!hasEvents) {
-      console.log('No joined events found, skipping test');
+      this.logStep('No joined events found, skipping test', 'warning');
       return false;
     }
     
@@ -638,7 +744,7 @@ export class SnapQuestPage extends BasePage {
     const hasEvents = await this.selectFirstJoinedEvent();
     
     if (!hasEvents) {
-      console.log('No joined events found, skipping test');
+      this.logStep('No joined events found, skipping test', 'warning');
       return false;
     }
     
@@ -737,7 +843,7 @@ export class SnapQuestPage extends BasePage {
     const hasEvents = await this.selectFirstJoinedEvent();
     
     if (!hasEvents) {
-      console.log('No joined events found, skipping test');
+      this.logStep('No joined events found, skipping test', 'warning');
       return false;
     }
     

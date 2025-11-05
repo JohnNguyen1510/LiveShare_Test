@@ -77,7 +77,6 @@ async function saveEmailAuth() {
     console.log('Email authentication successful, waiting 5 seconds before saving state...');
     await page.waitForTimeout(5000);
     
-    // Save the authentication state aligned with playwright.config.js - similar to DMS
     await context.storageState({ path: authFile });
     console.log(`✅ EMAIL Authentication completed and state saved to: ${authFile}`);
     
@@ -120,6 +119,8 @@ async function saveEmailAuth() {
 
         // Attempt to open the newly created event detail by clicking the first card
         try {
+          await page.goto('https://dev.livesharenow.com/events');
+          await eventListPage.waitForEventsToLoad();
           await eventListPage.clickEventByIndex(0);
         } catch {}
 

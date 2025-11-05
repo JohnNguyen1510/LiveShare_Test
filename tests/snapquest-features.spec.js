@@ -13,7 +13,7 @@ if (!fs.existsSync(screenshotsDir)) {
 
 test.describe('SnapQuest Additional Feature Tests', () => {
   // Increase timeout for the entire test suite
-  test.setTimeout(240000);
+  test.setTimeout(120000);
   
   let loginPage;
   let snapQuestPage;
@@ -32,17 +32,17 @@ test.describe('SnapQuest Additional Feature Tests', () => {
       // Verify details panel functionality using POM method
       const detailsPanelFound = await snapQuestPage.verifyDetailsPanel();
       
-      console.log('✅ TC-APP-FSQ-006 completed successfully using POM structure');
+      basePage.logStep('TC-APP-FSQ-006 completed successfully using POM structure', 'success');
       
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-details-panel-${Date.now()}.png`) });
+      await basePage.captureScreenshot('error-details-panel', `error-${Date.now()}`);
       throw error;
     }
   });
 
   test('TC-APP-FSQ-007: Verify "Airshow Home" Button Functionality using POM', async ({ page, context }) => {
     try {
-    console.log('Starting test: TC-APP-FSQ-007');
+    basePage.logStep('Starting test: TC-APP-FSQ-007', 'info');
     
       // Navigate to app and login
     await page.goto('https://dev.livesharenow.com/');
@@ -52,17 +52,17 @@ test.describe('SnapQuest Additional Feature Tests', () => {
       // Verify button links functionality using POM method
       const result = await snapQuestPage.verifyButtonLinks();
       
-      console.log('✅ TC-APP-FSQ-007 completed successfully using POM structure');
+      basePage.logStep('TC-APP-FSQ-007 completed successfully using POM structure', 'success');
       
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-airshow-home-${Date.now()}.png`) });
+      await basePage.captureScreenshot('error-airshow-home', `error-${Date.now()}`);
       throw error;
     }
   });
 
   test('TC-APP-FSQ-008: Verify "Map" Button Functionality using POM', async ({ page, context }) => {
     try {
-    console.log('Starting test: TC-APP-FSQ-008');
+    basePage.logStep('Starting test: TC-APP-FSQ-008', 'info');
     
       // Navigate to app and login
     await page.goto('https://dev.livesharenow.com/');
@@ -72,17 +72,17 @@ test.describe('SnapQuest Additional Feature Tests', () => {
       // Verify button links functionality using POM method (includes Map button)
       const result = await snapQuestPage.verifyButtonLinks();
       
-      console.log('✅ TC-APP-FSQ-008 completed successfully using POM structure');
+      basePage.logStep('TC-APP-FSQ-008 completed successfully using POM structure', 'success');
       
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-map-button-${Date.now()}.png`) });
+      await basePage.captureScreenshot('error-map-button', `error-${Date.now()}`);
       throw error;
     }
   });
 
   test('TC-APP-FSQ-009: Verify "LiveView" Option in More Menu using POM', async ({ page, context }) => {
     try {
-    console.log('Starting test: TC-APP-FSQ-009');
+    basePage.logStep('Starting test: TC-APP-FSQ-009', 'info');
     
       // Navigate to app and login
     await page.goto('https://dev.livesharenow.com/');
@@ -92,17 +92,17 @@ test.describe('SnapQuest Additional Feature Tests', () => {
       // Verify LiveView functionality using POM method
       const moreButtonFound = await snapQuestPage.verifyLiveViewFunctionality();
       
-      console.log('✅ TC-APP-FSQ-009 completed successfully using POM structure');
+      basePage.logStep('TC-APP-FSQ-009 completed successfully using POM structure', 'success');
       
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-liveview-${Date.now()}.png`) });
+      await basePage.captureScreenshot('error-liveview', `error-${Date.now()}`);
       throw error;
     }
   });
 
   test('TC-APP-FSQ-0010: Verify "Redeem Gift Code" Option in More Menu using POM', async ({ page, context }) => {
     try {
-    console.log('Starting test: TC-APP-FSQ-0010');
+    basePage.logStep('Starting test: TC-APP-FSQ-0010', 'info');
     
       // Navigate to app and login
     await page.goto('https://dev.livesharenow.com/');
@@ -112,17 +112,17 @@ test.describe('SnapQuest Additional Feature Tests', () => {
       // Verify redeem gift code functionality using POM method
       const moreButtonFound = await snapQuestPage.verifyRedeemGiftCode();
       
-      console.log('✅ TC-APP-FSQ-0010 completed successfully using POM structure');
+      basePage.logStep('TC-APP-FSQ-0010 completed successfully using POM structure', 'success');
       
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-redeem-gift-${Date.now()}.png`) });
+      await basePage.captureScreenshot('error-redeem-gift', `error-${Date.now()}`);
       throw error;
     }
   });
 
   test('TC-APP-FSQ-0011: Verify Image Upload Functionality using POM', async ({ page, context }) => {
     try {
-    console.log('Starting test: TC-APP-FSQ-0011');
+    basePage.logStep('Starting test: TC-APP-FSQ-0011', 'info');
     
       // Navigate to app and login
     await page.goto('https://dev.livesharenow.com/');
@@ -132,10 +132,10 @@ test.describe('SnapQuest Additional Feature Tests', () => {
       // Verify image upload functionality using POM method
       const addButtonFound = await snapQuestPage.verifyImageUploadFunctionality();
       
-      console.log('✅ TC-APP-FSQ-0011 completed successfully using POM structure');
+      basePage.logStep('TC-APP-FSQ-0011 completed successfully using POM structure', 'success');
       
     } catch (error) {
-      await page.screenshot({ path: path.join(screenshotsDir, `error-image-upload-${Date.now()}.png`) });
+      await basePage.captureScreenshot('error-image-upload', `error-${Date.now()}`);
       throw error;
     }
   });

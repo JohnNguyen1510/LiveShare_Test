@@ -17,6 +17,27 @@ export class BasePage {
   }
 
   /**
+   * Generate unique identifier for parallel-safe test data
+   * @returns {Object} Object with timestamp, processId, and randomId
+   */
+  static generateUniqueId() {
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substring(2, 8);
+    const processId = process.pid || Math.floor(Math.random() * 10000);
+    return { timestamp, processId, randomId, uniqueId: `${timestamp}_${processId}_${randomId}` };
+  }
+
+  /**
+   * Generate unique filename for screenshots (parallel-safe)
+   * @param {string} prefix - Filename prefix
+   * @returns {string} Unique filename
+   */
+  static generateUniqueFilename(prefix) {
+    const { uniqueId } = BasePage.generateUniqueId();
+    return `${prefix}-${uniqueId}`;
+  }
+
+  /**
    * Đợi đến khi event settings hoàn thành
    * @param {number} timeout Timeout in milliseconds
    * @returns {Promise<boolean>} Whether the wait was successful
@@ -68,7 +89,6 @@ export class BasePage {
   async waitForPageLoad(timeout = 30000) {
     try {
       await this.page.waitForLoadState('domcontentloaded', { timeout });
-      await this.page.waitForTimeout(1000);
       await this.page.waitForLoadState('networkidle', { timeout });
       return true;
     } catch (error) {
@@ -145,8 +165,8 @@ export class BasePage {
         // Try to scroll element into view if possible
         await element.scrollIntoViewIfNeeded().catch(() => {});
         
-        // Wait a moment to ensure element is ready for interaction
-        await this.page.waitForTimeout(500);
+        // Wait briefly for element to be stable (reduced from 500ms to 100ms)
+        await this.page.waitForTimeout(100);
         
         // Try to click with force option to handle overlay issues
         await element.click({ force: true, ...options });
@@ -183,7 +203,7 @@ export class BasePage {
             const isVisible = await element.isVisible({ timeout: 2000 }).catch(() => false);
             if (isVisible) {
               await element.scrollIntoViewIfNeeded().catch(() => {});
-              await this.page.waitForTimeout(500);
+              await this.page.waitForTimeout(100);
               await element.click({ force: true, ...options });
               return { success: true, selector, element };
             }
@@ -327,5 +347,124 @@ export class BasePage {
   async performActionAndVerifyResponse({ actionPromise, apiUrl, statusCode, requestMethod }) {
     const data = await this.performActionAndWaitForResponse({ actionPromise, apiUrl, statusCode, requestMethod });
     return data;
+  }
+
+  /**
+   * Get API response data by waiting for response
+   * @param {string} apiUrl - API URL substring to match
+   * @param {number} statusCode - Expected status code
+   * @param {string} [requestMethod] - Optional HTTP method
+   * @param {Object} [requestPayload] - Optional request payload to match
+   * @returns {Promise<any>} Parsed response data
+   */
+  async getApiResponse(apiUrl, statusCode = 200, requestMethod = null, requestPayload = null) {
+    const response = await this.waitApiResponse(apiUrl, statusCode, requestMethod, requestPayload);
+    let responseData = await response.json().catch(() => response.text());
+    
+    // If response has docs property, return docs array
+    if (responseData && typeof responseData === 'object' && responseData.docs) {
+      responseData = responseData.docs;
+    }
+    
+    return responseData;
+  }
+
+  /**
+   * Helper method to check if actual payload contains expected payload
+   * @param {Object} actualPayload - The actual request payload
+   * @param {Object} expectedPayload - The expected payload to match
+   * @returns {boolean} - True if actual payload contains expected payload
+   */
+  containsPayload(actualPayload, expectedPayload) {
+    if (typeof expectedPayload !== 'object' || expectedPayload === null) {
+      return actualPayload === expectedPayload;
+    }
+    
+    if (typeof actualPayload !== 'object' || actualPayload === null) {
+      return false;
+    }
+    
+    for (const key in expectedPayload) {
+      if (!(key in actualPayload)) {
+        return false;
+      }
+      
+      if (typeof expectedPayload[key] === 'object' && expectedPayload[key] !== null) {
+        if (!this.containsPayload(actualPayload[key], expectedPayload[key])) {
+          return false;
+        }
+      } else if (actualPayload[key] !== expectedPayload[key]) {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+
+  // ============================================================================
+  // TEST HELPER METHODS - Logging & Screenshots
+  // ============================================================================
+
+  /**
+   * Capture screenshot with timestamp
+   * @param {string} testCase - Test case identifier
+   * @param {string} step - Step description
+   * @returns {Promise<string>} Screenshot filename
+   */
+  async captureScreenshot(testCase, step) {
+    const { uniqueId } = BasePage.generateUniqueId();
+    const filename = `${testCase}-${step}-${uniqueId}.png`;
+    const screenshotsDir = './screenshots';
+    
+    try {
+      await this.page.screenshot({ 
+        path: `${screenshotsDir}/${filename}`,
+        fullPage: true 
+      });
+      return filename;
+    } catch (error) {
+      console.error(`Failed to capture screenshot: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Log test step with formatting
+   * @param {string} message - Log message
+   * @param {string} level - Log level (info, success, error, warning)
+   */
+  logStep(message, level = 'info') {
+    const icons = {
+      info: '📍',
+      success: '✅',
+      error: '❌',
+      warning: '⚠'
+    };
+    const icon = icons[level] || '•';
+    console.log(`${icon} ${message}`);
+  }
+
+  /**
+   * Print test header
+   * @param {string} testCase - Test case ID
+   * @param {string} description - Test description
+   */
+  printTestHeader(testCase, description) {
+    console.log('\n╔════════════════════════════════════════════════════════╗');
+    console.log(`║     ${testCase}: ${description.padEnd(36, ' ')}║`);
+    console.log('╚════════════════════════════════════════════════════════╝\n');
+  }
+
+  /**
+   * Print test footer
+   * @param {string} testCase - Test case ID
+   * @param {boolean} passed - Test result
+   */
+  printTestFooter(testCase, passed = true) {
+    const status = passed ? '✅ PASSED' : '❌ FAILED';
+    const message = `${testCase}: ${status}`;
+    console.log('\n╔════════════════════════════════════════════════════════╗');
+    console.log(`║   ${message.padEnd(51, ' ')}║`);
+    console.log('╚════════════════════════════════════════════════════════╝\n');
   }
 } 

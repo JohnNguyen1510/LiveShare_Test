@@ -15,10 +15,10 @@ const __dirname = path.dirname(__filename);
  */
 export default defineConfig({
   testDir: './tests',
-  fullyParallel: false,
+  fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 1,
-  workers: 1,
+  workers: process.env.CI ? 2 : 4,
   reporter: 'html',
   
   // Global timeout for each test
@@ -32,7 +32,7 @@ export default defineConfig({
     baseURL: 'https://dev.livesharenow.com',
 
     // Browser configurations
-    headless: false,
+    headless: process.env.HEADED ? false : true,
     viewport: { width: 1280, height: 720 },
     ignoreHTTPSErrors: true,
 
@@ -43,11 +43,11 @@ export default defineConfig({
 
     // Timeouts
     navigationTimeout: 30000,
-    actionTimeout: 15000,
+    actionTimeout: 10000,
     
     // Retry options
     retryOnNetworkError: true,
-    maxRetries: 3,
+    maxRetries: 1,
     
     // Test isolation
     isolatePages: true
@@ -56,10 +56,10 @@ export default defineConfig({
   projects: [
     {
       name: 'authenticated-tests',
-      testMatch: '**/!(register.spec.js)', // Tất cả test trừ register.spec.js
+      testMatch: '**/!(register.spec.js)',
       use: { 
         ...devices['Desktop Chrome'],
-        storageState: 'auth/user-auth.json', // Có authentication cho các test khác
+        storageState: 'auth/user-auth.json', 
         launchOptions: {
           args: [
             '--disable-dev-shm-usage',
@@ -71,20 +71,67 @@ export default defineConfig({
     },
     {
       name: 'guest-tests',
-      testMatch: '**/register.spec.js', // Chỉ register.spec.js
+      testMatch: '**/register.spec.js',
       use: { 
         ...devices['Desktop Chrome'],
-        // Không có storageState - clean state cho guest tests
         launchOptions: {
           args: [
             '--disable-dev-shm-usage',
             '--no-sandbox',
             '--disable-setuid-sandbox',
-            '--incognito' // Thêm incognito mode để đảm bảo clean state
+            '--incognito' 
           ]
         }
       },
-    }
+    },
+    // // Mobile devices - iPhone
+    // {
+    //   name: 'mobile-iphone-authenticated',
+    //   testMatch: '**/!(register.spec.js)',
+    //   use: { 
+    //     ...devices['iPhone 13 Pro'],
+    //     storageState: 'auth/user-auth.json',
+    //   },
+    // },
+    // {
+    //   name: 'mobile-iphone-guest',
+    //   testMatch: '**/register.spec.js',
+    //   use: { 
+    //     ...devices['iPhone 13 Pro'],
+    //   },
+    // },
+    // // Mobile devices - Android
+    // {
+    //   name: 'mobile-android-authenticated',
+    //   testMatch: '**/!(register.spec.js)',
+    //   use: { 
+    //     ...devices['Pixel 5'],
+    //     storageState: 'auth/user-auth.json',
+    //   },
+    // },
+    // {
+    //   name: 'mobile-android-guest',
+    //   testMatch: '**/register.spec.js',
+    //   use: { 
+    //     ...devices['Pixel 5'],
+    //   },
+    // },
+    // // Mobile devices - iPad
+    // {
+    //   name: 'mobile-ipad-authenticated',
+    //   testMatch: '**/!(register.spec.js)',
+    //   use: { 
+    //     ...devices['iPad Pro'],
+    //     storageState: 'auth/user-auth.json',
+    //   },
+    // },
+    // {
+    //   name: 'mobile-ipad-guest',
+    //   testMatch: '**/register.spec.js',
+    //   use: { 
+    //     ...devices['iPad Pro'],
+    //   },
+    // },
   ],
 
   // Output directory for test artifacts
@@ -100,14 +147,4 @@ export default defineConfig({
 
   // Test file pattern
   testMatch: '**/*.spec.js',
-
-  // Directory for storing global test data
-  globalSetupDir: path.join(__dirname, 'global-setup'),
-
-  // Custom reporter options
-  reporterOptions: {
-    html: {
-      open: process.env.CI ? 'never' : 'on-failure'
-    }
-  }
 }); 
